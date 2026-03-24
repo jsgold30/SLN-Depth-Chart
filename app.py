@@ -65,6 +65,7 @@ PG_STARTER_EXCEPTIONS = {
     'martray bagley',
     'caleb holt',
     'immanuel quickley',
+    'cade cunningham',
 }
 
 # Grade scale: index 0 = worst, 12 = best
