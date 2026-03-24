@@ -238,6 +238,8 @@
       line-height: 1.8;
       overflow-x: auto;
       min-height: 180px;
+      width: 100%;
+      resize: none;
     }
 
     .output-actions {
@@ -333,7 +335,7 @@
       .generate-row .btn { width: 100%; text-align: center; }
 
       /* Output box wraps long lines */
-      .output-box { font-size: 0.78rem; white-space: pre-wrap; word-break: break-word; }
+      .output-box { font-size: 0.78rem; white-space: pre-wrap; word-break: break-word; height: auto; min-height: 200px; }
 
       /* Copy button full width */
       .output-actions { flex-direction: column; }
@@ -485,7 +487,7 @@
   <!-- ── OUTPUT ── -->
   <div class="card" id="outputCard" style="display:none">
     <div class="card-title">Generated Depth Chart</div>
-    <div class="output-box" id="outputBox"></div>
+    <textarea class="output-box" id="outputBox" readonly></textarea>
     <div class="output-actions">
       <button class="btn btn-cyan" onclick="copyOutput()">Copy to Clipboard</button>
       <span class="copy-confirm" id="copyConfirm"></span>
@@ -868,7 +870,7 @@ function generateDepthChart() {
   lines.push(`Pressure: ${bb(document.getElementById('t_pressure').value, 'bold_t_pressure')}`);
   lines.push(`Offense Focus: ${bb(document.getElementById('t_offense').value, 'bold_t_offense')}`);
 
-  document.getElementById('outputBox').textContent = lines.join('\n');
+  document.getElementById('outputBox').value = lines.join('\n');
   document.getElementById('outputCard').style.display = 'block';
 
   const vList = document.getElementById('violationsList');
@@ -883,19 +885,32 @@ function generateDepthChart() {
 
 // ─── Copy output ──────────────────────────────────────────────────────────────
 async function copyOutput() {
-  const text = document.getElementById('outputBox').textContent;
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
+  const box = document.getElementById('outputBox');
+  const text = box.value;
+
+  // Try modern clipboard API first (works on most modern mobile browsers)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showCopyConfirm();
+      return;
+    } catch(e) { /* fall through to iOS fallback */ }
   }
+
+  // iOS Safari fallback — select the textarea directly and execCommand
+  box.removeAttribute('readonly');
+  box.focus();
+  box.setSelectionRange(0, box.value.length);
+  try {
+    document.execCommand('copy');
+  } catch(e) {}
+  box.setAttribute('readonly', '');
+  window.getSelection().removeAllRanges();
+
+  showCopyConfirm();
+}
+
+function showCopyConfirm() {
   const confirm = document.getElementById('copyConfirm');
   confirm.textContent = '✓ Copied!';
   setTimeout(() => confirm.textContent = '', 2500);
