@@ -542,6 +542,7 @@ async function loadRoster(restoring = false) {
     buildOptionDropdowns();
 
     await restoreState();
+    refreshIR();
 
   } catch(e) {
     setStatus('Network error — make sure the Flask server is running.', 'err');
@@ -751,7 +752,36 @@ function onSlotChange(pos, slot) {
   }
   validateSlot(pos, slot);
   updateStatBadge(pos, slot);
+  refreshIR();
   saveState();
+}
+
+// ─── Refresh IR eligibility ───────────────────────────────────────────────────
+function refreshIR() {
+  // Collect all players currently assigned to any position slot
+  const used = new Set();
+  POSITIONS.forEach(p => {
+    for (let s = 0; s < 3; s++) {
+      const sel = document.getElementById(`${p}_${s}`);
+      if (sel && sel.value) used.add(sel.value);
+    }
+  });
+
+  document.querySelectorAll('input[name="ir"]').forEach(cb => {
+    const label = cb.closest('label');
+    if (used.has(cb.value)) {
+      // Auto-remove from IR if now in a roster slot
+      if (cb.checked) {
+        cb.checked = false;
+        if (label) label.classList.remove('checked');
+      }
+      cb.disabled = true;
+      if (label) label.style.opacity = '0.3';
+    } else {
+      cb.disabled = false;
+      if (label) label.style.opacity = '';
+    }
+  });
 }
 
 function onOptChange() { saveState(); }
