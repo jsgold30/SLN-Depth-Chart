@@ -55,6 +55,18 @@ def load_chart():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Players allowed to start at PG regardless of their listed position
+PG_STARTER_EXCEPTIONS = {
+    'luka doncic',
+    'boogie fland',
+    'darius adams',
+    'dylan harper',
+    'dyland harper',
+    'martray bagley',
+    'caleb holt',
+    'immanuel quickley',
+}
+
 # Grade scale: index 0 = worst, 12 = best
 GRADE_ORDER = ['F', 'D-', 'D', 'D+', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+']
 
@@ -86,6 +98,7 @@ def parse_height_inches(height_str):
 
 def compute_eligibility(player):
     pos = player['pos']
+    name = player['name'].lower().strip()
     reb = player['reb']
     out = player['out']
 
@@ -94,8 +107,8 @@ def compute_eligibility(player):
 
     # --- STARTER RULES ---
 
-    # PG: PG, SG, and SF players are eligible to start at PG
-    starter['PG'] = pos in ('PG', 'SG', 'SF')
+    # PG: only PG-position players are eligible, plus specific named exceptions
+    starter['PG'] = pos == 'PG' or name in PG_STARTER_EXCEPTIONS
 
     # SG: PG can play up freely; SG/SF need reb B- or worse; PF/C prohibited
     if pos == 'PG':
