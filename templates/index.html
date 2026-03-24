@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sim League Depth Chart Builder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    .container { max-width: 860px; margin: 0 auto; }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #38bdf8;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #64748b;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+
+    .card-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #64748b;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #334155;
+    }
+
+    /* Team select row */
+    .url-row { display: flex; gap: 10px; }
+    .url-row select { flex: 1; }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px 14px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 0.875rem;
+    }
+    input[type="text"]:focus { outline: none; border-color: #38bdf8; }
+
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-cyan  { background: #0891b2; color: #fff; }
+    .btn-cyan:hover { background: #0e7490; }
+    .btn-green { background: #16a34a; color: #fff; }
+    .btn-green:hover { background: #15803d; }
+    .btn-slate { background: #334155; color: #e2e8f0; }
+    .btn-slate:hover { background: #475569; }
+    .btn-lg { font-size: 1rem; padding: 13px 36px; }
+
+    .status-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 10px; min-height: 22px;
+    }
+    .status-ok   { color: #4ade80; font-size: 0.82rem; }
+    .status-err  { color: #f87171; font-size: 0.82rem; }
+    .status-info { color: #94a3b8; font-size: 0.82rem; }
+    .spinner { display: none; width: 16px; height: 16px; border: 2px solid #334155; border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Depth chart grid */
+    .dc-header {
+      display: grid;
+      grid-template-columns: 52px 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .dc-header span {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      text-align: center;
+    }
+
+    .dc-row {
+      display: grid;
+      grid-template-columns: 52px 1fr 1fr 1fr;
+      gap: 8px;
+      align-items: start;
+      margin-bottom: 10px;
+    }
+
+    .pos-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 38px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #38bdf8;
+      letter-spacing: 1px;
+    }
+
+    .slot-wrap { position: relative; }
+
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 0.8rem;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 24px;
+    }
+    select:focus { outline: none; border-color: #38bdf8; }
+    select.is-valid   { border-color: #22c55e; }
+    select.is-invalid { border-color: #ef4444; }
+
+    .slot-warn {
+      font-size: 0.7rem;
+      color: #f59e0b;
+      margin-top: 3px;
+      line-height: 1.3;
+      display: none;
+    }
+    .slot-warn.show { display: block; }
+
+    /* Player stat badge shown below select when a player is chosen */
+    .player-stat {
+      font-size: 0.68rem;
+      color: #475569;
+      margin-top: 2px;
+      display: none;
+    }
+    .player-stat.show { display: block; }
+
+    /* IR checkboxes */
+    .ir-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .ir-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: border-color 0.15s;
+      user-select: none;
+    }
+    .ir-label:hover { border-color: #475569; }
+    .ir-label input[type="checkbox"] { accent-color: #38bdf8; cursor: pointer; }
+    .ir-label.checked { border-color: #38bdf8; background: #0c1a2e; }
+
+    /* Options */
+    .options-col { display: flex; flex-direction: column; gap: 10px; }
+
+    /* Tactics grid */
+    .tactics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .tactic-item label {
+      display: block;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+
+    /* Generate row */
+    .generate-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 8px 0 20px;
+    }
+
+    /* Output */
+    .output-box {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.9rem;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 18px;
+      white-space: pre;
+      color: #7dd3fc;
+      line-height: 1.8;
+      overflow-x: auto;
+      min-height: 180px;
+    }
+
+    .output-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    .copy-confirm { font-size: 0.8rem; color: #4ade80; }
+
+    .violations-list {
+      margin-top: 12px;
+      font-size: 0.78rem;
+      color: #fb923c;
+      line-height: 1.6;
+    }
+
+    /* Bold checkbox */
+    .bold-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 4px;
+      font-size: 0.68rem;
+      color: #64748b;
+      cursor: pointer;
+      user-select: none;
+    }
+    .bold-check input[type="checkbox"] { accent-color: #f59e0b; cursor: pointer; }
+    .bold-check.active { color: #f59e0b; }
+
+    /* Options row */
+    .option-row { display: flex; align-items: center; gap: 10px; }
+    .option-row select { flex: 1; }
+
+    /* Tactic bold row */
+    .tactic-bold { margin-top: 5px; }
+
+    /* Placeholder state */
+    .placeholder-msg {
+      color: #475569;
+      font-size: 0.82rem;
+      font-style: italic;
+    }
+
+    @media (max-width: 580px) {
+      .dc-row { grid-template-columns: 44px 1fr; grid-template-rows: auto auto auto; }
+      .tactics-grid { grid-template-columns: 1fr; }
+      .url-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Depth Chart Builder</h1>
+  <p class="subtitle">Sim League Nirvana · Basketball</p>
+
+  <!-- ── ROSTER LOAD ── -->
+  <div class="card">
+    <div class="card-title">Select Team</div>
+    <div class="url-row">
+      <select id="teamSelect">
+        <option value="">-- Select a Team --</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster1.htm">Boston Celtics</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster2.htm">Miami Heat</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster3.htm">New Jersey Nets</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster4.htm">New York Knicks</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster5.htm">Orlando Magic</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster6.htm">Philadelphia 76ers</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster7.htm">Washington Bullets</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster8.htm">Atlanta Hawks</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster9.htm">Charlotte Hornets</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster10.htm">Chicago Bulls</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster11.htm">Cleveland Cavaliers</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster12.htm">Detroit Pistons</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster13.htm">Indiana Pacers</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster14.htm">Milwaukee Bucks</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster15.htm">Toronto Raptors</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster16.htm">Dallas Mavericks</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster17.htm">Denver Nuggets</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster18.htm">Houston Rockets</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster19.htm">Minnesota Timberwolves</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster20.htm">San Antonio Spurs</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster21.htm">Utah Jazz</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster22.htm">Vancouver Grizzlies</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster23.htm">Golden State Warriors</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster24.htm">Los Angeles Clippers</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster25.htm">Los Angeles Lakers</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster26.htm">Phoenix Suns</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster27.htm">Portland Trail Blazers</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster28.htm">Sacramento Kings</option>
+        <option value="https://www.simleaguenirvana.com/rosters/roster29.htm">Seattle SuperSonics</option>
+      </select>
+      <button class="btn btn-cyan" onclick="loadRoster()">Load Roster</button>
+    </div>
+    <div class="status-row">
+      <div class="spinner" id="spinner"></div>
+      <span id="statusMsg" class="status-info"></span>
+    </div>
+  </div>
+
+  <!-- ── DEPTH CHART ── -->
+  <div class="card">
+    <div class="card-title">Depth Chart</div>
+    <div class="dc-header">
+      <span></span>
+      <span>Starter</span>
+      <span>Backup 1</span>
+      <span>Backup 2</span>
+    </div>
+    <div id="positionRows">
+      <p class="placeholder-msg">Load a roster above to begin building your depth chart.</p>
+    </div>
+  </div>
+
+  <!-- ── IR ── -->
+  <div class="card">
+    <div class="card-title">Injured Reserve (IR)</div>
+    <div id="irContainer">
+      <p class="placeholder-msg">Load a roster to see players.</p>
+    </div>
+  </div>
+
+  <!-- ── OPTIONS ── -->
+  <div class="card">
+    <div class="card-title">Options</div>
+    <div class="options-col" id="optionsContainer">
+      <div class="option-row">
+        <select id="opt1" onchange="onOptChange()"><option value="">-- Option 1 (optional) --</option></select>
+        <label class="bold-check" id="boldlabel_opt1"><input type="checkbox" id="bold_opt1" onchange="toggleBoldLabel('boldlabel_opt1')"> bold</label>
+      </div>
+      <div class="option-row">
+        <select id="opt2" onchange="onOptChange()"><option value="">-- Option 2 (optional) --</option></select>
+        <label class="bold-check" id="boldlabel_opt2"><input type="checkbox" id="bold_opt2" onchange="toggleBoldLabel('boldlabel_opt2')"> bold</label>
+      </div>
+      <div class="option-row">
+        <select id="opt3" onchange="onOptChange()"><option value="">-- Option 3 (optional) --</option></select>
+        <label class="bold-check" id="boldlabel_opt3"><input type="checkbox" id="bold_opt3" onchange="toggleBoldLabel('boldlabel_opt3')"> bold</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TACTICS ── -->
+  <div class="card">
+    <div class="card-title">Tactics</div>
+    <div class="tactics-grid">
+      <div class="tactic-item">
+        <label>Pace</label>
+        <select id="t_pace">
+          <option>Very Fast</option><option>Fast</option>
+          <option selected>Normal</option>
+          <option>Slow</option><option>Very Slow</option>
+        </select>
+        <label class="bold-check tactic-bold" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onchange="toggleBoldLabel('boldlabel_t_pace')"> bold</label>
+      </div>
+      <div class="tactic-item">
+        <label>Trap</label>
+        <select id="t_trap">
+          <option>Always</option><option>Often</option>
+          <option selected>Normal</option>
+          <option>Sometimes</option><option>Never</option>
+        </select>
+        <label class="bold-check tactic-bold" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onchange="toggleBoldLabel('boldlabel_t_trap')"> bold</label>
+      </div>
+      <div class="tactic-item">
+        <label>Pressure</label>
+        <select id="t_pressure">
+          <option>Always</option><option>Often</option>
+          <option selected>Normal</option>
+          <option>Sometimes</option><option>Never</option>
+        </select>
+        <label class="bold-check tactic-bold" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onchange="toggleBoldLabel('boldlabel_t_pressure')"> bold</label>
+      </div>
+      <div class="tactic-item">
+        <label>Offense Focus</label>
+        <select id="t_offense">
+          <option>Inside</option>
+          <option selected>Balanced</option>
+          <option>Outside</option>
+        </select>
+        <label class="bold-check tactic-bold" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onchange="toggleBoldLabel('boldlabel_t_offense')"> bold</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GENERATE ── -->
+  <div class="generate-row">
+    <button class="btn btn-green btn-lg" onclick="generateDepthChart()">Generate Depth Chart</button>
+    <button class="btn btn-slate" onclick="clearSelections()">Clear</button>
+  </div>
+
+  <!-- ── OUTPUT ── -->
+  <div class="card" id="outputCard" style="display:none">
+    <div class="card-title">Generated Depth Chart</div>
+    <div class="output-box" id="outputBox"></div>
+    <div class="output-actions">
+      <button class="btn btn-cyan" onclick="copyOutput()">Copy to Clipboard</button>
+      <span class="copy-confirm" id="copyConfirm"></span>
+    </div>
+    <div class="violations-list" id="violationsList"></div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ─── Constants ────────────────────────────────────────────────────────────────
+const POSITIONS = ['C', 'PF', 'SF', 'SG', 'PG'];
+const GRADE_ORDER = ['F','D-','D','D+','C-','C','C+','B-','B','B+','A-','A','A+'];
+
+let roster = [];
+
+// ─── Grade helpers ────────────────────────────────────────────────────────────
+function gradeVal(g) { return GRADE_ORDER.indexOf((g||'').trim()); }
+function gradeGte(g, t) { return gradeVal(g) >= gradeVal(t); }
+function gradeLte(g, t) { return gradeVal(g) <= gradeVal(t); }
+
+// ─── Load roster ─────────────────────────────────────────────────────────────
+async function loadRoster() {
+  const url = document.getElementById('teamSelect').value.trim();
+  if (!url) { setStatus('Please select a team.', 'err'); return; }
+
+  setStatus('', 'info');
+  document.getElementById('spinner').style.display = 'inline-block';
+
+  try {
+    const res = await fetch('/fetch_roster', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url})
+    });
+    const data = await res.json();
+
+    if (data.error) { setStatus(data.error, 'err'); return; }
+
+    roster = data.players;
+    const label = data.team_name ? `${data.team_name} — ` : '';
+    setStatus(`✓ ${label}${roster.length} players loaded`, 'ok');
+
+    buildPositionRows();
+    buildIR();
+    buildOptionDropdowns();
+
+  } catch(e) {
+    setStatus('Network error — make sure the Flask server is running.', 'err');
+  } finally {
+    document.getElementById('spinner').style.display = 'none';
+  }
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = `status-${type}`;
+}
+
+// ─── Build depth chart rows ───────────────────────────────────────────────────
+function buildPositionRows() {
+  const container = document.getElementById('positionRows');
+  container.innerHTML = '';
+
+  POSITIONS.forEach(pos => {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'dc-row';
+    rowDiv.id = `dcrow_${pos}`;
+
+    // Position badge
+    const badge = document.createElement('div');
+    badge.className = 'pos-badge';
+    badge.textContent = pos;
+    rowDiv.appendChild(badge);
+
+    // 3 slots
+    for (let slot = 0; slot < 3; slot++) {
+      const wrap = document.createElement('div');
+      wrap.className = 'slot-wrap';
+
+      const sel = document.createElement('select');
+      sel.id = `${pos}_${slot}`;
+      sel.addEventListener('change', () => onSlotChange(pos, slot));
+      wrap.appendChild(sel);
+
+      const warn = document.createElement('div');
+      warn.className = 'slot-warn';
+      warn.id = `warn_${pos}_${slot}`;
+      wrap.appendChild(warn);
+
+      const stat = document.createElement('div');
+      stat.className = 'player-stat';
+      stat.id = `stat_${pos}_${slot}`;
+      wrap.appendChild(stat);
+
+      const boldLabel = document.createElement('label');
+      boldLabel.className = 'bold-check';
+      boldLabel.id = `boldlabel_${pos}_${slot}`;
+      const boldCb = document.createElement('input');
+      boldCb.type = 'checkbox';
+      boldCb.id = `bold_${pos}_${slot}`;
+      boldCb.addEventListener('change', () => toggleBoldLabel(`boldlabel_${pos}_${slot}`));
+      boldLabel.appendChild(boldCb);
+      boldLabel.appendChild(document.createTextNode(' bold'));
+      wrap.appendChild(boldLabel);
+
+      rowDiv.appendChild(wrap);
+    }
+
+    container.appendChild(rowDiv);
+  });
+
+  refreshAllDropdowns();
+}
+
+// ─── Build IR checkboxes ──────────────────────────────────────────────────────
+function buildIR() {
+  const container = document.getElementById('irContainer');
+  container.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'ir-grid';
+
+  roster.forEach(p => {
+    const label = document.createElement('label');
+    label.className = 'ir-label';
+    label.id = `ir_label_${p.name.replace(/\s+/g,'_')}`;
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.name = 'ir';
+    cb.value = p.name;
+    cb.addEventListener('change', () => {
+      label.classList.toggle('checked', cb.checked);
+    });
+
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(`${p.name} (${p.pos})`));
+    grid.appendChild(label);
+  });
+
+  container.appendChild(grid);
+}
+
+// ─── Build options dropdowns ──────────────────────────────────────────────────
+function buildOptionDropdowns() {
+  ['opt1','opt2','opt3'].forEach(id => {
+    const sel = document.getElementById(id);
+    const cur = sel.value;
+    sel.innerHTML = '';
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = id === 'opt1' ? '-- Option 1 (optional) --'
+                       : id === 'opt2' ? '-- Option 2 (optional) --'
+                       : '-- Option 3 (optional) --';
+    sel.appendChild(blank);
+
+    roster.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = `${p.name} (${p.pos})`;
+      sel.appendChild(opt);
+    });
+
+    if (cur) sel.value = cur;
+  });
+}
+
+// ─── Refresh all position dropdowns ──────────────────────────────────────────
+function refreshAllDropdowns() {
+  POSITIONS.forEach(pos => {
+    for (let slot = 0; slot < 3; slot++) {
+      refreshDropdown(pos, slot);
+    }
+  });
+}
+
+function refreshDropdown(pos, slot) {
+  const selId = `${pos}_${slot}`;
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+
+  const currentValue = sel.value;
+
+  sel.innerHTML = '';
+
+  // Blank option
+  const blank = document.createElement('option');
+  blank.value = '';
+  blank.textContent = slot === 0 ? '-- Starter --' : `-- Backup ${slot} --`;
+  sel.appendChild(blank);
+
+  // Separate players into eligible / ineligible
+  const eligible = [];
+  const ineligible = [];
+
+  roster.forEach(p => {
+    const isElig = slot === 0
+      ? p.eligible_starter[pos]
+      : p.eligible_backup[pos];
+    if (isElig) eligible.push(p);
+    else ineligible.push(p);
+  });
+
+  function makeGroup(label, players) {
+    const grp = document.createElement('optgroup');
+    grp.label = label;
+    players.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = `${p.name} (${p.pos} | Reb:${p.reb} | Out:${p.out} | Hn:${p.hn})`;
+      grp.appendChild(opt);
+    });
+    return grp;
+  }
+
+  if (eligible.length)   sel.appendChild(makeGroup('Eligible', eligible));
+  if (ineligible.length) sel.appendChild(makeGroup('⚠ Ineligible', ineligible));
+
+  // Restore value
+  if (currentValue) {
+    sel.value = currentValue;
+    if (sel.value !== currentValue) sel.value = '';
+  }
+
+  validateSlot(pos, slot);
+  updateStatBadge(pos, slot);
+}
+
+// ─── Slot change handler ──────────────────────────────────────────────────────
+function onSlotChange(pos, slot) {
+  validateSlot(pos, slot);
+  updateStatBadge(pos, slot);
+}
+
+function onOptChange() {}
+
+// ─── Bold label toggle ────────────────────────────────────────────────────────
+function toggleBoldLabel(labelId) {
+  const lbl = document.getElementById(labelId);
+  if (!lbl) return;
+  const cb = lbl.querySelector('input[type="checkbox"]');
+  lbl.classList.toggle('active', cb && cb.checked);
+}
+
+function bb(value, boldId) {
+  const cb = document.getElementById(boldId);
+  if (cb && cb.checked && value) return `[b]${value}[/b]`;
+  return value;
+}
+
+// ─── Validate a slot ──────────────────────────────────────────────────────────
+function validateSlot(pos, slot) {
+  const sel = document.getElementById(`${pos}_${slot}`);
+  const warn = document.getElementById(`warn_${pos}_${slot}`);
+  if (!sel || !warn) return;
+
+  sel.className = '';
+  warn.textContent = '';
+  warn.classList.remove('show');
+
+  if (!sel.value) return;
+
+  const player = roster.find(p => p.name === sel.value);
+  if (!player) return;
+
+  const isElig = slot === 0
+    ? player.eligible_starter[pos]
+    : player.eligible_backup[pos];
+
+  if (isElig) {
+    sel.className = 'is-valid';
+  } else {
+    sel.className = 'is-invalid';
+    warn.textContent = '⚠ ' + getViolationReason(player, pos, slot);
+    warn.classList.add('show');
+  }
+}
+
+function getViolationReason(player, pos, slot) {
+  const pp = player.pos;
+  const reb = player.reb;
+  const out = player.out;
+
+  if (slot === 0) {
+    if (pos === 'PG') return `${player.name} must be listed as PG, SG, or SF to start at PG`;
+    if (pos === 'SG') {
+      if (['PF','C'].includes(pp)) return 'PF/C cannot start at SG';
+      return `Reb must be B- or worse (is ${reb})`;
+    }
+    if (pos === 'SF' && ['PF','C'].includes(pp)) {
+      const r = [];
+      if (!gradeLte(reb, 'B+')) r.push(`Reb must be B+ or worse (is ${reb})`);
+      if (!gradeGte(out, 'C'))  r.push(`Outside must be C or better (is ${out})`);
+      return r.join('; ');
+    }
+  }
+  return 'Not eligible for this slot';
+}
+
+// ─── Stat badge under each select ────────────────────────────────────────────
+function updateStatBadge(pos, slot) {
+  const sel = document.getElementById(`${pos}_${slot}`);
+  const stat = document.getElementById(`stat_${pos}_${slot}`);
+  if (!sel || !stat) return;
+
+  if (!sel.value) {
+    stat.classList.remove('show');
+    stat.textContent = '';
+    return;
+  }
+
+  const p = roster.find(x => x.name === sel.value);
+  if (!p) return;
+
+  stat.textContent = `${p.height} ${p.weight}lbs · In:${p.in_rating} Out:${p.out} Hn:${p.hn} Reb:${p.reb} Df:${p.df}`;
+  stat.classList.add('show');
+}
+
+// ─── Generate depth chart ─────────────────────────────────────────────────────
+function generateDepthChart() {
+  const lines = [];
+  const violations = [];
+
+  // Position lines
+  POSITIONS.forEach(pos => {
+    const slots = [];
+    for (let s = 0; s < 3; s++) {
+      const sel = document.getElementById(`${pos}_${s}`);
+      const val = sel ? sel.value : '';
+      slots.push(bb(val, `bold_${pos}_${s}`));
+    }
+
+    // Trim trailing empty slots
+    while (slots.length > 1 && !slots[slots.length - 1]) slots.pop();
+
+    lines.push(`${pos}: ${slots.join(' / ')}`);
+
+    // Check violations
+    for (let s = 0; s < 3; s++) {
+      if (!slots[s]) continue;
+      const player = roster.find(p => p.name === slots[s]);
+      if (!player) continue;
+      const isElig = s === 0 ? player.eligible_starter[pos] : player.eligible_backup[pos];
+      if (!isElig) {
+        const slotName = s === 0 ? 'starter' : `backup ${s}`;
+        violations.push(
+          `⚠ ${slots[s]} (${player.pos}) as ${pos} ${slotName} — ${getViolationReason(player, pos, s)}`
+        );
+      }
+    }
+  });
+
+  lines.push('');
+
+  // IR
+  const irPlayers = [...document.querySelectorAll('input[name="ir"]:checked')].map(cb => cb.value);
+  lines.push(`IR: ${irPlayers.join(', ')}`);
+  lines.push('');
+
+  // Options
+  const opts = ['opt1','opt2','opt3']
+    .map(id => ({ val: document.getElementById(id).value, id }))
+    .filter(o => o.val);
+  if (opts.length) {
+    lines.push('Options:');
+    opts.forEach(o => lines.push(bb(o.val, `bold_${o.id}`)));
+    lines.push('');
+  }
+
+  // Tactics
+  lines.push('Tactics:');
+  lines.push(`Pace: ${bb(document.getElementById('t_pace').value, 'bold_t_pace')}`);
+  lines.push(`Trap: ${bb(document.getElementById('t_trap').value, 'bold_t_trap')}`);
+  lines.push(`Pressure: ${bb(document.getElementById('t_pressure').value, 'bold_t_pressure')}`);
+  lines.push(`Offense Focus: ${bb(document.getElementById('t_offense').value, 'bold_t_offense')}`);
+
+  document.getElementById('outputBox').textContent = lines.join('\n');
+  document.getElementById('outputCard').style.display = 'block';
+
+  const vList = document.getElementById('violationsList');
+  if (violations.length) {
+    vList.textContent = 'Rule violations detected:\n' + violations.join('\n');
+  } else {
+    vList.textContent = '';
+  }
+
+  document.getElementById('outputCard').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+// ─── Copy output ──────────────────────────────────────────────────────────────
+async function copyOutput() {
+  const text = document.getElementById('outputBox').textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+  const confirm = document.getElementById('copyConfirm');
+  confirm.textContent = '✓ Copied!';
+  setTimeout(() => confirm.textContent = '', 2500);
+}
+
+// ─── Clear selections ─────────────────────────────────────────────────────────
+function clearSelections() {
+  POSITIONS.forEach(pos => {
+    for (let slot = 0; slot < 3; slot++) {
+      const sel = document.getElementById(`${pos}_${slot}`);
+      if (sel) { sel.value = ''; sel.className = ''; }
+      const warn = document.getElementById(`warn_${pos}_${slot}`);
+      if (warn) { warn.textContent = ''; warn.classList.remove('show'); }
+      const stat = document.getElementById(`stat_${pos}_${slot}`);
+      if (stat) { stat.textContent = ''; stat.classList.remove('show'); }
+    }
+  });
+
+  ['opt1','opt2','opt3'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) sel.value = '';
+    const bcb = document.getElementById(`bold_${id}`);
+    if (bcb) { bcb.checked = false; toggleBoldLabel(`boldlabel_${id}`); }
+  });
+
+  // Clear tactic bold checkboxes
+  ['t_pace','t_trap','t_pressure','t_offense'].forEach(id => {
+    const bcb = document.getElementById(`bold_${id}`);
+    if (bcb) { bcb.checked = false; toggleBoldLabel(`boldlabel_${id}`); }
+  });
+
+  document.querySelectorAll('input[name="ir"]').forEach(cb => {
+    cb.checked = false;
+    const label = cb.closest('label');
+    if (label) label.classList.remove('checked');
+  });
+
+  document.getElementById('outputCard').style.display = 'none';
+}
+</script>
+</body>
+</html>
