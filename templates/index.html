@@ -388,6 +388,7 @@
     <div class="status-row">
       <div class="spinner" id="spinner"></div>
       <span id="statusMsg" class="status-info"></span>
+      <span id="savedIndicator" style="margin-left:auto;font-size:0.75rem;color:#4ade80;opacity:0;transition:opacity 0.5s;"></span>
     </div>
   </div>
 
@@ -438,7 +439,7 @@
     <div class="tactics-grid">
       <div class="tactic-item">
         <label>Pace</label>
-        <select id="t_pace">
+        <select id="t_pace" onchange="saveState()">
           <option>Very Fast</option><option>Fast</option>
           <option selected>Normal</option>
           <option>Slow</option><option>Very Slow</option>
@@ -447,7 +448,7 @@
       </div>
       <div class="tactic-item">
         <label>Trap</label>
-        <select id="t_trap">
+        <select id="t_trap" onchange="saveState()">
           <option>Always</option><option>Often</option>
           <option selected>Normal</option>
           <option>Sometimes</option><option>Never</option>
@@ -456,7 +457,7 @@
       </div>
       <div class="tactic-item">
         <label>Pressure</label>
-        <select id="t_pressure">
+        <select id="t_pressure" onchange="saveState()">
           <option>Always</option><option>Often</option>
           <option selected>Normal</option>
           <option>Sometimes</option><option>Never</option>
@@ -465,7 +466,7 @@
       </div>
       <div class="tactic-item">
         <label>Offense Focus</label>
-        <select id="t_offense">
+        <select id="t_offense" onchange="saveState()">
           <option>Inside</option>
           <option selected>Balanced</option>
           <option>Outside</option>
@@ -507,7 +508,7 @@ function gradeGte(g, t) { return gradeVal(g) >= gradeVal(t); }
 function gradeLte(g, t) { return gradeVal(g) <= gradeVal(t); }
 
 // ─── Load roster ─────────────────────────────────────────────────────────────
-async function loadRoster() {
+async function loadRoster(restoring = false) {
   const url = document.getElementById('teamSelect').value.trim();
   if (!url) { setStatus('Please select a team.', 'err'); return; }
 
@@ -531,6 +532,8 @@ async function loadRoster() {
     buildPositionRows();
     buildIR();
     buildOptionDropdowns();
+
+    if (restoring) restoreState();
 
   } catch(e) {
     setStatus('Network error — make sure the Flask server is running.', 'err');
@@ -619,6 +622,7 @@ function buildIR() {
     cb.value = p.name;
     cb.addEventListener('change', () => {
       label.classList.toggle('checked', cb.checked);
+      saveState();
     });
 
     label.appendChild(cb);
@@ -718,9 +722,10 @@ function refreshDropdown(pos, slot) {
 function onSlotChange(pos, slot) {
   validateSlot(pos, slot);
   updateStatBadge(pos, slot);
+  saveState();
 }
 
-function onOptChange() {}
+function onOptChange() { saveState(); }
 
 // ─── Bold label toggle ────────────────────────────────────────────────────────
 function toggleBoldLabel(labelId) {
@@ -728,6 +733,7 @@ function toggleBoldLabel(labelId) {
   if (!lbl) return;
   const cb = lbl.querySelector('input[type="checkbox"]');
   lbl.classList.toggle('active', cb && cb.checked);
+  saveState();
 }
 
 function bb(value, boldId) {
@@ -928,7 +934,115 @@ function clearSelections() {
   });
 
   document.getElementById('outputCard').style.display = 'none';
+  localStorage.removeItem(STORAGE_KEY);
 }
+
+// ─── Save / Restore state ─────────────────────────────────────────────────────
+const STORAGE_KEY = 'slnDepthChart';
+
+function saveState() {
+  const state = {};
+  state.team = document.getElementById('teamSelect').value;
+
+  POSITIONS.forEach(pos => {
+    for (let slot = 0; slot < 3; slot++) {
+      const sel  = document.getElementById(`${pos}_${slot}`);
+      const bold = document.getElementById(`bold_${pos}_${slot}`);
+      if (sel)  state[`${pos}_${slot}`]      = sel.value;
+      if (bold) state[`bold_${pos}_${slot}`] = bold.checked;
+    }
+  });
+
+  state.ir = [...document.querySelectorAll('input[name="ir"]:checked')].map(cb => cb.value);
+
+  ['opt1','opt2','opt3'].forEach(id => {
+    const sel  = document.getElementById(id);
+    const bold = document.getElementById(`bold_${id}`);
+    if (sel)  state[id]           = sel.value;
+    if (bold) state[`bold_${id}`] = bold.checked;
+  });
+
+  ['t_pace','t_trap','t_pressure','t_offense'].forEach(id => {
+    const sel  = document.getElementById(id);
+    const bold = document.getElementById(`bold_${id}`);
+    if (sel)  state[id]           = sel.value;
+    if (bold) state[`bold_${id}`] = bold.checked;
+  });
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+  const indicator = document.getElementById('savedIndicator');
+  if (indicator) {
+    indicator.textContent = '✓ Auto-saved';
+    indicator.style.opacity = '1';
+    clearTimeout(indicator._timer);
+    indicator._timer = setTimeout(() => { indicator.style.opacity = '0'; }, 2000);
+  }
+}
+
+function restoreState() {
+  let state;
+  try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return; }
+
+  POSITIONS.forEach(pos => {
+    for (let slot = 0; slot < 3; slot++) {
+      const sel       = document.getElementById(`${pos}_${slot}`);
+      const bold      = document.getElementById(`bold_${pos}_${slot}`);
+      const boldLabel = document.getElementById(`boldlabel_${pos}_${slot}`);
+      if (sel && state[`${pos}_${slot}`]) {
+        sel.value = state[`${pos}_${slot}`];
+        validateSlot(pos, slot);
+        updateStatBadge(pos, slot);
+      }
+      if (bold && state[`bold_${pos}_${slot}`] !== undefined) {
+        bold.checked = state[`bold_${pos}_${slot}`];
+        if (boldLabel) boldLabel.classList.toggle('active', bold.checked);
+      }
+    }
+  });
+
+  if (state.ir && state.ir.length) {
+    document.querySelectorAll('input[name="ir"]').forEach(cb => {
+      if (state.ir.includes(cb.value)) {
+        cb.checked = true;
+        const lbl = cb.closest('label');
+        if (lbl) lbl.classList.add('checked');
+      }
+    });
+  }
+
+  ['opt1','opt2','opt3'].forEach(id => {
+    const sel       = document.getElementById(id);
+    const bold      = document.getElementById(`bold_${id}`);
+    const boldLabel = document.getElementById(`boldlabel_${id}`);
+    if (sel && state[id]) sel.value = state[id];
+    if (bold && state[`bold_${id}`] !== undefined) {
+      bold.checked = state[`bold_${id}`];
+      if (boldLabel) boldLabel.classList.toggle('active', bold.checked);
+    }
+  });
+
+  ['t_pace','t_trap','t_pressure','t_offense'].forEach(id => {
+    const sel       = document.getElementById(id);
+    const bold      = document.getElementById(`bold_${id}`);
+    const boldLabel = document.getElementById(`boldlabel_${id}`);
+    if (sel && state[id]) sel.value = state[id];
+    if (bold && state[`bold_${id}`] !== undefined) {
+      bold.checked = state[`bold_${id}`];
+      if (boldLabel) boldLabel.classList.toggle('active', bold.checked);
+    }
+  });
+}
+
+// ─── Auto-load saved team on page open ───────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  let state;
+  try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return; }
+  if (state.team) {
+    document.getElementById('teamSelect').value = state.team;
+    loadRoster(true);
+  }
+});
 </script>
 </body>
 </html>
