@@ -541,7 +541,7 @@ async function loadRoster(restoring = false) {
     buildIR();
     buildOptionDropdowns();
 
-    if (restoring) restoreState();
+    await restoreState();
 
   } catch(e) {
     setStatus('Network error — make sure the Flask server is running.', 'err');
@@ -952,10 +952,8 @@ function clearSelections() {
 // ─── Save / Restore state ─────────────────────────────────────────────────────
 const STORAGE_KEY = 'slnDepthChart';
 
-function saveState() {
+function buildStateObject() {
   const state = {};
-  state.team = document.getElementById('teamSelect').value;
-
   POSITIONS.forEach(pos => {
     for (let slot = 0; slot < 3; slot++) {
       const sel  = document.getElementById(`${pos}_${slot}`);
@@ -964,24 +962,37 @@ function saveState() {
       if (bold) state[`bold_${pos}_${slot}`] = bold.checked;
     }
   });
-
   state.ir = [...document.querySelectorAll('input[name="ir"]:checked')].map(cb => cb.value);
-
   ['opt1','opt2','opt3'].forEach(id => {
     const sel  = document.getElementById(id);
     const bold = document.getElementById(`bold_${id}`);
     if (sel)  state[id]           = sel.value;
     if (bold) state[`bold_${id}`] = bold.checked;
   });
-
   ['t_pace','t_trap','t_pressure','t_offense'].forEach(id => {
     const sel  = document.getElementById(id);
     const bold = document.getElementById(`bold_${id}`);
     if (sel)  state[id]           = sel.value;
     if (bold) state[`bold_${id}`] = bold.checked;
   });
+  return state;
+}
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function saveState() {
+  const teamUrl = document.getElementById('teamSelect').value;
+  if (!teamUrl) return;
+  const state = buildStateObject();
+
+  // Save to localStorage immediately (per-team key + last-used team)
+  localStorage.setItem('sln_' + teamUrl, JSON.stringify(state));
+  localStorage.setItem('sln_lastTeam', teamUrl);
+
+  // Save to server in background so any device can load it
+  fetch('/save_chart', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ team_url: teamUrl, data: state })
+  }).catch(() => {});
 
   const indicator = document.getElementById('savedIndicator');
   if (indicator) {
@@ -992,9 +1003,32 @@ function saveState() {
   }
 }
 
-function restoreState() {
-  let state;
-  try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return; }
+async function restoreState() {
+  const teamUrl = document.getElementById('teamSelect').value;
+  let state = null;
+
+  // Try server first (cross-device)
+  if (teamUrl) {
+    try {
+      const res = await fetch('/load_chart', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ team_url: teamUrl })
+      });
+      const json = await res.json();
+      if (json.data) state = json.data;
+    } catch(e) {}
+  }
+
+  // Fall back to localStorage
+  if (!state) {
+    try {
+      state = JSON.parse(
+        localStorage.getItem('sln_' + teamUrl) ||
+        localStorage.getItem(STORAGE_KEY) || '{}'
+      );
+    } catch { return; }
+  }
 
   POSITIONS.forEach(pos => {
     for (let slot = 0; slot < 3; slot++) {
@@ -1046,13 +1080,19 @@ function restoreState() {
   });
 }
 
-// ─── Auto-load saved team on page open ───────────────────────────────────────
+// ─── Auto-load last-used team on page open ───────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  let state;
-  try { state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return; }
-  if (state.team) {
-    document.getElementById('teamSelect').value = state.team;
-    loadRoster(true);
+  // Check new per-team key first, fall back to old global key
+  let lastTeam = localStorage.getItem('sln_lastTeam');
+  if (!lastTeam) {
+    try {
+      const old = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      lastTeam = old.team || '';
+    } catch {}
+  }
+  if (lastTeam) {
+    document.getElementById('teamSelect').value = lastTeam;
+    loadRoster();
   }
 });
 </script>

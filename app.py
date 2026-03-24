@@ -2,8 +2,58 @@ from flask import Flask, render_template, request, jsonify
 import requests
 from bs4 import BeautifulSoup
 import re
+import sqlite3
+import json
+import os
 
 app = Flask(__name__)
+
+DB_PATH = os.environ.get('DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'depth_charts.db'))
+
+
+def get_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute('''CREATE TABLE IF NOT EXISTS team_charts
+                    (team_url TEXT PRIMARY KEY, data TEXT,
+                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    conn.commit()
+    return conn
+
+
+@app.route('/save_chart', methods=['POST'])
+def save_chart():
+    body = request.get_json()
+    team_url = (body.get('team_url') or '').strip()
+    data = body.get('data')
+    if not team_url or data is None:
+        return jsonify({'error': 'Missing fields'}), 400
+    try:
+        conn = get_db()
+        conn.execute(
+            'INSERT OR REPLACE INTO team_charts (team_url, data, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
+            (team_url, json.dumps(data))
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/load_chart', methods=['POST'])
+def load_chart():
+    body = request.get_json()
+    team_url = (body.get('team_url') or '').strip()
+    if not team_url:
+        return jsonify({'error': 'Missing team_url'}), 400
+    try:
+        conn = get_db()
+        row = conn.execute('SELECT data FROM team_charts WHERE team_url = ?', (team_url,)).fetchone()
+        conn.close()
+        return jsonify({'data': json.loads(row[0]) if row else None})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Grade scale: index 0 = worst, 12 = best
 GRADE_ORDER = ['F', 'D-', 'D', 'D+', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+']
@@ -226,6 +276,5 @@ def fetch_roster():
 
 
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
