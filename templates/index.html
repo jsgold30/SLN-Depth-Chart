@@ -693,6 +693,9 @@ function refreshDropdown(pos, slot) {
   const eligible = [];
   const ineligible = [];
 
+  const posOrder = {'C':0,'PF':1,'SF':2,'SG':3,'PG':4};
+  const sortByPos = (a, b) => (posOrder[a.pos] ?? 9) - (posOrder[b.pos] ?? 9);
+
   roster.forEach(p => {
     const isElig = slot === 0
       ? p.eligible_starter[pos]
@@ -700,6 +703,9 @@ function refreshDropdown(pos, slot) {
     if (isElig) eligible.push(p);
     else ineligible.push(p);
   });
+
+  eligible.sort(sortByPos);
+  ineligible.sort(sortByPos);
 
   function makeGroup(label, players) {
     const grp = document.createElement('optgroup');
