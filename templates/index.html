@@ -734,6 +734,21 @@ function refreshDropdown(pos, slot) {
 
 // ─── Slot change handler ──────────────────────────────────────────────────────
 function onSlotChange(pos, slot) {
+  // Starter slots: a player can only occupy one starting slot at a time
+  if (slot === 0) {
+    const chosen = document.getElementById(`${pos}_0`).value;
+    if (chosen) {
+      POSITIONS.forEach(otherPos => {
+        if (otherPos === pos) return;
+        const otherSel = document.getElementById(`${otherPos}_0`);
+        if (otherSel && otherSel.value === chosen) {
+          otherSel.value = '';
+          validateSlot(otherPos, 0);
+          updateStatBadge(otherPos, 0);
+        }
+      });
+    }
+  }
   validateSlot(pos, slot);
   updateStatBadge(pos, slot);
   saveState();
