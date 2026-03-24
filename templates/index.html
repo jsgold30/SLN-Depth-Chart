@@ -495,6 +495,7 @@
     </p>
     <div class="output-actions">
       <button class="btn btn-cyan" onclick="copyOutput()">Copy to Clipboard</button>
+      <button class="btn btn-slate" id="shareBtn" onclick="shareOutput()" style="display:none">Share / Export</button>
       <span class="copy-confirm" id="copyConfirm"></span>
     </div>
     <div class="violations-list" id="violationsList"></div>
@@ -889,36 +890,13 @@ function generateDepthChart() {
 }
 
 // ─── Copy output ──────────────────────────────────────────────────────────────
-async function copyOutput() {
+function copyOutput() {
   const box = document.getElementById('outputBox');
-  const text = box.value;
-
-  // Method 1: ClipboardItem with explicit text/plain (best for iOS 13.4+)
-  if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-    try {
-      await navigator.clipboard.write([
-        new ClipboardItem({ 'text/plain': new Blob([text], { type: 'text/plain' }) })
-      ]);
-      showCopyConfirm();
-      return;
-    } catch(e) {}
-  }
-
-  // Method 2: writeText (broad support)
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    try {
-      await navigator.clipboard.writeText(text);
-      showCopyConfirm();
-      return;
-    } catch(e) {}
-  }
-
-  // Method 3: select visible textarea + execCommand (iOS Safari final fallback)
   box.removeAttribute('readonly');
   box.focus();
   box.select();
   box.setSelectionRange(0, 99999);
-  try { document.execCommand('copy'); } catch(e) {}
+  document.execCommand('copy');
   box.setAttribute('readonly', '');
   showCopyConfirm();
 }
