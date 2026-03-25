@@ -330,32 +330,34 @@ def fetch_salary_roster():
             if not all_rows:
                 continue
 
-            # Find header row containing 'name' and 'year 1'.
-            # Use find_all(['th','td']) for BOTH header and data rows so indices
-            # are always consistent regardless of whether cells are th or td.
+            # Find the header row that contains 'year 1'.
+            # Only year1_idx is derived from the header — player names are
+            # read from the <a> tag in each data row, which is always reliable.
             header_row_index = None
-            col_names = []
+            year1_idx = None
             for i, row in enumerate(all_rows):
-                all_cells = [c.get_text(strip=True).lower()
-                             for c in row.find_all(['th', 'td'])]
-                if 'name' in all_cells and 'year 1' in all_cells:
-                    col_names = all_cells
+                cells = [c.get_text(strip=True).lower()
+                         for c in row.find_all(['th', 'td'])]
+                if 'year 1' in cells:
+                    year1_idx = cells.index('year 1')
                     header_row_index = i
                     break
 
             if header_row_index is None:
                 continue
 
-            name_idx  = col_names.index('name')
-            year1_idx = col_names.index('year 1')
-
             rows = all_rows[header_row_index + 1:]
             for row in rows:
+                # Player names on SLN roster pages are always hyperlinks.
+                # Using the <a> tag avoids all column-index guesswork for names.
+                name_tag = row.find('a')
+                if not name_tag:
+                    continue
+                name = name_tag.get_text(strip=True)
+                if not name:
+                    continue
                 cells = [c.get_text(strip=True) for c in row.find_all(['th', 'td'])]
                 if len(cells) <= year1_idx:
-                    continue
-                name = cells[name_idx].strip()
-                if not name:
                     continue
                 salary = parse_salary(cells[year1_idx])
                 players.append({'name': name, 'salary': salary})
@@ -367,14 +369,7 @@ def fetch_salary_roster():
             return jsonify({'error': 'Could not find salary data (Year 1 column) on this page.'}), 400
 
         total_salary = sum(p['salary'] for p in players)
-        return jsonify({
-            'players': players,
-            'team_name': team_name,
-            'total_salary': total_salary,
-            'debug_col_names': col_names,
-            'debug_name_idx': name_idx,
-            'debug_year1_idx': year1_idx
-        })
+        return jsonify({'players': players, 'team_name': team_name, 'total_salary': total_salary})
 
     except requests.exceptions.Timeout:
         return jsonify({'error': 'Request timed out.'}), 400
