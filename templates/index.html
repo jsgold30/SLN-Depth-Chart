@@ -2007,6 +2007,25 @@ function validateTradeMatch() {
     checks.push(`✓ Team B: ${playersB.length} player${playersB.length > 1 ? 's' : ''} (max 5)`);
   }
 
+  // ── Rule: 15% salary matching (always applies, blocks the trade) ─────────
+  if (playersA.length > 0 && playersB.length > 0) {
+    const minSal      = Math.min(salA, salB);
+    const maxSal      = Math.max(salA, salB);
+    const maxAllowed  = Math.round(minSal * 1.15);
+    const lesserTeam  = salA <= salB ? 'Team A' : 'Team B';
+    const greaterTeam = salA <= salB ? 'Team B' : 'Team A';
+
+    if (maxSal <= maxAllowed) {
+      checks.push(
+        `✓ Salary match OK — ${lesserTeam} sends ${fmtSal(minSal)} × 1.15 = ${fmtSal(maxAllowed)} ≥ ${greaterTeam}'s ${fmtSal(maxSal)}`
+      );
+    } else {
+      errors.push(
+        `✗ Salary mismatch — ${lesserTeam} sends ${fmtSal(minSal)} × 1.15 = ${fmtSal(maxAllowed)}, but ${greaterTeam} sends ${fmtSal(maxSal)} (over by ${fmtSal(maxSal - maxAllowed)})`
+      );
+    }
+  }
+
   // ── Cap status (informational only — does not block the trade) ───────────
   if (playersA.length > 0 && playersB.length > 0) {
     if (overCapA || overCapB) {
