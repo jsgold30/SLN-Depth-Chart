@@ -835,9 +835,10 @@
 
     </div><!-- /tm-columns -->
 
-    <!-- Validate button -->
-    <div style="text-align:center;margin-top:16px;">
+    <!-- Validate / Clear buttons -->
+    <div style="text-align:center;margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
       <button class="btn btn-green" onclick="validateTradeMatch()" style="padding:10px 32px;">Check Trade Validity</button>
+      <button class="btn btn-slate" onclick="clearTradeMachine()" style="padding:10px 24px;">✕ Clear</button>
     </div>
 
     <!-- Result panel -->
@@ -1881,6 +1882,21 @@ function addTradePlayer(player) {
 // ─── Trade Machine ────────────────────────────────────────────────────────────
 let tmRosterA = [], tmRosterB = [];
 let tmTotalA = 0, tmTotalB = 0;
+
+function clearTradeMachine() {
+  ['A','B'].forEach(side => {
+    // Uncheck all player checkboxes and remove selected highlight
+    const container = document.getElementById(`tmPlayerList${side}`);
+    container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.checked = false;
+      cb.closest('label')?.classList.remove('selected');
+    });
+    // Reset sending total
+    tmUpdateSending(side);
+  });
+  // Clear result panel
+  document.getElementById('tmResult').innerHTML = '';
+}
 
 function fmtSal(n) {
   if (!n) return '$0';
