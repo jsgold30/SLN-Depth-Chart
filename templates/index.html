@@ -1497,6 +1497,7 @@ function removePlayerFromRoster(name) {
   refreshAllDropdowns();
   enforceIRLimit();
   buildRosterTagList();
+  buildTradePlayerList(); // re-enable removed player in trade list if they're on that team
 }
 
 async function loadTradeTeam() {
