@@ -2136,24 +2136,25 @@ function tmGetSelected(side) {
 }
 
 function tmUpdateSending(side) {
-  const salA = tmGetSelected('A').reduce((s, p) => s + p.salary, 0);
-  const salB = tmGetSelected('B').reduce((s, p) => s + p.salary, 0);
+  // Sending = selected player salaries + vet min salaries (all part of the trade)
+  const salA = tmGetSelected('A').reduce((s, p) => s + p.salary, 0) + tmGetVetMinTotal('A');
+  const salB = tmGetSelected('B').reduce((s, p) => s + p.salary, 0) + tmGetVetMinTotal('B');
 
   document.getElementById('tmSendingA').textContent = fmtSal(salA);
   document.getElementById('tmSendingB').textContent = fmtSal(salB);
 
-  // Cap after trade = (current total + vet mins) - salary going out + salary coming in
-  function capAfterEl(elId, currentTotal, vetMinTotal, outSal, inSal) {
+  // Cap after trade = current total - salary going out + salary coming in
+  function capAfterEl(elId, currentTotal, outSal, inSal) {
     const el = document.getElementById(elId);
     if (!currentTotal) { el.textContent = '—'; el.style.color = '#94a3b8'; return; }
-    const adjusted = currentTotal + vetMinTotal - outSal + inSal;
+    const adjusted = currentTotal - outSal + inSal;
     const overCap  = adjusted > TM_HARD_CAP;
     el.textContent = fmtSal(adjusted) + (overCap ? ' ● Over' : ' ● Under');
     el.style.color  = overCap ? '#f87171' : '#4ade80';
   }
 
-  capAfterEl('tmCapAfterA', tmTotalA, tmGetVetMinTotal('A'), salA, salB);
-  capAfterEl('tmCapAfterB', tmTotalB, tmGetVetMinTotal('B'), salB, salA);
+  capAfterEl('tmCapAfterA', tmTotalA, salA, salB);
+  capAfterEl('tmCapAfterB', tmTotalB, salB, salA);
 }
 
 function validateTradeMatch() {
@@ -2166,35 +2167,43 @@ function validateTradeMatch() {
     return;
   }
 
-  const playersA = tmGetSelected('A');
-  const playersB = tmGetSelected('B');
-  const salA     = playersA.reduce((s, p) => s + p.salary, 0);
-  const salB     = playersB.reduce((s, p) => s + p.salary, 0);
-  const hardCap  = TM_HARD_CAP;
-  const overCapA = tmTotalA > hardCap;
-  const overCapB = tmTotalB > hardCap;
+  const playersA  = tmGetSelected('A');
+  const playersB  = tmGetSelected('B');
+  const vetMinA   = tmGetVetMinTotal('A');
+  const vetMinB   = tmGetVetMinTotal('B');
+  const vetMinCntA = document.querySelectorAll('#tmVetMinListA select').length;
+  const vetMinCntB = document.querySelectorAll('#tmVetMinListB select').length;
+  const salA      = playersA.reduce((s, p) => s + p.salary, 0) + vetMinA;
+  const salB      = playersB.reduce((s, p) => s + p.salary, 0) + vetMinB;
+  const hardCap   = TM_HARD_CAP;
+  const overCapA  = tmTotalA > hardCap;
+  const overCapB  = tmTotalB > hardCap;
 
   const errors = [];
   const checks = [];
 
   // ── Rule: At least 1 player per side ──────────────────────────────────────
-  if (!playersA.length) { errors.push('Select at least one player from Team A.'); }
-  if (!playersB.length) { errors.push('Select at least one player from Team B.'); }
+  if (!playersA.length && !vetMinCntA) { errors.push('Select at least one player from Team A.'); }
+  if (!playersB.length && !vetMinCntB) { errors.push('Select at least one player from Team B.'); }
 
   // ── Rule: Max 5 players per side ──────────────────────────────────────────
   if (playersA.length > 5) {
     errors.push(`⚠ Team A is sending ${playersA.length} players — max is 5 per side. Split into separate trades.`);
-  } else if (playersA.length > 0) {
-    checks.push(`✓ Team A: ${playersA.length} player${playersA.length > 1 ? 's' : ''} (max 5)`);
+  } else if (playersA.length > 0 || vetMinCntA > 0) {
+    const vmNote = vetMinCntA > 0 ? ` + ${vetMinCntA} vet min${vetMinCntA > 1 ? 's' : ''}` : '';
+    checks.push(`✓ Team A: ${playersA.length} player${playersA.length !== 1 ? 's' : ''}${vmNote} (max 5)`);
   }
   if (playersB.length > 5) {
     errors.push(`⚠ Team B is sending ${playersB.length} players — max is 5 per side. Split into separate trades.`);
-  } else if (playersB.length > 0) {
-    checks.push(`✓ Team B: ${playersB.length} player${playersB.length > 1 ? 's' : ''} (max 5)`);
+  } else if (playersB.length > 0 || vetMinCntB > 0) {
+    const vmNote = vetMinCntB > 0 ? ` + ${vetMinCntB} vet min${vetMinCntB > 1 ? 's' : ''}` : '';
+    checks.push(`✓ Team B: ${playersB.length} player${playersB.length !== 1 ? 's' : ''}${vmNote} (max 5)`);
   }
 
   // ── Rule: 15% salary matching (always applies, blocks the trade) ─────────
-  if (playersA.length > 0 && playersB.length > 0) {
+  const hasA = playersA.length > 0 || vetMinCntA > 0;
+  const hasB = playersB.length > 0 || vetMinCntB > 0;
+  if (hasA && hasB) {
     const minSal      = Math.min(salA, salB);
     const maxSal      = Math.max(salA, salB);
     const maxAllowed  = Math.round(minSal * 1.15);
@@ -2215,7 +2224,7 @@ function validateTradeMatch() {
   }
 
   // ── Cap status (informational only — does not block the trade) ───────────
-  if (playersA.length > 0 && playersB.length > 0) {
+  if (hasA && hasB) {
     if (overCapA || overCapB) {
       const whichOver = overCapA && overCapB ? 'Both teams are'
                       : overCapA ? 'Team A is' : 'Team B is';
@@ -2226,7 +2235,7 @@ function validateTradeMatch() {
   }
 
   // ── Build result HTML ──────────────────────────────────────────────────────
-  const passed = errors.length === 0 && playersA.length > 0 && playersB.length > 0;
+  const passed = errors.length === 0 && hasA && hasB;
   const bg     = passed ? 'rgba(74,222,128,0.05)' : 'rgba(248,113,113,0.05)';
   const border = passed ? '#22c55e44' : '#ef444444';
 
@@ -2244,12 +2253,20 @@ function validateTradeMatch() {
   }
 
   // Summary block
-  if (playersA.length || playersB.length) {
+  if (hasA || hasB) {
     html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid #334155;font-size:0.78rem;">`;
     html += `<span style="color:#94a3b8;font-weight:700;">Trade Summary</span><br>`;
-    if (playersA.length) html += `<span style="color:#7dd3fc;">Team A gives:</span> <span style="color:#cbd5e1;">${playersA.map(p => p.name).join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salA)})</span><br>`;
-    if (playersB.length) html += `<span style="color:#7dd3fc;">Team B gives:</span> <span style="color:#cbd5e1;">${playersB.map(p => p.name).join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salB)})</span><br>`;
-    if (playersA.length && playersB.length) {
+    if (hasA) {
+      const namesA = playersA.map(p => p.name);
+      if (vetMinCntA > 0) namesA.push(`${vetMinCntA} vet min${vetMinCntA > 1 ? 's' : ''} (${fmtSal(vetMinA)})`);
+      html += `<span style="color:#7dd3fc;">Team A gives:</span> <span style="color:#cbd5e1;">${namesA.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salA)} total)</span><br>`;
+    }
+    if (hasB) {
+      const namesB = playersB.map(p => p.name);
+      if (vetMinCntB > 0) namesB.push(`${vetMinCntB} vet min${vetMinCntB > 1 ? 's' : ''} (${fmtSal(vetMinB)})`);
+      html += `<span style="color:#7dd3fc;">Team B gives:</span> <span style="color:#cbd5e1;">${namesB.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salB)} total)</span><br>`;
+    }
+    if (hasA && hasB) {
       const diff = Math.abs(salA - salB);
       html += `<span style="color:#64748b;">Salary difference: ${fmtSal(diff)}</span>`;
     }
