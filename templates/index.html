@@ -492,12 +492,9 @@
 <body>
 <div class="container">
 
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;">
-    <div>
-      <h1>Depth Chart Builder</h1>
-      <p class="subtitle">Sim League Nirvana · Basketball</p>
-    </div>
-    <span style="font-size:0.68rem;color:#475569;margin-top:6px;">v1.9</span>
+  <div style="text-align:center;">
+    <h1>Depth Chart Builder</h1>
+    <p class="subtitle">Sim League Nirvana · Basketball</p>
   </div>
 
   <!-- Tab Navigation -->
@@ -842,6 +839,7 @@
   </div><!-- /tabTrade -->
 
 </div><!-- /container -->
+<div style="text-align:right;padding:8px 16px;font-size:0.68rem;color:#334155;">v2.0</div>
 
 <script>
 // ─── Tab switching ────────────────────────────────────────────────────────────
@@ -1853,10 +1851,10 @@ function fmtSal(n) {
   return '$' + Math.round(n).toLocaleString();
 }
 
-const TM_SOFT_CAP = 50_000_000;
+const TM_HARD_CAP = 85_000_000;
 
 function tmParseSoftCap() {
-  return TM_SOFT_CAP;
+  return TM_HARD_CAP;
 }
 
 async function loadTMTeam(side) {
@@ -1884,13 +1882,11 @@ async function loadTMTeam(side) {
 
     buildTMPlayerList(side);
 
-    const cap = tmParseSoftCap();
     const total = side === 'A' ? tmTotalA : tmTotalB;
-    const overCap = cap > 0 && total > cap;
-    const capBadge = cap > 0
-      ? (overCap ? ' <span style="color:#f87171;font-weight:700;">● Over Cap</span>'
-                 : ' <span style="color:#4ade80;font-weight:700;">● Under Cap</span>')
-      : '';
+    const overCap = total > TM_HARD_CAP;
+    const capBadge = overCap
+      ? ' <span style="color:#f87171;font-weight:700;">● Over Cap</span>'
+      : ' <span style="color:#4ade80;font-weight:700;">● Under Cap</span>';
     statusEl.innerHTML = `✓ ${data.team_name} · Total: ${fmtSal(total)}${capBadge}`;
   } catch(e) {
     statusEl.textContent = 'Network error loading team.';
@@ -1965,7 +1961,7 @@ function tmUpdateSending(side) {
     const el = document.getElementById(elId);
     if (!currentTotal) { el.textContent = '—'; el.style.color = '#94a3b8'; return; }
     const adjusted = currentTotal - outSal + inSal;
-    const overCap  = adjusted > TM_SOFT_CAP;
+    const overCap  = adjusted > TM_HARD_CAP;
     el.textContent = fmtSal(adjusted) + (overCap ? ' ● Over' : ' ● Under');
     el.style.color  = overCap ? '#f87171' : '#4ade80';
   }
@@ -1988,9 +1984,9 @@ function validateTradeMatch() {
   const playersB = tmGetSelected('B');
   const salA     = playersA.reduce((s, p) => s + p.salary, 0);
   const salB     = playersB.reduce((s, p) => s + p.salary, 0);
-  const softCap  = tmParseSoftCap();
-  const overCapA = softCap > 0 && tmTotalA > softCap;
-  const overCapB = softCap > 0 && tmTotalB > softCap;
+  const hardCap  = TM_HARD_CAP;
+  const overCapA = tmTotalA > hardCap;
+  const overCapB = tmTotalB > hardCap;
 
   const errors = [];
   const checks = [];
@@ -2011,28 +2007,14 @@ function validateTradeMatch() {
     checks.push(`✓ Team B: ${playersB.length} player${playersB.length > 1 ? 's' : ''} (max 5)`);
   }
 
-  // ── Rule: Salary matching (if either team over soft cap) ──────────────────
+  // ── Cap status (informational only — does not block the trade) ───────────
   if (playersA.length > 0 && playersB.length > 0) {
     if (overCapA || overCapB) {
       const whichOver = overCapA && overCapB ? 'Both teams are'
                       : overCapA ? 'Team A is' : 'Team B is';
-      const minSal     = Math.min(salA, salB);
-      const maxSal     = Math.max(salA, salB);
-      const maxAllowed = Math.round(minSal * 1.15);
-      const lesserTeam = salA <= salB ? 'Team A' : 'Team B';
-      const greaterTeam = salA <= salB ? 'Team B' : 'Team A';
-
-      if (maxSal <= maxAllowed) {
-        checks.push(
-          `✓ Salary match OK — ${whichOver} over cap. ${lesserTeam} sends ${fmtSal(minSal)} × 1.15 = ${fmtSal(maxAllowed)} ≥ ${greaterTeam}'s ${fmtSal(maxSal)}`
-        );
-      } else {
-        errors.push(
-          `✗ Salary mismatch — ${whichOver} over cap. ${lesserTeam} sends ${fmtSal(minSal)} × 1.15 = ${fmtSal(maxAllowed)}, but ${greaterTeam} sends ${fmtSal(maxSal)} (over limit by ${fmtSal(maxSal - maxAllowed)})`
-        );
-      }
+      checks.push(`⚠ ${whichOver} over the hard cap (${fmtSal(hardCap)}) — trade can still be processed`);
     } else {
-      checks.push(`✓ Both teams under soft cap (${fmtSal(softCap)}) — salary matching not required`);
+      checks.push(`✓ Both teams under the hard cap (${fmtSal(hardCap)})`);
     }
   }
 
