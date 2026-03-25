@@ -643,16 +643,16 @@
     <div class="card-title">Options</div>
     <div class="options-col" id="optionsContainer">
       <div class="option-row">
-        <select id="opt1" onchange="onOptChange()"><option value="">-- Option 1 (optional) --</option></select>
-        <label class="bold-check" id="boldlabel_opt1"><input type="checkbox" id="bold_opt1" onchange="toggleBoldLabel('boldlabel_opt1')"> bold</label>
+        <select id="opt1" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 1 (optional) --</option></select>
+        <label class="bold-check" id="boldlabel_opt1"><input type="checkbox" id="bold_opt1" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt1')"> bold</label>
       </div>
       <div class="option-row">
-        <select id="opt2" onchange="onOptChange()"><option value="">-- Option 2 (optional) --</option></select>
-        <label class="bold-check" id="boldlabel_opt2"><input type="checkbox" id="bold_opt2" onchange="toggleBoldLabel('boldlabel_opt2')"> bold</label>
+        <select id="opt2" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 2 (optional) --</option></select>
+        <label class="bold-check" id="boldlabel_opt2"><input type="checkbox" id="bold_opt2" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt2')"> bold</label>
       </div>
       <div class="option-row">
-        <select id="opt3" onchange="onOptChange()"><option value="">-- Option 3 (optional) --</option></select>
-        <label class="bold-check" id="boldlabel_opt3"><input type="checkbox" id="bold_opt3" onchange="toggleBoldLabel('boldlabel_opt3')"> bold</label>
+        <select id="opt3" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 3 (optional) --</option></select>
+        <label class="bold-check" id="boldlabel_opt3"><input type="checkbox" id="bold_opt3" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt3')"> bold</label>
       </div>
     </div>
   </div>
@@ -663,39 +663,39 @@
     <div class="tactics-grid">
       <div class="tactic-item">
         <label>Pace</label>
-        <select id="t_pace" onchange="saveState()">
+        <select id="t_pace" onmousedown="pushUndo()" onchange="saveState()">
           <option>Very Fast</option><option>Fast</option>
           <option selected>Normal</option>
           <option>Slow</option><option>Very Slow</option>
         </select>
-        <label class="bold-check tactic-bold" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onchange="toggleBoldLabel('boldlabel_t_pace')"> bold</label>
+        <label class="bold-check tactic-bold" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')"> bold</label>
       </div>
       <div class="tactic-item">
         <label>Trap</label>
-        <select id="t_trap" onchange="saveState()">
+        <select id="t_trap" onmousedown="pushUndo()" onchange="saveState()">
           <option>Always</option><option>Often</option>
           <option selected>Normal</option>
           <option>Sometimes</option><option>Never</option>
         </select>
-        <label class="bold-check tactic-bold" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onchange="toggleBoldLabel('boldlabel_t_trap')"> bold</label>
+        <label class="bold-check tactic-bold" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')"> bold</label>
       </div>
       <div class="tactic-item">
         <label>Pressure</label>
-        <select id="t_pressure" onchange="saveState()">
+        <select id="t_pressure" onmousedown="pushUndo()" onchange="saveState()">
           <option>Always</option><option>Often</option>
           <option selected>Normal</option>
           <option>Sometimes</option><option>Never</option>
         </select>
-        <label class="bold-check tactic-bold" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onchange="toggleBoldLabel('boldlabel_t_pressure')"> bold</label>
+        <label class="bold-check tactic-bold" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')"> bold</label>
       </div>
       <div class="tactic-item">
         <label>Offense Focus</label>
-        <select id="t_offense" onchange="saveState()">
+        <select id="t_offense" onmousedown="pushUndo()" onchange="saveState()">
           <option>Inside</option>
           <option selected>Balanced</option>
           <option>Outside</option>
         </select>
-        <label class="bold-check tactic-bold" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onchange="toggleBoldLabel('boldlabel_t_offense')"> bold</label>
+        <label class="bold-check tactic-bold" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')"> bold</label>
       </div>
     </div>
   </div>
@@ -870,8 +870,11 @@ let lastGeneratedState = null;
 let undoStack = [];
 
 function pushUndo() {
-  undoStack.push(buildStateObject());
-  if (undoStack.length > 50) undoStack.shift(); // cap history at 50
+  const snapshot = buildStateObject();
+  // Skip if identical to the top of the stack (mousedown fired but nothing changed)
+  if (undoStack.length && JSON.stringify(undoStack[undoStack.length - 1]) === JSON.stringify(snapshot)) return;
+  undoStack.push(snapshot);
+  if (undoStack.length > 50) undoStack.shift();
   const btn = document.getElementById('undoBtn');
   if (btn) btn.disabled = false;
 }
@@ -966,6 +969,7 @@ function buildPositionRows() {
 
       const sel = document.createElement('select');
       sel.id = `${pos}_${slot}`;
+      sel.addEventListener('mousedown', () => pushUndo()); // capture state before change
       sel.addEventListener('change', () => onSlotChange(pos, slot));
       wrap.appendChild(sel);
 
@@ -985,6 +989,7 @@ function buildPositionRows() {
       const boldCb = document.createElement('input');
       boldCb.type = 'checkbox';
       boldCb.id = `bold_${pos}_${slot}`;
+      boldCb.addEventListener('mousedown', () => pushUndo());
       boldCb.addEventListener('change', () => toggleBoldLabel(`boldlabel_${pos}_${slot}`));
       boldLabel.appendChild(boldCb);
       boldLabel.appendChild(document.createTextNode(' bold'));
@@ -1015,6 +1020,7 @@ function buildIR() {
     cb.type = 'checkbox';
     cb.name = 'ir';
     cb.value = p.name;
+    cb.addEventListener('mousedown', () => pushUndo());
     cb.addEventListener('change', () => {
       label.classList.toggle('checked', cb.checked);
       if (cb.checked) {
@@ -1164,7 +1170,6 @@ function refreshDropdown(pos, slot) {
 
 // ─── Slot change handler ──────────────────────────────────────────────────────
 function onSlotChange(pos, slot) {
-  pushUndo();
   // Starter slots: a player can only occupy one starting slot at a time
   if (slot === 0) {
     const chosen = document.getElementById(`${pos}_0`).value;
