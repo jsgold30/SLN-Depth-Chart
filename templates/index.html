@@ -89,8 +89,14 @@
     .btn-lg { font-size: 1rem; padding: 13px 36px; }
 
     .status-row {
-      display: flex; align-items: center; gap: 10px;
-      margin-top: 10px; min-height: 22px;
+      display: flex; flex-direction: column; gap: 6px;
+      margin-top: 10px;
+    }
+    .status-row-top {
+      display: flex; align-items: center; gap: 8px; min-height: 22px;
+    }
+    .status-row-btns {
+      display: flex; gap: 8px; flex-wrap: wrap;
     }
     .status-ok   { color: #4ade80; font-size: 0.82rem; }
     .status-err  { color: #f87171; font-size: 0.82rem; }
@@ -545,13 +551,17 @@
       <button class="btn btn-cyan" onclick="loadRoster()">Load Roster</button>
     </div>
     <div class="status-row">
-      <div class="spinner" id="spinner"></div>
-      <span id="statusMsg" class="status-info"></span>
-      <button class="btn btn-slate" onclick="randomizeDepthChart()" style="margin-left:auto;font-size:0.72rem;padding:4px 10px;">Randomize</button>
-      <button class="btn btn-green" onclick="optimizeDepthChart()" style="font-size:0.72rem;padding:4px 10px;">Optimize</button>
-      <button class="btn btn-slate" id="undoBtn" onclick="undoLast()" disabled style="font-size:0.72rem;padding:4px 10px;">↩ Undo</button>
-      <button class="btn btn-slate" id="tradeModeBtn" onclick="toggleTradePanel()" style="display:none;font-size:0.72rem;padding:4px 10px;">✏ Trade Mode</button>
-      <span id="savedIndicator" style="font-size:0.75rem;color:#4ade80;opacity:0;transition:opacity 0.5s;"></span>
+      <div class="status-row-top">
+        <div class="spinner" id="spinner"></div>
+        <span id="statusMsg" class="status-info"></span>
+        <span id="savedIndicator" style="font-size:0.75rem;color:#4ade80;opacity:0;transition:opacity 0.5s;margin-left:auto;"></span>
+      </div>
+      <div class="status-row-btns">
+        <button class="btn btn-slate" id="undoBtn" onclick="undoLast()" disabled style="font-size:0.72rem;padding:4px 10px;">↩ Undo</button>
+        <button class="btn btn-slate" id="tradeModeBtn" onclick="toggleTradePanel()" style="display:none;font-size:0.72rem;padding:4px 10px;">✏ Trade Mode</button>
+        <button class="btn btn-slate" onclick="randomizeDepthChart()" style="font-size:0.72rem;padding:4px 10px;">Randomize</button>
+        <button class="btn btn-green" onclick="optimizeDepthChart()" style="font-size:0.72rem;padding:4px 10px;">Optimize</button>
+      </div>
     </div>
 
     <!-- ── TRADE EDITOR PANEL ── -->
