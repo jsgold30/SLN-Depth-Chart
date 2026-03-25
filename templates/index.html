@@ -640,6 +640,12 @@ async function loadRoster(restoring = false) {
     refreshAllDropdowns();
     enforceIRLimit();
 
+    // If trade panel is open, refresh it for the new roster
+    if (document.getElementById('tradePanel').classList.contains('open')) {
+      buildRosterTagList();
+      buildTradePlayerList(); // re-grey any added players that are now on this roster
+    }
+
   } catch(e) {
     setStatus('Network error — make sure the Flask server is running.', 'err');
   } finally {
