@@ -478,12 +478,9 @@
           <option value="https://www.simleaguenirvana.com/rosters/roster29.htm">Seattle SuperSonics</option>
         </select>
         <button class="btn btn-slate" onclick="loadTradeTeam()" style="white-space:nowrap;">Load Team</button>
-        <select id="tradePlayerSelect" style="flex:1;min-width:140px;" disabled>
-          <option value="">-- Select Player --</option>
-        </select>
-        <button class="btn btn-cyan" onclick="addTradePlayer()" style="white-space:nowrap;">Add Player</button>
       </div>
       <div id="tradeStatus" style="font-size:0.78rem;color:#94a3b8;margin-top:6px;min-height:18px;"></div>
+      <div id="tradePlayerList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
     </div>
   </div>
 
@@ -1501,7 +1498,7 @@ async function loadTradeTeam() {
   if (!url) { document.getElementById('tradeStatus').textContent = 'Select a team first.'; return; }
 
   document.getElementById('tradeStatus').textContent = 'Loading…';
-  document.getElementById('tradePlayerSelect').disabled = true;
+  document.getElementById('tradePlayerList').innerHTML = '';
 
   try {
     const res  = await fetch('/fetch_roster', {
@@ -1513,38 +1510,43 @@ async function loadTradeTeam() {
     if (data.error) { document.getElementById('tradeStatus').textContent = data.error; return; }
 
     tradeRoster = data.players;
-    const sel = document.getElementById('tradePlayerSelect');
-    sel.innerHTML = '<option value="">-- Select Player --</option>';
-
-    const posOrder = {'C':0,'PF':1,'SF':2,'SG':3,'PG':4};
-    [...tradeRoster]
-      .sort((a,b) => (posOrder[a.pos]??9) - (posOrder[b.pos]??9))
-      .forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.name;
-        opt.textContent = `${p.name} (${p.pos})`;
-        opt.dataset.player = JSON.stringify(p);
-        sel.appendChild(opt);
-      });
-
-    sel.disabled = false;
-    document.getElementById('tradeStatus').textContent = `✓ ${data.team_name} — ${tradeRoster.length} players loaded`;
+    document.getElementById('tradeStatus').textContent = `✓ ${data.team_name} — click a player to add them`;
+    buildTradePlayerList();
   } catch(e) {
     document.getElementById('tradeStatus').textContent = 'Error loading team roster.';
   }
 }
 
-function addTradePlayer() {
-  const sel = document.getElementById('tradePlayerSelect');
-  if (!sel.value) { document.getElementById('tradeStatus').textContent = 'Select a player first.'; return; }
+function buildTradePlayerList() {
+  const container = document.getElementById('tradePlayerList');
+  container.innerHTML = '';
+  const posOrder = {'C':0,'PF':1,'SF':2,'SG':3,'PG':4};
 
-  const opt    = sel.options[sel.selectedIndex];
-  const player = JSON.parse(opt.dataset.player);
+  [...tradeRoster]
+    .sort((a,b) => (posOrder[a.pos]??9) - (posOrder[b.pos]??9))
+    .forEach(p => {
+      const alreadyOnRoster = !!roster.find(r => r.name === p.name);
+      const tag = document.createElement('div');
+      tag.className = 'roster-tag';
+      tag.style.cursor = alreadyOnRoster ? 'default' : 'pointer';
+      tag.style.opacity = alreadyOnRoster ? '0.35' : '';
+      tag.style.borderColor = alreadyOnRoster ? '#334155' : '';
+      tag.title = alreadyOnRoster ? 'Already on roster' : `Add ${p.name}`;
+      tag.innerHTML = `<span>${p.name} (${p.pos})</span>`;
 
-  if (roster.find(p => p.name === player.name)) {
-    document.getElementById('tradeStatus').textContent = `${player.name} is already on this roster.`;
-    return;
-  }
+      if (!alreadyOnRoster) {
+        const plus = document.createElement('span');
+        plus.textContent = '+';
+        plus.style.cssText = 'color:#4ade80;font-size:1.1rem;line-height:1;';
+        tag.appendChild(plus);
+        tag.addEventListener('click', () => addTradePlayer(p));
+      }
+      container.appendChild(tag);
+    });
+}
+
+function addTradePlayer(player) {
+  if (roster.find(p => p.name === player.name)) return;
 
   roster.push(player);
   buildIR();
@@ -1552,9 +1554,9 @@ function addTradePlayer() {
   refreshAllDropdowns();
   enforceIRLimit();
   buildRosterTagList();
+  buildTradePlayerList(); // refresh to grey out the added player
 
   document.getElementById('tradeStatus').textContent = `✓ ${player.name} (${player.pos}) added to roster.`;
-  sel.value = '';
 }
 
 // ─── Auto-load last-used team on page open ───────────────────────────────────
