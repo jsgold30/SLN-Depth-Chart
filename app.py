@@ -289,6 +289,96 @@ def fetch_roster():
         return jsonify({'error': f'Error parsing roster: {str(e)}'}), 500
 
 
+def parse_salary(salary_str):
+    """Parse salary string like '$2,863,892' to integer."""
+    if not salary_str:
+        return 0
+    clean = re.sub(r'[$,\s]', '', str(salary_str))
+    try:
+        return int(float(clean))
+    except (ValueError, TypeError):
+        return 0
+
+
+@app.route('/fetch_salary_roster', methods=['POST'])
+def fetch_salary_roster():
+    url = request.json.get('url', '').strip()
+    if not url:
+        return jsonify({'error': 'No URL provided'}), 400
+
+    try:
+        headers = {
+            'User-Agent': (
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/120.0.0.0 Safari/537.36'
+            )
+        }
+        resp = requests.get(url, timeout=15, headers=headers)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, 'html.parser')
+
+        team_name = ''
+        title_tag = soup.find('title')
+        if title_tag:
+            team_name = title_tag.get_text(strip=True)
+
+        players = []
+
+        for table in soup.find_all('table'):
+            all_rows = table.find_all('tr')
+            if not all_rows:
+                continue
+
+            # Find header row containing 'name' and 'year 1'
+            header_row_index = None
+            col_names = []
+            for i, row in enumerate(all_rows):
+                candidate = [
+                    c.get_text(strip=True).lower()
+                    for c in row.find_all(['th', 'td'])
+                ]
+                if 'name' in candidate and 'year 1' in candidate:
+                    col_names = candidate
+                    header_row_index = i
+                    break
+
+            if header_row_index is None:
+                continue
+
+            name_idx  = col_names.index('name')
+            year1_idx = col_names.index('year 1')
+            pos_idx   = col_names.index('pos') if 'pos' in col_names else None
+
+            rows = all_rows[header_row_index + 1:]
+            for row in rows:
+                cells = [td.get_text(strip=True) for td in row.find_all('td')]
+                if len(cells) <= year1_idx:
+                    continue
+                name = cells[name_idx].strip()
+                if not name:
+                    continue
+                pos    = cells[pos_idx].strip().upper() if pos_idx is not None and len(cells) > pos_idx else ''
+                salary = parse_salary(cells[year1_idx])
+                players.append({'name': name, 'pos': pos, 'salary': salary})
+
+            if players:
+                break
+
+        if not players:
+            return jsonify({'error': 'Could not find salary data (Year 1 column) on this page.'}), 400
+
+        total_salary = sum(p['salary'] for p in players)
+        return jsonify({'players': players, 'team_name': team_name, 'total_salary': total_salary})
+
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Request timed out.'}), 400
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Failed to fetch page: {str(e)}'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Error parsing salary data: {str(e)}'}), 500
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)

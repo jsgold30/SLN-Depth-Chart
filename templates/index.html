@@ -325,6 +325,96 @@
       font-style: italic;
     }
 
+    /* ── Tabs ── */
+    .tab-nav {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 20px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 9px 12px;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      background: transparent;
+      color: #475569;
+      transition: background 0.15s, color 0.15s;
+    }
+    .tab-btn:hover { color: #94a3b8; }
+    .tab-btn.active {
+      background: #0f172a;
+      color: #38bdf8;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Trade Machine ── */
+    .tm-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 4px;
+    }
+    .tm-side {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .tm-player-list {
+      max-height: 260px;
+      overflow-y: auto;
+      margin-top: 4px;
+    }
+    .tm-player-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 6px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      user-select: none;
+      transition: background 0.1s;
+    }
+    .tm-player-row:hover { background: #1e293b; }
+    .tm-player-row input[type="checkbox"] { accent-color: #38bdf8; cursor: pointer; flex-shrink: 0; }
+    .tm-player-row.selected { background: #0c1a2e; color: #e2e8f0; }
+    .tm-player-name { flex: 1; }
+    .tm-salary { font-variant-numeric: tabular-nums; color: #4ade80; font-size: 0.75rem; white-space: nowrap; }
+    .tm-total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 6px 0;
+      border-top: 1px solid #334155;
+      margin-top: 6px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    .tm-result {
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-top: 14px;
+      display: none;
+    }
+    .tm-check-row {
+      font-size: 0.8rem;
+      line-height: 1.9;
+    }
+
     @media (max-width: 600px) {
       body { padding: 14px 10px; }
 
@@ -379,6 +469,9 @@
       /* Copy button full width */
       .output-actions { flex-direction: column; }
       .output-actions .btn { width: 100%; }
+
+      /* Trade Machine stacks on mobile */
+      .tm-columns { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -387,6 +480,15 @@
 
   <h1>Depth Chart Builder</h1>
   <p class="subtitle">Sim League Nirvana · Basketball</p>
+
+  <!-- Tab Navigation -->
+  <div class="tab-nav">
+    <button class="tab-btn active" id="tabBtnDepth" onclick="switchTab('depth')">⛹ Depth Chart Builder</button>
+    <button class="tab-btn" id="tabBtnTrade" onclick="switchTab('trade')">⇄ Trade Machine</button>
+  </div>
+
+  <!-- ── TAB 1: Depth Chart Builder ── -->
+  <div class="tab-panel active" id="tabDepth">
 
   <!-- ── ROSTER LOAD ── -->
   <div class="card">
@@ -425,13 +527,13 @@
         <option value="https://www.simleaguenirvana.com/rosters/roster29.htm">Seattle SuperSonics</option>
       </select>
       <button class="btn btn-cyan" onclick="loadRoster()">Load Roster</button>
-      <button class="btn btn-slate" onclick="randomizeDepthChart()">Randomize</button>
-      <button class="btn btn-green" onclick="optimizeDepthChart()">Optimize</button>
     </div>
     <div class="status-row">
       <div class="spinner" id="spinner"></div>
       <span id="statusMsg" class="status-info"></span>
-      <button class="btn btn-slate" id="tradeModeBtn" onclick="toggleTradePanel()" style="display:none;margin-left:auto;font-size:0.72rem;padding:4px 10px;">✏ Trade Mode</button>
+      <button class="btn btn-slate" onclick="randomizeDepthChart()" style="margin-left:auto;font-size:0.72rem;padding:4px 10px;">Randomize</button>
+      <button class="btn btn-green" onclick="optimizeDepthChart()" style="font-size:0.72rem;padding:4px 10px;">Optimize</button>
+      <button class="btn btn-slate" id="tradeModeBtn" onclick="toggleTradePanel()" style="display:none;font-size:0.72rem;padding:4px 10px;">✏ Trade Mode</button>
       <span id="savedIndicator" style="font-size:0.75rem;color:#4ade80;opacity:0;transition:opacity 0.5s;"></span>
     </div>
 
@@ -594,9 +696,144 @@
     <div class="violations-list" id="violationsList"></div>
   </div>
 
+  </div><!-- /tabDepth -->
+
+  <!-- ── TAB 2: Trade Machine ── -->
+  <div class="tab-panel" id="tabTrade">
+
+  <!-- ── TRADE MACHINE ── -->
+  <div class="card">
+    <div class="card-title">Trade Machine</div>
+
+    <!-- Soft Cap Row -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+      <label style="font-size:0.8rem;color:#94a3b8;white-space:nowrap;">Soft Cap ($):</label>
+      <input type="text" id="tmSoftCap" placeholder="e.g. 45000000"
+             style="max-width:170px;flex:unset;"
+             oninput="tmOnCapChange()">
+      <span id="tmCapHint" style="font-size:0.73rem;color:#64748b;"></span>
+    </div>
+
+    <!-- Two-team columns -->
+    <div class="tm-columns">
+
+      <!-- ── Team A ── -->
+      <div class="tm-side">
+        <div class="trade-section-label">Team A — Giving</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
+          <select id="tmSelectA" style="flex:1;min-width:120px;">
+            <option value="">-- Select Team --</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster1.htm">Boston Celtics</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster2.htm">Miami Heat</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster3.htm">New Jersey Nets</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster4.htm">New York Knicks</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster5.htm">Orlando Magic</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster6.htm">Philadelphia 76ers</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster7.htm">Washington Bullets</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster8.htm">Atlanta Hawks</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster9.htm">Charlotte Hornets</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster10.htm">Chicago Bulls</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster11.htm">Cleveland Cavaliers</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster12.htm">Detroit Pistons</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster13.htm">Indiana Pacers</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster14.htm">Milwaukee Bucks</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster15.htm">Toronto Raptors</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster16.htm">Dallas Mavericks</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster17.htm">Denver Nuggets</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster18.htm">Houston Rockets</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster19.htm">Minnesota Timberwolves</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster20.htm">San Antonio Spurs</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster21.htm">Utah Jazz</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster22.htm">Vancouver Grizzlies</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster23.htm">Golden State Warriors</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster24.htm">Los Angeles Clippers</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster25.htm">Los Angeles Lakers</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster26.htm">Phoenix Suns</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster27.htm">Portland Trail Blazers</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster28.htm">Sacramento Kings</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster29.htm">Seattle SuperSonics</option>
+          </select>
+          <button class="btn btn-cyan" onclick="loadTMTeam('A')" style="font-size:0.78rem;padding:6px 12px;">Load</button>
+        </div>
+        <div id="tmStatusA" style="font-size:0.75rem;color:#94a3b8;min-height:16px;margin-bottom:4px;"></div>
+        <div id="tmPlayerListA" class="tm-player-list"></div>
+        <div class="tm-total-row">
+          <span>Sending:</span>
+          <span id="tmSendingA" style="color:#38bdf8;">$0</span>
+        </div>
+      </div>
+
+      <!-- ── Team B ── -->
+      <div class="tm-side">
+        <div class="trade-section-label">Team B — Giving</div>
+        <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
+          <select id="tmSelectB" style="flex:1;min-width:120px;">
+            <option value="">-- Select Team --</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster1.htm">Boston Celtics</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster2.htm">Miami Heat</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster3.htm">New Jersey Nets</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster4.htm">New York Knicks</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster5.htm">Orlando Magic</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster6.htm">Philadelphia 76ers</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster7.htm">Washington Bullets</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster8.htm">Atlanta Hawks</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster9.htm">Charlotte Hornets</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster10.htm">Chicago Bulls</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster11.htm">Cleveland Cavaliers</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster12.htm">Detroit Pistons</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster13.htm">Indiana Pacers</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster14.htm">Milwaukee Bucks</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster15.htm">Toronto Raptors</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster16.htm">Dallas Mavericks</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster17.htm">Denver Nuggets</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster18.htm">Houston Rockets</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster19.htm">Minnesota Timberwolves</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster20.htm">San Antonio Spurs</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster21.htm">Utah Jazz</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster22.htm">Vancouver Grizzlies</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster23.htm">Golden State Warriors</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster24.htm">Los Angeles Clippers</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster25.htm">Los Angeles Lakers</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster26.htm">Phoenix Suns</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster27.htm">Portland Trail Blazers</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster28.htm">Sacramento Kings</option>
+            <option value="https://www.simleaguenirvana.com/rosters/roster29.htm">Seattle SuperSonics</option>
+          </select>
+          <button class="btn btn-cyan" onclick="loadTMTeam('B')" style="font-size:0.78rem;padding:6px 12px;">Load</button>
+        </div>
+        <div id="tmStatusB" style="font-size:0.75rem;color:#94a3b8;min-height:16px;margin-bottom:4px;"></div>
+        <div id="tmPlayerListB" class="tm-player-list"></div>
+        <div class="tm-total-row">
+          <span>Sending:</span>
+          <span id="tmSendingB" style="color:#38bdf8;">$0</span>
+        </div>
+      </div>
+
+    </div><!-- /tm-columns -->
+
+    <!-- Validate button -->
+    <div style="text-align:center;margin-top:16px;">
+      <button class="btn btn-green" onclick="validateTradeMatch()" style="padding:10px 32px;">Check Trade Validity</button>
+    </div>
+
+    <!-- Result panel -->
+    <div class="tm-result" id="tmResult"></div>
+
+  </div><!-- /Trade Machine card -->
+
+  </div><!-- /tabTrade -->
+
 </div><!-- /container -->
 
 <script>
+// ─── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tabDepth').classList.toggle('active', tab === 'depth');
+  document.getElementById('tabTrade').classList.toggle('active', tab === 'trade');
+  document.getElementById('tabBtnDepth').classList.toggle('active', tab === 'depth');
+  document.getElementById('tabBtnTrade').classList.toggle('active', tab === 'trade');
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 const POSITIONS = ['C', 'PF', 'SF', 'SG', 'PG'];
 const GRADE_ORDER = ['F','D-','D','D+','C-','C','C+','B-','B','B+','A-','A','A+'];
@@ -641,6 +878,7 @@ async function loadRoster(restoring = false) {
     enforceIRLimit();
 
     // If trade panel is open, refresh it for the new roster
+    removedPlayers = []; // reset removed players on new roster load
     if (document.getElementById('tradePanel').classList.contains('open')) {
       buildRosterTagList();
       buildTradePlayerList(); // re-grey any added players that are now on this roster
@@ -1447,13 +1685,18 @@ function optimizeDepthChart() {
 
 // ─── Trade Mode ───────────────────────────────────────────────────────────────
 let tradeRoster = [];
+let removedPlayers = []; // players removed from current roster during trade mode
 
 function toggleTradePanel() {
   const panel = document.getElementById('tradePanel');
   const btn   = document.getElementById('tradeModeBtn');
   const open  = panel.classList.toggle('open');
   btn.textContent = open ? '✕ Close Trade Mode' : '✏ Trade Mode';
-  if (open) buildRosterTagList();
+  if (open) {
+    buildRosterTagList();
+  } else {
+    removedPlayers = []; // clear removed list when closing trade panel
+  }
 }
 
 function buildRosterTagList() {
@@ -1477,6 +1720,8 @@ function buildRosterTagList() {
 }
 
 function removePlayerFromRoster(name) {
+  const player = roster.find(p => p.name === name);
+  if (player) removedPlayers.push(player);
   roster = roster.filter(p => p.name !== name);
 
   // Clear from any position slot
@@ -1529,15 +1774,27 @@ function buildTradePlayerList() {
   container.innerHTML = '';
   const posOrder = {'C':0,'PF':1,'SF':2,'SG':3,'PG':4};
 
-  [...tradeRoster]
+  // Merge tradeRoster with removedPlayers (avoid duplicates by name)
+  const tradeNames = new Set(tradeRoster.map(p => p.name));
+  const combined = [
+    ...tradeRoster,
+    ...removedPlayers.filter(p => !tradeNames.has(p.name))
+  ];
+
+  combined
     .sort((a,b) => (posOrder[a.pos]??9) - (posOrder[b.pos]??9))
     .forEach(p => {
       const alreadyOnRoster = !!roster.find(r => r.name === p.name);
+      const isRemoved = !!removedPlayers.find(r => r.name === p.name);
       const tag = document.createElement('div');
       tag.className = 'roster-tag';
       tag.style.cursor = alreadyOnRoster ? 'default' : 'pointer';
       tag.style.opacity = alreadyOnRoster ? '0.35' : '';
-      tag.style.borderColor = alreadyOnRoster ? '#334155' : '';
+      if (alreadyOnRoster) {
+        tag.style.borderColor = '#334155';
+      } else if (isRemoved) {
+        tag.style.border = '1px solid #f59e0b'; // amber highlight for players removed from your roster
+      }
       tag.title = alreadyOnRoster ? 'Already on roster' : `Add ${p.name}`;
       tag.innerHTML = `<span>${p.name} (${p.pos})</span>`;
 
@@ -1555,6 +1812,9 @@ function buildTradePlayerList() {
 function addTradePlayer(player) {
   if (roster.find(p => p.name === player.name)) return;
 
+  // If this player was previously removed from our roster, un-remove them
+  removedPlayers = removedPlayers.filter(p => p.name !== player.name);
+
   roster.push(player);
   buildIR();
   buildOptionDropdowns();
@@ -1564,6 +1824,228 @@ function addTradePlayer(player) {
   buildTradePlayerList(); // refresh to grey out the added player
 
   document.getElementById('tradeStatus').textContent = `✓ ${player.name} (${player.pos}) added to roster.`;
+}
+
+// ─── Trade Machine ────────────────────────────────────────────────────────────
+let tmRosterA = [], tmRosterB = [];
+let tmTotalA = 0, tmTotalB = 0;
+
+function fmtSal(n) {
+  if (!n) return '$0';
+  return '$' + Math.round(n).toLocaleString();
+}
+
+function tmParseSoftCap() {
+  const raw = (document.getElementById('tmSoftCap').value || '').replace(/[$,\s]/g, '');
+  return parseFloat(raw) || 0;
+}
+
+function tmOnCapChange() {
+  const cap = tmParseSoftCap();
+  const hint = document.getElementById('tmCapHint');
+  hint.textContent = cap > 0 ? `= ${fmtSal(cap)}` : '';
+  // Refresh cap indicators for both loaded rosters
+  if (tmRosterA.length) buildTMPlayerList('A');
+  if (tmRosterB.length) buildTMPlayerList('B');
+}
+
+async function loadTMTeam(side) {
+  const url = document.getElementById(`tmSelect${side}`).value;
+  const statusEl = document.getElementById(`tmStatus${side}`);
+  if (!url) { statusEl.textContent = 'Select a team first.'; return; }
+
+  statusEl.textContent = 'Loading…';
+  document.getElementById(`tmPlayerList${side}`).innerHTML = '';
+  document.getElementById(`tmSending${side}`).textContent = '$0';
+
+  try {
+    const res  = await fetch('/fetch_salary_roster', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    if (data.error) { statusEl.textContent = '⚠ ' + data.error; return; }
+
+    if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; }
+    else              { tmRosterB = data.players; tmTotalB = data.total_salary; }
+
+    buildTMPlayerList(side);
+
+    const cap = tmParseSoftCap();
+    const total = side === 'A' ? tmTotalA : tmTotalB;
+    const overCap = cap > 0 && total > cap;
+    const capBadge = cap > 0
+      ? (overCap ? ' <span style="color:#f87171;font-weight:700;">● Over Cap</span>'
+                 : ' <span style="color:#4ade80;font-weight:700;">● Under Cap</span>')
+      : '';
+    statusEl.innerHTML = `✓ ${data.team_name} · Total: ${fmtSal(total)}${capBadge}`;
+  } catch(e) {
+    statusEl.textContent = 'Network error loading team.';
+  }
+}
+
+function buildTMPlayerList(side) {
+  const roster = side === 'A' ? tmRosterA : tmRosterB;
+  const container = document.getElementById(`tmPlayerList${side}`);
+
+  // Preserve checked state by name before rebuild
+  const checked = new Set(
+    [...container.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.dataset.name)
+  );
+
+  container.innerHTML = '';
+  const posOrder = { C:0, PF:1, SF:2, SG:3, PG:4 };
+
+  [...roster]
+    .sort((a, b) => (posOrder[a.pos] ?? 9) - (posOrder[b.pos] ?? 9) || a.name.localeCompare(b.name))
+    .forEach(p => {
+      const row = document.createElement('label');
+      row.className = 'tm-player-row' + (checked.has(p.name) ? ' selected' : '');
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.dataset.name   = p.name;
+      cb.dataset.salary = p.salary;
+      cb.checked = checked.has(p.name);
+      cb.addEventListener('change', () => {
+        row.classList.toggle('selected', cb.checked);
+        tmUpdateSending(side);
+      });
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'tm-player-name';
+      nameSpan.textContent = `${p.name} (${p.pos})`;
+
+      const salSpan = document.createElement('span');
+      salSpan.className = 'tm-salary';
+      salSpan.textContent = fmtSal(p.salary);
+
+      row.appendChild(cb);
+      row.appendChild(nameSpan);
+      row.appendChild(salSpan);
+      container.appendChild(row);
+    });
+
+  tmUpdateSending(side);
+}
+
+function tmGetSelected(side) {
+  return [...document.querySelectorAll(`#tmPlayerList${side} input[type="checkbox"]:checked`)]
+    .map(cb => ({ name: cb.dataset.name, salary: parseInt(cb.dataset.salary) || 0 }));
+}
+
+function tmUpdateSending(side) {
+  const players = tmGetSelected(side);
+  const total   = players.reduce((s, p) => s + p.salary, 0);
+  document.getElementById(`tmSending${side}`).textContent = fmtSal(total);
+}
+
+function validateTradeMatch() {
+  const result = document.getElementById('tmResult');
+  result.style.display = 'block';
+
+  if (!tmRosterA.length || !tmRosterB.length) {
+    result.style.cssText = 'display:block;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:14px 16px;margin-top:14px;';
+    result.innerHTML = '<span style="color:#f87171;">⚠ Load both teams first.</span>';
+    return;
+  }
+
+  const playersA = tmGetSelected('A');
+  const playersB = tmGetSelected('B');
+  const salA     = playersA.reduce((s, p) => s + p.salary, 0);
+  const salB     = playersB.reduce((s, p) => s + p.salary, 0);
+  const softCap  = tmParseSoftCap();
+  const overCapA = softCap > 0 && tmTotalA > softCap;
+  const overCapB = softCap > 0 && tmTotalB > softCap;
+
+  const errors = [];
+  const checks = [];
+
+  // ── Rule: At least 1 player per side ──────────────────────────────────────
+  if (!playersA.length) { errors.push('Select at least one player from Team A.'); }
+  if (!playersB.length) { errors.push('Select at least one player from Team B.'); }
+
+  // ── Rule: Max 5 players per side ──────────────────────────────────────────
+  if (playersA.length > 5) {
+    errors.push(`⚠ Team A is sending ${playersA.length} players — max is 5 per side. Split into separate trades.`);
+  } else if (playersA.length > 0) {
+    checks.push(`✓ Team A: ${playersA.length} player${playersA.length > 1 ? 's' : ''} (max 5)`);
+  }
+  if (playersB.length > 5) {
+    errors.push(`⚠ Team B is sending ${playersB.length} players — max is 5 per side. Split into separate trades.`);
+  } else if (playersB.length > 0) {
+    checks.push(`✓ Team B: ${playersB.length} player${playersB.length > 1 ? 's' : ''} (max 5)`);
+  }
+
+  // ── Rule: Salary matching (if either team over soft cap) ──────────────────
+  if (playersA.length > 0 && playersB.length > 0) {
+    if (!softCap) {
+      checks.push('ℹ Enter the Soft Cap above to check salary matching.');
+    } else if (overCapA || overCapB) {
+      const whichOver = overCapA && overCapB ? 'Both teams are'
+                      : overCapA ? 'Team A is' : 'Team B is';
+      const minSal     = Math.min(salA, salB);
+      const maxSal     = Math.max(salA, salB);
+      const maxAllowed = Math.round(minSal * 1.15);
+      const lesserTeam = salA <= salB ? 'Team A' : 'Team B';
+      const greaterTeam = salA <= salB ? 'Team B' : 'Team A';
+
+      if (maxSal <= maxAllowed) {
+        checks.push(
+          `✓ Salary match OK — ${whichOver} over cap. ${lesserTeam} sends ${fmtSal(minSal)} × 1.15 = ${fmtSal(maxAllowed)} ≥ ${greaterTeam}'s ${fmtSal(maxSal)}`
+        );
+      } else {
+        errors.push(
+          `✗ Salary mismatch — ${whichOver} over cap. ${lesserTeam} sends ${fmtSal(minSal)} × 1.15 = ${fmtSal(maxAllowed)}, but ${greaterTeam} sends ${fmtSal(maxSal)} (over limit by ${fmtSal(maxSal - maxAllowed)})`
+        );
+      }
+    } else {
+      checks.push(`✓ Both teams under soft cap (${fmtSal(softCap)}) — salary matching not required`);
+    }
+  }
+
+  // ── Build result HTML ──────────────────────────────────────────────────────
+  const passed = errors.length === 0 && playersA.length > 0 && playersB.length > 0;
+  const bg     = passed ? 'rgba(74,222,128,0.05)' : 'rgba(248,113,113,0.05)';
+  const border = passed ? '#22c55e44' : '#ef444444';
+
+  result.style.cssText = `display:block;background:${bg};border:1px solid ${border};border-radius:8px;padding:14px 16px;margin-top:14px;`;
+
+  let html = `<div style="font-size:1rem;font-weight:700;color:${passed ? '#4ade80' : '#f87171'};margin-bottom:10px;">`;
+  html += passed ? '✓ Trade Appears Valid' : '✗ Trade Has Issues';
+  html += '</div>';
+
+  if (checks.length) {
+    html += `<div class="tm-check-row" style="color:#94a3b8;">${checks.join('<br>')}</div>`;
+  }
+  if (errors.length) {
+    html += `<div class="tm-check-row" style="color:#f87171;margin-top:6px;">${errors.join('<br>')}</div>`;
+  }
+
+  // Summary block
+  if (playersA.length || playersB.length) {
+    html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid #334155;font-size:0.78rem;">`;
+    html += `<span style="color:#94a3b8;font-weight:700;">Trade Summary</span><br>`;
+    if (playersA.length) html += `<span style="color:#7dd3fc;">Team A gives:</span> <span style="color:#cbd5e1;">${playersA.map(p => p.name).join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salA)})</span><br>`;
+    if (playersB.length) html += `<span style="color:#7dd3fc;">Team B gives:</span> <span style="color:#cbd5e1;">${playersB.map(p => p.name).join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salB)})</span><br>`;
+    if (playersA.length && playersB.length) {
+      const diff = Math.abs(salA - salB);
+      html += `<span style="color:#64748b;">Salary difference: ${fmtSal(diff)}</span>`;
+    }
+    html += `</div>`;
+  }
+
+  // Reminders
+  html += `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #334155;font-size:0.73rem;color:#475569;line-height:1.7;">`;
+  html += `<strong style="color:#64748b;">League Reminders:</strong><br>`;
+  html += `· MLE/LLE players are tradeable after Day 30<br>`;
+  html += `· Max 1,500 RPs/season may be included in trades<br>`;
+  html += `· No draft picks more than 6 seasons in advance<br>`;
+  html += `· Trade is only official after both GMs post in the Trade Thread`;
+  html += `</div>`;
+
+  result.innerHTML = html;
 }
 
 // ─── Auto-load last-used team on page open ───────────────────────────────────
