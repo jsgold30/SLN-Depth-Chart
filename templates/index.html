@@ -2098,7 +2098,7 @@ function buildTMPlayerList(side) {
   container.appendChild(hdr);
 
   [...roster]
-    .sort((a, b) => (posOrder[a.pos] ?? 9) - (posOrder[b.pos] ?? 9) || a.name.localeCompare(b.name))
+    .sort((a, b) => b.salary - a.salary)
     .forEach(p => {
       const row = document.createElement('label');
       row.className = 'tm-player-row' + (checked.has(p.name) ? ' selected' : '');
