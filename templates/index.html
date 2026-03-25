@@ -376,10 +376,24 @@
       overflow-y: auto;
       margin-top: 4px;
     }
+    .tm-list-header {
+      display: grid;
+      grid-template-columns: 18px 1fr 44px 90px;
+      gap: 6px;
+      padding: 3px 6px 5px;
+      font-size: 0.63rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #475569;
+      border-bottom: 1px solid #334155;
+      margin-bottom: 1px;
+    }
     .tm-player-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: 18px 1fr 44px 90px;
+      gap: 6px;
       align-items: center;
-      gap: 8px;
       padding: 5px 6px;
       border-radius: 5px;
       cursor: pointer;
@@ -389,10 +403,11 @@
       transition: background 0.1s;
     }
     .tm-player-row:hover { background: #1e293b; }
-    .tm-player-row input[type="checkbox"] { accent-color: #38bdf8; cursor: pointer; flex-shrink: 0; }
+    .tm-player-row input[type="checkbox"] { accent-color: #38bdf8; cursor: pointer; }
     .tm-player-row.selected { background: #0c1a2e; color: #e2e8f0; }
-    .tm-player-name { flex: 1; }
-    .tm-salary { font-variant-numeric: tabular-nums; color: #4ade80; font-size: 0.75rem; white-space: nowrap; }
+    .tm-player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tm-player-pos { font-size: 0.7rem; font-weight: 700; color: #38bdf8; text-align: center; }
+    .tm-salary { font-variant-numeric: tabular-nums; color: #4ade80; font-size: 0.8rem; text-align: right; white-space: nowrap; }
     .tm-total-row {
       display: flex;
       justify-content: space-between;
@@ -1880,6 +1895,12 @@ function buildTMPlayerList(side) {
   container.innerHTML = '';
   const posOrder = { C:0, PF:1, SF:2, SG:3, PG:4 };
 
+  // Column header
+  const hdr = document.createElement('div');
+  hdr.className = 'tm-list-header';
+  hdr.innerHTML = '<span></span><span>Player</span><span style="text-align:center">Pos</span><span style="text-align:right">Year 1</span>';
+  container.appendChild(hdr);
+
   [...roster]
     .sort((a, b) => (posOrder[a.pos] ?? 9) - (posOrder[b.pos] ?? 9) || a.name.localeCompare(b.name))
     .forEach(p => {
@@ -1898,7 +1919,11 @@ function buildTMPlayerList(side) {
 
       const nameSpan = document.createElement('span');
       nameSpan.className = 'tm-player-name';
-      nameSpan.textContent = `${p.name} (${p.pos})`;
+      nameSpan.textContent = p.name;
+
+      const posSpan = document.createElement('span');
+      posSpan.className = 'tm-player-pos';
+      posSpan.textContent = p.pos;
 
       const salSpan = document.createElement('span');
       salSpan.className = 'tm-salary';
@@ -1906,6 +1931,7 @@ function buildTMPlayerList(side) {
 
       row.appendChild(cb);
       row.appendChild(nameSpan);
+      row.appendChild(posSpan);
       row.appendChild(salSpan);
       container.appendChild(row);
     });
