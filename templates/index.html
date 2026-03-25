@@ -542,7 +542,8 @@ async function loadRoster(restoring = false) {
     buildOptionDropdowns();
 
     await restoreState();
-    refreshAllDropdowns(); // apply IR restrictions after state restored
+    refreshAllDropdowns();
+    enforceIRLimit();
 
   } catch(e) {
     setStatus('Network error — make sure the Flask server is running.', 'err');
@@ -644,7 +645,8 @@ function buildIR() {
           }
         });
       }
-      refreshAllDropdowns(); // disable IR players in position dropdowns
+      refreshAllDropdowns();
+      enforceIRLimit();
       saveState();
     });
 
@@ -654,6 +656,25 @@ function buildIR() {
   });
 
   container.appendChild(grid);
+}
+
+// ─── Enforce IR roster limit (min 12 active players) ─────────────────────────
+function enforceIRLimit() {
+  const maxIR = Math.max(0, roster.length - 12);
+  const currentIR = document.querySelectorAll('input[name="ir"]:checked').length;
+  const atLimit = currentIR >= maxIR;
+
+  document.querySelectorAll('input[name="ir"]').forEach(cb => {
+    const label = cb.closest('label');
+    if (cb.checked) return; // leave selected boxes alone
+    if (atLimit) {
+      cb.disabled = true;
+      if (label) { label.style.opacity = '0.25'; label.style.cursor = 'not-allowed'; }
+    } else {
+      cb.disabled = false;
+      if (label) { label.style.opacity = ''; label.style.cursor = ''; }
+    }
+  });
 }
 
 // ─── Build options dropdowns ──────────────────────────────────────────────────
