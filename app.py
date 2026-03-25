@@ -356,7 +356,8 @@ def fetch_salary_roster():
 
             rows = all_rows[header_row_index + 1:]
             for row in rows:
-                cells = [td.get_text(strip=True) for td in row.find_all('td')]
+                # Use both th and td so row-number <th> cells don't shift indices
+                cells = [td.get_text(strip=True) for td in row.find_all(['th', 'td'])]
                 if len(cells) <= year1_idx:
                     continue
                 name = cells[name_idx].strip()
