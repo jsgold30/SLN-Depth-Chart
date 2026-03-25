@@ -372,7 +372,27 @@ def fetch_salary_roster():
         if not players:
             return jsonify({'error': 'Could not find salary data (Year 1 column) on this page.'}), 400
 
-        total_salary = sum(p['salary'] for p in players)
+        # Add cut players Year 1 salary to total
+        cut_salary = 0
+        for table in soup.find_all('table'):
+            rows = table.find_all('tr', recursive=False)
+            if not rows:
+                tbody = table.find('tbody', recursive=False)
+                if tbody:
+                    rows = tbody.find_all('tr', recursive=False)
+            for row in rows:
+                all_tds = [c.get_text(strip=True) for c in row.find_all('td')]
+                lower = [t.lower() for t in all_tds]
+                if 'cut players:' not in lower:
+                    continue
+                total_pos = next((i for i, t in enumerate(lower) if t == 'total'), None)
+                if total_pos is not None and total_pos + 1 < len(all_tds):
+                    cut_salary = parse_salary(all_tds[total_pos + 1])
+                break
+            if cut_salary:
+                break
+
+        total_salary = sum(p['salary'] for p in players) + cut_salary
         return jsonify({'players': players, 'team_name': team_name, 'total_salary': total_salary})
 
     except requests.exceptions.Timeout:
