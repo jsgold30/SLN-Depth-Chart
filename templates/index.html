@@ -386,6 +386,7 @@
         <option value="https://www.simleaguenirvana.com/rosters/roster29.htm">Seattle SuperSonics</option>
       </select>
       <button class="btn btn-cyan" onclick="loadRoster()">Load Roster</button>
+      <button class="btn btn-slate" onclick="randomizeDepthChart()">Randomize</button>
     </div>
     <div class="status-row">
       <div class="spinner" id="spinner"></div>
@@ -1139,6 +1140,72 @@ async function restoreState() {
       if (boldLabel) boldLabel.classList.toggle('active', bold.checked);
     }
   });
+}
+
+// ─── Randomize depth chart ────────────────────────────────────────────────────
+function randomizeDepthChart() {
+  if (!roster.length) { setStatus('Load a roster first.', 'err'); return; }
+
+  // Clear all current selections
+  POSITIONS.forEach(pos => {
+    for (let slot = 0; slot < 3; slot++) {
+      const sel = document.getElementById(`${pos}_${slot}`);
+      if (sel) sel.value = '';
+    }
+  });
+  document.querySelectorAll('input[name="ir"]').forEach(cb => {
+    cb.checked = false;
+    const lbl = cb.closest('label');
+    if (lbl) { lbl.classList.remove('checked'); lbl.style.opacity = ''; lbl.style.cursor = ''; }
+    cb.disabled = false;
+  });
+
+  // Randomly assign IR (0 to maxIR players)
+  const maxIR = Math.max(0, roster.length - 12);
+  const irCount = Math.floor(Math.random() * (maxIR + 1));
+  const shuffledAll = [...roster].sort(() => Math.random() - 0.5);
+  const irSet = new Set(shuffledAll.slice(0, irCount).map(p => p.name));
+
+  irSet.forEach(name => {
+    const cb = document.querySelector(`input[name="ir"][value="${name.replace(/"/g, '\\"')}"]`);
+    if (cb) { cb.checked = true; cb.closest('label')?.classList.add('checked'); }
+  });
+
+  // Active players available for slots
+  const active = roster.filter(p => !irSet.has(p.name));
+
+  // Assign starters — each player can only hold one starter slot
+  const usedStarters = new Set();
+  POSITIONS.forEach(pos => {
+    const pool = active.filter(p => p.eligible_starter[pos] && !usedStarters.has(p.name));
+    if (!pool.length) return;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    const sel = document.getElementById(`${pos}_0`);
+    if (sel) sel.value = pick.name;
+    usedStarters.add(pick.name);
+  });
+
+  // Assign backups — no uniqueness restriction, any eligible active player
+  POSITIONS.forEach(pos => {
+    for (let slot = 1; slot < 3; slot++) {
+      const pool = active.filter(p => p.eligible_backup[pos]);
+      if (!pool.length) continue;
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      const sel = document.getElementById(`${pos}_${slot}`);
+      if (sel) sel.value = pick.name;
+    }
+  });
+
+  // Refresh all UI state
+  refreshAllDropdowns();
+  enforceIRLimit();
+  POSITIONS.forEach(pos => {
+    for (let slot = 0; slot < 3; slot++) {
+      validateSlot(pos, slot);
+      updateStatBadge(pos, slot);
+    }
+  });
+  saveState();
 }
 
 // ─── Auto-load last-used team on page open ───────────────────────────────────
