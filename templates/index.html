@@ -549,6 +549,7 @@
       <span id="statusMsg" class="status-info"></span>
       <button class="btn btn-slate" onclick="randomizeDepthChart()" style="margin-left:auto;font-size:0.72rem;padding:4px 10px;">Randomize</button>
       <button class="btn btn-green" onclick="optimizeDepthChart()" style="font-size:0.72rem;padding:4px 10px;">Optimize</button>
+      <button class="btn btn-slate" id="undoBtn" onclick="undoLast()" disabled style="font-size:0.72rem;padding:4px 10px;">↩ Undo</button>
       <button class="btn btn-slate" id="tradeModeBtn" onclick="toggleTradePanel()" style="display:none;font-size:0.72rem;padding:4px 10px;">✏ Trade Mode</button>
       <span id="savedIndicator" style="font-size:0.75rem;color:#4ade80;opacity:0;transition:opacity 0.5s;"></span>
     </div>
@@ -856,6 +857,22 @@ const GRADE_ORDER = ['F','D-','D','D+','C-','C','C+','B-','B','B+','A-','A','A+'
 
 let roster = [];
 let lastGeneratedState = null;
+let undoStack = [];
+
+function pushUndo() {
+  undoStack.push(buildStateObject());
+  if (undoStack.length > 50) undoStack.shift(); // cap history at 50
+  const btn = document.getElementById('undoBtn');
+  if (btn) btn.disabled = false;
+}
+
+function undoLast() {
+  if (!undoStack.length) return;
+  applyState(undoStack.pop());
+  saveState();
+  const btn = document.getElementById('undoBtn');
+  if (btn) btn.disabled = undoStack.length === 0;
+}
 
 // ─── Grade helpers ────────────────────────────────────────────────────────────
 function gradeVal(g) { return GRADE_ORDER.indexOf((g||'').trim()); }
@@ -881,6 +898,9 @@ async function loadRoster(restoring = false) {
     if (data.error) { setStatus(data.error, 'err'); return; }
 
     roster = data.players;
+    undoStack = [];
+    const undoBtnEl = document.getElementById('undoBtn');
+    if (undoBtnEl) undoBtnEl.disabled = true;
     const label = data.team_name ? `${data.team_name} — ` : '';
     setStatus(`✓ ${label}${roster.length} players loaded`, 'ok');
     document.getElementById('tradeModeBtn').style.display = '';
@@ -1134,6 +1154,7 @@ function refreshDropdown(pos, slot) {
 
 // ─── Slot change handler ──────────────────────────────────────────────────────
 function onSlotChange(pos, slot) {
+  pushUndo();
   // Starter slots: a player can only occupy one starting slot at a time
   if (slot === 0) {
     const chosen = document.getElementById(`${pos}_0`).value;
@@ -1558,6 +1579,7 @@ async function restoreState() {
 // ─── Randomize depth chart ────────────────────────────────────────────────────
 function randomizeDepthChart() {
   if (!roster.length) { setStatus('Load a roster first.', 'err'); return; }
+  pushUndo();
 
   // Clear all current selections
   POSITIONS.forEach(pos => {
@@ -1624,6 +1646,7 @@ function randomizeDepthChart() {
 // ─── Optimize depth chart ─────────────────────────────────────────────────────
 function optimizeDepthChart() {
   if (!roster.length) { setStatus('Load a roster first.', 'err'); return; }
+  pushUndo();
 
   // Score a player for a specific position using weighted stats
   function score(p, pos) {
