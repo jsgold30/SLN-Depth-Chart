@@ -825,6 +825,7 @@
           <button class="btn btn-cyan" onclick="loadTMTeam('A')" style="font-size:0.78rem;padding:6px 12px;">Load</button>
         </div>
         <div id="tmStatusA" style="display:none;"></div>
+        <div id="tmTeamNameA" style="font-size:0.85rem;font-weight:700;color:#7dd3fc;margin:6px 0 4px;display:none;"></div>
         <div id="tmPlayerListA" class="tm-player-list"></div>
 
         <!-- Vet Min Players -->
@@ -882,6 +883,7 @@
           <button class="btn btn-cyan" onclick="loadTMTeam('B')" style="font-size:0.78rem;padding:6px 12px;">Load</button>
         </div>
         <div id="tmStatusB" style="display:none;"></div>
+        <div id="tmTeamNameB" style="font-size:0.85rem;font-weight:700;color:#7dd3fc;margin:6px 0 4px;display:none;"></div>
         <div id="tmPlayerListB" class="tm-player-list"></div>
 
         <!-- Vet Min Players -->
@@ -1950,6 +1952,7 @@ function addTradePlayer(player) {
 // ─── Trade Machine ────────────────────────────────────────────────────────────
 let tmRosterA = [], tmRosterB = [];
 let tmTotalA = 0, tmTotalB = 0;
+let tmNameA = 'Team A', tmNameB = 'Team B';
 
 // Vet minimum salary table (years of service → annual salary)
 const VET_MIN_SALARIES = {
@@ -2063,8 +2066,13 @@ async function loadTMTeam(side) {
     const data = await res.json();
     if (data.error) { statusEl.textContent = '⚠ ' + data.error; return; }
 
-    if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; }
-    else              { tmRosterB = data.players; tmTotalB = data.total_salary; }
+    const teamName = data.team_name || (side === 'A' ? 'Team A' : 'Team B');
+    if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; }
+    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; }
+
+    const nameEl = document.getElementById(`tmTeamName${side}`);
+    nameEl.textContent = teamName;
+    nameEl.style.display = '';
 
     buildTMPlayerList(side);
 
@@ -2073,7 +2081,7 @@ async function loadTMTeam(side) {
     const capBadge = overCap
       ? ' <span style="color:#f87171;font-weight:700;">● Over Cap</span>'
       : ' <span style="color:#4ade80;font-weight:700;">● Under Cap</span>';
-    statusEl.innerHTML = `✓ ${data.team_name} · Total: ${fmtSal(total)}${capBadge}`;
+    statusEl.innerHTML = `✓ Total: ${fmtSal(total)}${capBadge}`;
   } catch(e) {
     statusEl.textContent = 'Network error loading team.';
   }
@@ -2183,21 +2191,21 @@ function validateTradeMatch() {
   const checks = [];
 
   // ── Rule: At least 1 player per side ──────────────────────────────────────
-  if (!playersA.length && !vetMinCntA) { errors.push('Select at least one player from Team A.'); }
-  if (!playersB.length && !vetMinCntB) { errors.push('Select at least one player from Team B.'); }
+  if (!playersA.length && !vetMinCntA) { errors.push(`Select at least one player from ${tmNameA}.`); }
+  if (!playersB.length && !vetMinCntB) { errors.push(`Select at least one player from ${tmNameB}.`); }
 
   // ── Rule: Max 5 players per side ──────────────────────────────────────────
   if (playersA.length > 5) {
-    errors.push(`⚠ Team A is sending ${playersA.length} players — max is 5 per side. Split into separate trades.`);
+    errors.push(`⚠ ${tmNameA} is sending ${playersA.length} players — max is 5 per side. Split into separate trades.`);
   } else if (playersA.length > 0 || vetMinCntA > 0) {
     const vmNote = vetMinCntA > 0 ? ` + ${vetMinCntA} vet min${vetMinCntA > 1 ? 's' : ''}` : '';
-    checks.push(`✓ Team A: ${playersA.length} player${playersA.length !== 1 ? 's' : ''}${vmNote} (max 5)`);
+    checks.push(`✓ ${tmNameA}: ${playersA.length} player${playersA.length !== 1 ? 's' : ''}${vmNote} (max 5)`);
   }
   if (playersB.length > 5) {
-    errors.push(`⚠ Team B is sending ${playersB.length} players — max is 5 per side. Split into separate trades.`);
+    errors.push(`⚠ ${tmNameB} is sending ${playersB.length} players — max is 5 per side. Split into separate trades.`);
   } else if (playersB.length > 0 || vetMinCntB > 0) {
     const vmNote = vetMinCntB > 0 ? ` + ${vetMinCntB} vet min${vetMinCntB > 1 ? 's' : ''}` : '';
-    checks.push(`✓ Team B: ${playersB.length} player${playersB.length !== 1 ? 's' : ''}${vmNote} (max 5)`);
+    checks.push(`✓ ${tmNameB}: ${playersB.length} player${playersB.length !== 1 ? 's' : ''}${vmNote} (max 5)`);
   }
 
   // ── Rule: 15% salary matching (always applies, blocks the trade) ─────────
@@ -2207,8 +2215,8 @@ function validateTradeMatch() {
     const minSal      = Math.min(salA, salB);
     const maxSal      = Math.max(salA, salB);
     const maxAllowed  = Math.round(minSal * 1.15);
-    const lesserTeam  = salA <= salB ? 'Team A' : 'Team B';
-    const greaterTeam = salA <= salB ? 'Team B' : 'Team A';
+    const lesserTeam  = salA <= salB ? tmNameA : tmNameB;
+    const greaterTeam = salA <= salB ? tmNameB : tmNameA;
 
     if (maxSal <= maxAllowed) {
       checks.push(
@@ -2227,7 +2235,7 @@ function validateTradeMatch() {
   if (hasA && hasB) {
     if (overCapA || overCapB) {
       const whichOver = overCapA && overCapB ? 'Both teams are'
-                      : overCapA ? 'Team A is' : 'Team B is';
+                      : overCapA ? `${tmNameA} is` : `${tmNameB} is`;
       checks.push(`⚠ ${whichOver} over the hard cap (${fmtSal(hardCap)}) — trade can still be processed`);
     } else {
       checks.push(`✓ Both teams under the hard cap (${fmtSal(hardCap)})`);
@@ -2259,12 +2267,12 @@ function validateTradeMatch() {
     if (hasA) {
       const namesA = playersA.map(p => p.name);
       if (vetMinCntA > 0) namesA.push(`${vetMinCntA} vet min${vetMinCntA > 1 ? 's' : ''} (${fmtSal(vetMinA)})`);
-      html += `<span style="color:#7dd3fc;">Team A gives:</span> <span style="color:#cbd5e1;">${namesA.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salA)} total)</span><br>`;
+      html += `<span style="color:#7dd3fc;">${tmNameA} gives:</span> <span style="color:#cbd5e1;">${namesA.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salA)} total)</span><br>`;
     }
     if (hasB) {
       const namesB = playersB.map(p => p.name);
       if (vetMinCntB > 0) namesB.push(`${vetMinCntB} vet min${vetMinCntB > 1 ? 's' : ''} (${fmtSal(vetMinB)})`);
-      html += `<span style="color:#7dd3fc;">Team B gives:</span> <span style="color:#cbd5e1;">${namesB.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salB)} total)</span><br>`;
+      html += `<span style="color:#7dd3fc;">${tmNameB} gives:</span> <span style="color:#cbd5e1;">${namesB.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salB)} total)</span><br>`;
     }
     if (hasA && hasB) {
       const diff = Math.abs(salA - salB);
