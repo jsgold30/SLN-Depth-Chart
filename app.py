@@ -331,20 +331,15 @@ def fetch_salary_roster():
                 continue
 
             # Find header row containing 'name' and 'year 1'.
-            # Prefer <th>-only matching so indices align with <td> data rows.
+            # Use find_all(['th','td']) for BOTH header and data rows so indices
+            # are always consistent regardless of whether cells are th or td.
             header_row_index = None
             col_names = []
             for i, row in enumerate(all_rows):
-                # Try th-only first (proper header cells)
-                th_cells = [c.get_text(strip=True).lower() for c in row.find_all('th')]
-                if 'name' in th_cells and 'year 1' in th_cells:
-                    col_names = th_cells
-                    header_row_index = i
-                    break
-                # Fall back to td-only
-                td_cells = [c.get_text(strip=True).lower() for c in row.find_all('td')]
-                if 'name' in td_cells and 'year 1' in td_cells:
-                    col_names = td_cells
+                all_cells = [c.get_text(strip=True).lower()
+                             for c in row.find_all(['th', 'td'])]
+                if 'name' in all_cells and 'year 1' in all_cells:
+                    col_names = all_cells
                     header_row_index = i
                     break
 
@@ -356,8 +351,7 @@ def fetch_salary_roster():
 
             rows = all_rows[header_row_index + 1:]
             for row in rows:
-                # Use both th and td so row-number <th> cells don't shift indices
-                cells = [td.get_text(strip=True) for td in row.find_all(['th', 'td'])]
+                cells = [c.get_text(strip=True) for c in row.find_all(['th', 'td'])]
                 if len(cells) <= year1_idx:
                     continue
                 name = cells[name_idx].strip()
