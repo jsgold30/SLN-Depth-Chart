@@ -66,6 +66,7 @@ PG_STARTER_EXCEPTIONS = {
     'caleb holt',
     'immanuel quickley',
     'cade cunningham',
+    'jeremiah fears',
 }
 
 # Grade scale: index 0 = worst, 12 = best
