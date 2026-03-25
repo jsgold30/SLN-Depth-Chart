@@ -186,15 +186,16 @@
       display: flex;
       align-items: center;
       padding: 6px 12px;
-      background: #0f172a;
-      border: 1px solid #334155;
+      background: #080f1a;
+      border: 1px solid #1e293b;
       border-radius: 6px;
       cursor: pointer;
       font-size: 0.8rem;
-      transition: border-color 0.15s, background 0.15s;
+      color: #475569;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
       user-select: none;
     }
-    .ir-label:hover { border-color: #475569; }
+    .ir-label:hover { border-color: #334155; color: #94a3b8; }
     .ir-label input[type="checkbox"] { display: none; }
     .ir-label.checked { border-color: #38bdf8; background: #0c1a2e; color: #38bdf8; }
 
@@ -541,7 +542,7 @@ async function loadRoster(restoring = false) {
     buildOptionDropdowns();
 
     await restoreState();
-    refreshIR();
+    refreshAllDropdowns(); // apply IR restrictions after state restored
 
   } catch(e) {
     setStatus('Network error — make sure the Flask server is running.', 'err');
@@ -630,6 +631,20 @@ function buildIR() {
     cb.value = p.name;
     cb.addEventListener('change', () => {
       label.classList.toggle('checked', cb.checked);
+      if (cb.checked) {
+        // Remove this player from any position slot they're currently in
+        POSITIONS.forEach(pos => {
+          for (let s = 0; s < 3; s++) {
+            const sel = document.getElementById(`${pos}_${s}`);
+            if (sel && sel.value === cb.value) {
+              sel.value = '';
+              validateSlot(pos, s);
+              updateStatBadge(pos, s);
+            }
+          }
+        });
+      }
+      refreshAllDropdowns(); // disable IR players in position dropdowns
       saveState();
     });
 
@@ -696,6 +711,10 @@ function refreshDropdown(pos, slot) {
   const posOrder = {'C':0,'PF':1,'SF':2,'SG':3,'PG':4};
   const sortByPos = (a, b) => (posOrder[a.pos] ?? 9) - (posOrder[b.pos] ?? 9);
 
+  const irPlayers = new Set(
+    [...document.querySelectorAll('input[name="ir"]:checked')].map(cb => cb.value)
+  );
+
   roster.forEach(p => {
     const isElig = slot === 0
       ? p.eligible_starter[pos]
@@ -713,7 +732,12 @@ function refreshDropdown(pos, slot) {
     players.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.name;
-      opt.textContent = `${p.name} (${p.pos} | Reb:${p.reb} | Out:${p.out} | Hn:${p.hn})`;
+      if (irPlayers.has(p.name)) {
+        opt.textContent = `${p.name} [IR]`;
+        opt.disabled = true;
+      } else {
+        opt.textContent = `${p.name} (${p.pos} | Reb:${p.reb} | Out:${p.out} | Hn:${p.hn})`;
+      }
       grp.appendChild(opt);
     });
     return grp;
@@ -751,37 +775,9 @@ function onSlotChange(pos, slot) {
   }
   validateSlot(pos, slot);
   updateStatBadge(pos, slot);
-  refreshIR();
   saveState();
 }
 
-// ─── Refresh IR eligibility ───────────────────────────────────────────────────
-function refreshIR() {
-  // Collect all players currently assigned to any position slot
-  const used = new Set();
-  POSITIONS.forEach(p => {
-    for (let s = 0; s < 3; s++) {
-      const sel = document.getElementById(`${p}_${s}`);
-      if (sel && sel.value) used.add(sel.value);
-    }
-  });
-
-  document.querySelectorAll('input[name="ir"]').forEach(cb => {
-    const label = cb.closest('label');
-    if (used.has(cb.value)) {
-      // Auto-remove from IR if now in a roster slot
-      if (cb.checked) {
-        cb.checked = false;
-        if (label) label.classList.remove('checked');
-      }
-      cb.disabled = true;
-      if (label) label.style.opacity = '0.3';
-    } else {
-      cb.disabled = false;
-      if (label) label.style.opacity = '';
-    }
-  });
-}
 
 function onOptChange() { saveState(); }
 
