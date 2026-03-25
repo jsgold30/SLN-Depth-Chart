@@ -483,6 +483,7 @@
   <!-- ── GENERATE ── -->
   <div class="generate-row">
     <button class="btn btn-green btn-lg" onclick="generateDepthChart()">Generate Depth Chart</button>
+    <button class="btn btn-slate" id="resetBtn" onclick="resetToLastGenerated()" style="display:none">Reset</button>
     <button class="btn btn-slate" onclick="clearSelections()">Clear</button>
   </div>
 
@@ -511,6 +512,7 @@ const POSITIONS = ['C', 'PF', 'SF', 'SG', 'PG'];
 const GRADE_ORDER = ['F','D-','D','D+','C-','C','C+','B-','B','B+','A-','A','A+'];
 
 let roster = [];
+let lastGeneratedState = null;
 
 // ─── Grade helpers ────────────────────────────────────────────────────────────
 function gradeVal(g) { return GRADE_ORDER.indexOf((g||'').trim()); }
@@ -887,8 +889,67 @@ function updateStatBadge(pos, slot) {
   stat.classList.add('show');
 }
 
+// ─── Apply a state object to the UI ──────────────────────────────────────────
+function applyState(state) {
+  if (!state) return;
+
+  POSITIONS.forEach(pos => {
+    for (let slot = 0; slot < 3; slot++) {
+      const sel       = document.getElementById(`${pos}_${slot}`);
+      const bold      = document.getElementById(`bold_${pos}_${slot}`);
+      const boldLabel = document.getElementById(`boldlabel_${pos}_${slot}`);
+      if (sel)  sel.value    = state[`${pos}_${slot}`] || '';
+      if (bold) bold.checked = !!state[`bold_${pos}_${slot}`];
+      if (boldLabel) boldLabel.classList.toggle('active', !!state[`bold_${pos}_${slot}`]);
+      validateSlot(pos, slot);
+      updateStatBadge(pos, slot);
+    }
+  });
+
+  // IR
+  document.querySelectorAll('input[name="ir"]').forEach(cb => {
+    cb.checked = (state.ir || []).includes(cb.value);
+    const lbl = cb.closest('label');
+    if (lbl) lbl.classList.toggle('checked', cb.checked);
+  });
+
+  // Options
+  ['opt1','opt2','opt3'].forEach(id => {
+    const sel       = document.getElementById(id);
+    const bold      = document.getElementById(`bold_${id}`);
+    const boldLabel = document.getElementById(`boldlabel_${id}`);
+    if (sel)  sel.value    = state[id] || '';
+    if (bold) bold.checked = !!state[`bold_${id}`];
+    if (boldLabel) boldLabel.classList.toggle('active', !!state[`bold_${id}`]);
+  });
+
+  // Tactics
+  ['t_pace','t_trap','t_pressure','t_offense'].forEach(id => {
+    const sel       = document.getElementById(id);
+    const bold      = document.getElementById(`bold_${id}`);
+    const boldLabel = document.getElementById(`boldlabel_${id}`);
+    if (sel && state[id]) sel.value = state[id];
+    if (bold) bold.checked = !!state[`bold_${id}`];
+    if (boldLabel) boldLabel.classList.toggle('active', !!state[`bold_${id}`]);
+  });
+
+  refreshAllDropdowns();
+  enforceIRLimit();
+}
+
+// ─── Reset to last generated state ───────────────────────────────────────────
+function resetToLastGenerated() {
+  if (!lastGeneratedState) return;
+  applyState(lastGeneratedState);
+  saveState();
+}
+
 // ─── Generate depth chart ─────────────────────────────────────────────────────
 function generateDepthChart() {
+  // Snapshot current state so Reset can restore it
+  lastGeneratedState = buildStateObject();
+  document.getElementById('resetBtn').style.display = '';
+
   const lines = [];
   const violations = [];
 
