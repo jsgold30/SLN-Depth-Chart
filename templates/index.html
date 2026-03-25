@@ -761,7 +761,7 @@ function refreshDropdown(pos, slot) {
         opt.textContent = `${p.name} [IR]`;
         opt.disabled = true;
       } else {
-        opt.textContent = `${p.name} (${p.pos} | Reb:${p.reb} | Out:${p.out} | Hn:${p.hn})`;
+        opt.textContent = `${p.name} (${p.pos})`;
       }
       grp.appendChild(opt);
     });
