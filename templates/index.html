@@ -398,7 +398,10 @@
 
   <!-- ── DEPTH CHART ── -->
   <div class="card">
-    <div class="card-title">Depth Chart</div>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Depth Chart</span>
+      <button class="btn btn-slate" id="resetBtn" onclick="resetToLastGenerated()" style="display:none;padding:4px 10px;font-size:0.72rem;">Reset</button>
+    </div>
     <div class="dc-header">
       <span></span>
       <span>Starter</span>
@@ -483,7 +486,6 @@
   <!-- ── GENERATE ── -->
   <div class="generate-row">
     <button class="btn btn-green btn-lg" onclick="generateDepthChart()">Generate Depth Chart</button>
-    <button class="btn btn-slate" id="resetBtn" onclick="resetToLastGenerated()" style="display:none">Reset</button>
     <button class="btn btn-slate" onclick="clearSelections()">Clear</button>
   </div>
 
