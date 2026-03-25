@@ -325,30 +325,35 @@ def fetch_salary_roster():
 
         players = []
 
+        # SLN pages use nested tables. find_all('tr') on the outer table
+        # recurses into all nested tables, producing wrong row counts and
+        # shifted indices. Using recursive=False gets only the direct child
+        # rows of each table, which correctly isolates the salary table.
+        # Note: SLN uses <td> for ALL cells including column headers (no <th>).
         for table in soup.find_all('table'):
-            all_rows = table.find_all('tr')
-            if not all_rows:
+            rows = table.find_all('tr', recursive=False)
+            if not rows:
+                tbody = table.find('tbody', recursive=False)
+                if tbody:
+                    rows = tbody.find_all('tr', recursive=False)
+            if not rows:
                 continue
 
-            # The salary table header row is all <th> cells.
-            # Use find_all('th') for header so year1_idx matches the
-            # all-<td> data rows exactly — no mixed-tag offset issues.
+            # Find the header row that has both 'name' and 'year 1' columns
             header_row_index = None
             year1_idx = None
-            for i, row in enumerate(all_rows):
-                th_cells = [c.get_text(strip=True).lower()
-                            for c in row.find_all('th')]
-                if 'year 1' in th_cells:
-                    year1_idx = th_cells.index('year 1')
+            for i, row in enumerate(rows):
+                cols = [c.get_text(strip=True).lower() for c in row.find_all('td')]
+                if 'name' in cols and 'year 1' in cols:
+                    year1_idx = cols.index('year 1')
                     header_row_index = i
                     break
 
             if header_row_index is None:
                 continue
 
-            rows = all_rows[header_row_index + 1:]
-            for row in rows:
-                # Data rows are all <td>. Player name is inside an <a> tag.
+            for row in rows[header_row_index + 1:]:
+                # Player name is always wrapped in an <a> tag on SLN pages
                 name_tag = row.find('a')
                 if not name_tag:
                     continue
