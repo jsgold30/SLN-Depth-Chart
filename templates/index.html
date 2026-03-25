@@ -387,6 +387,7 @@
       </select>
       <button class="btn btn-cyan" onclick="loadRoster()">Load Roster</button>
       <button class="btn btn-slate" onclick="randomizeDepthChart()">Randomize</button>
+      <button class="btn btn-green" onclick="optimizeDepthChart()">Optimize</button>
     </div>
     <div class="status-row">
       <div class="spinner" id="spinner"></div>
@@ -1197,6 +1198,84 @@ function randomizeDepthChart() {
   });
 
   // Refresh all UI state
+  refreshAllDropdowns();
+  enforceIRLimit();
+  POSITIONS.forEach(pos => {
+    for (let slot = 0; slot < 3; slot++) {
+      validateSlot(pos, slot);
+      updateStatBadge(pos, slot);
+    }
+  });
+  saveState();
+}
+
+// ─── Optimize depth chart ─────────────────────────────────────────────────────
+function optimizeDepthChart() {
+  if (!roster.length) { setStatus('Load a roster first.', 'err'); return; }
+
+  // Score a player for a specific position using weighted stats
+  function score(p, pos) {
+    const g = k => Math.max(0, gradeVal(p[k] || ''));
+    switch (pos) {
+      case 'C':  return g('in_rating')*3 + g('reb')*3   + g('df')*2   + g('out')*0.5 + g('hn')*0.5;
+      case 'PF': return g('in_rating')*2.5 + g('reb')*2.5 + g('df')*2 + g('out')*1   + g('hn')*0.5;
+      case 'SF': return g('out')*2   + g('in_rating')*2  + g('df')*2   + g('reb')*1.5 + g('hn')*1;
+      case 'SG': return g('out')*3   + g('hn')*2.5       + g('df')*2   + g('in_rating')*0.5;
+      case 'PG': return g('hn')*3.5  + g('out')*2.5      + g('df')*1.5 + g('in_rating')*0.5;
+      default:   return g('in_rating') + g('reb') + g('df') + g('out') + g('hn');
+    }
+  }
+
+  // Clear all slots and IR
+  POSITIONS.forEach(pos => {
+    for (let slot = 0; slot < 3; slot++) {
+      const sel = document.getElementById(`${pos}_${slot}`);
+      if (sel) sel.value = '';
+    }
+  });
+  document.querySelectorAll('input[name="ir"]').forEach(cb => {
+    cb.checked = false;
+    const lbl = cb.closest('label');
+    if (lbl) { lbl.classList.remove('checked'); lbl.style.opacity = ''; lbl.style.cursor = ''; }
+    cb.disabled = false;
+  });
+
+  // ── Starters ──────────────────────────────────────────────────────────────
+  // Fill positions with the fewest eligible players first (scarcity-first)
+  // to avoid painting ourselves into a corner
+  const usedStarters = new Set();
+  const positionsByScarcity = [...POSITIONS].sort((a, b) => {
+    const countA = roster.filter(p => p.eligible_starter[a]).length;
+    const countB = roster.filter(p => p.eligible_starter[b]).length;
+    return countA - countB;
+  });
+
+  positionsByScarcity.forEach(pos => {
+    const pool = roster.filter(p => p.eligible_starter[pos] && !usedStarters.has(p.name));
+    if (!pool.length) return;
+    const best = pool.reduce((a, b) => score(a, pos) >= score(b, pos) ? a : b);
+    const sel = document.getElementById(`${pos}_0`);
+    if (sel) sel.value = best.name;
+    usedStarters.add(best.name);
+  });
+
+  // ── Backups ───────────────────────────────────────────────────────────────
+  // For each position pick the top 2 highest-scoring eligible players
+  // (no uniqueness restriction on backups)
+  POSITIONS.forEach(pos => {
+    const pool = [...roster].sort((a, b) => score(b, pos) - score(a, pos));
+    let filled = 0;
+    for (const p of pool) {
+      if (!p.eligible_backup[pos]) continue;
+      const slot = filled + 1; // slot 1 then slot 2
+      const sel = document.getElementById(`${pos}_${slot}`);
+      if (sel) sel.value = p.name;
+      filled++;
+      if (filled >= 2) break;
+    }
+  });
+
+  // ── Refresh UI ────────────────────────────────────────────────────────────
   refreshAllDropdowns();
   enforceIRLimit();
   POSITIONS.forEach(pos => {
