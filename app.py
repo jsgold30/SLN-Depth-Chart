@@ -330,16 +330,16 @@ def fetch_salary_roster():
             if not all_rows:
                 continue
 
-            # Find the header row that contains 'year 1'.
-            # Only year1_idx is derived from the header — player names are
-            # read from the <a> tag in each data row, which is always reliable.
+            # The salary table header row is all <th> cells.
+            # Use find_all('th') for header so year1_idx matches the
+            # all-<td> data rows exactly — no mixed-tag offset issues.
             header_row_index = None
             year1_idx = None
             for i, row in enumerate(all_rows):
-                cells = [c.get_text(strip=True).lower()
-                         for c in row.find_all(['th', 'td'])]
-                if 'year 1' in cells:
-                    year1_idx = cells.index('year 1')
+                th_cells = [c.get_text(strip=True).lower()
+                            for c in row.find_all('th')]
+                if 'year 1' in th_cells:
+                    year1_idx = th_cells.index('year 1')
                     header_row_index = i
                     break
 
@@ -348,18 +348,17 @@ def fetch_salary_roster():
 
             rows = all_rows[header_row_index + 1:]
             for row in rows:
-                # Player names on SLN roster pages are always hyperlinks.
-                # Using the <a> tag avoids all column-index guesswork for names.
+                # Data rows are all <td>. Player name is inside an <a> tag.
                 name_tag = row.find('a')
                 if not name_tag:
                     continue
                 name = name_tag.get_text(strip=True)
                 if not name:
                     continue
-                cells = [c.get_text(strip=True) for c in row.find_all(['th', 'td'])]
-                if len(cells) <= year1_idx:
+                td_cells = [c.get_text(strip=True) for c in row.find_all('td')]
+                if len(td_cells) <= year1_idx:
                     continue
-                salary = parse_salary(cells[year1_idx])
+                salary = parse_salary(td_cells[year1_idx])
                 players.append({'name': name, 'salary': salary})
 
             if players:
