@@ -705,15 +705,6 @@
   <div class="card">
     <div class="card-title">Trade Machine</div>
 
-    <!-- Soft Cap Row -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-      <label style="font-size:0.8rem;color:#94a3b8;white-space:nowrap;">Soft Cap ($):</label>
-      <input type="text" id="tmSoftCap" placeholder="e.g. 45000000"
-             style="max-width:170px;flex:unset;"
-             oninput="tmOnCapChange()">
-      <span id="tmCapHint" style="font-size:0.73rem;color:#64748b;"></span>
-    </div>
-
     <!-- Two-team columns -->
     <div class="tm-columns">
 
@@ -1835,18 +1826,10 @@ function fmtSal(n) {
   return '$' + Math.round(n).toLocaleString();
 }
 
-function tmParseSoftCap() {
-  const raw = (document.getElementById('tmSoftCap').value || '').replace(/[$,\s]/g, '');
-  return parseFloat(raw) || 0;
-}
+const TM_SOFT_CAP = 50_000_000;
 
-function tmOnCapChange() {
-  const cap = tmParseSoftCap();
-  const hint = document.getElementById('tmCapHint');
-  hint.textContent = cap > 0 ? `= ${fmtSal(cap)}` : '';
-  // Refresh cap indicators for both loaded rosters
-  if (tmRosterA.length) buildTMPlayerList('A');
-  if (tmRosterB.length) buildTMPlayerList('B');
+function tmParseSoftCap() {
+  return TM_SOFT_CAP;
 }
 
 async function loadTMTeam(side) {
@@ -1980,9 +1963,7 @@ function validateTradeMatch() {
 
   // ── Rule: Salary matching (if either team over soft cap) ──────────────────
   if (playersA.length > 0 && playersB.length > 0) {
-    if (!softCap) {
-      checks.push('ℹ Enter the Soft Cap above to check salary matching.');
-    } else if (overCapA || overCapB) {
+    if (overCapA || overCapB) {
       const whichOver = overCapA && overCapB ? 'Both teams are'
                       : overCapA ? 'Team A is' : 'Team B is';
       const minSal     = Math.min(salA, salB);
