@@ -424,6 +424,58 @@
       color: #94a3b8;
       font-weight: 600;
     }
+    .tm-vetmin-section {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid #334155;
+    }
+    .tm-vetmin-label {
+      font-size: 0.63rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #475569;
+      margin-bottom: 5px;
+    }
+    .tm-vetmin-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+    .tm-vetmin-row select {
+      flex: 1;
+      font-size: 0.75rem;
+      padding: 3px 6px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      color: #cbd5e1;
+    }
+    .tm-vetmin-row .vm-sal {
+      font-variant-numeric: tabular-nums;
+      color: #4ade80;
+      font-size: 0.75rem;
+      min-width: 72px;
+      text-align: right;
+    }
+    .tm-vetmin-row .vm-remove {
+      background: none;
+      border: none;
+      color: #475569;
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0 2px;
+      line-height: 1;
+    }
+    .tm-vetmin-row .vm-remove:hover { color: #f87171; }
+    .tm-vetmin-add {
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      margin-top: 4px;
+    }
     .tm-result {
       border-radius: 8px;
       padding: 14px 16px;
@@ -774,6 +826,14 @@
         </div>
         <div id="tmStatusA" style="display:none;"></div>
         <div id="tmPlayerListA" class="tm-player-list"></div>
+
+        <!-- Vet Min Players -->
+        <div class="tm-vetmin-section">
+          <div class="tm-vetmin-label">Vet Minimum Players</div>
+          <div id="tmVetMinListA"></div>
+          <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddA" onclick="addVetMin('A')">+ Add Vet Min</button>
+        </div>
+
         <div class="tm-total-row">
           <span>Sending:</span>
           <span id="tmSendingA" style="color:#38bdf8;">$0</span>
@@ -823,6 +883,14 @@
         </div>
         <div id="tmStatusB" style="display:none;"></div>
         <div id="tmPlayerListB" class="tm-player-list"></div>
+
+        <!-- Vet Min Players -->
+        <div class="tm-vetmin-section">
+          <div class="tm-vetmin-label">Vet Minimum Players</div>
+          <div id="tmVetMinListB"></div>
+          <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddB" onclick="addVetMin('B')">+ Add Vet Min</button>
+        </div>
+
         <div class="tm-total-row">
           <span>Sending:</span>
           <span id="tmSendingB" style="color:#38bdf8;">$0</span>
@@ -1883,6 +1951,69 @@ function addTradePlayer(player) {
 let tmRosterA = [], tmRosterB = [];
 let tmTotalA = 0, tmTotalB = 0;
 
+// Vet minimum salary table (years of service → annual salary)
+const VET_MIN_SALARIES = {
+  '0':  332817,
+  '1':  465850,
+  '2':  540850,
+  '3':  565850,
+  '4':  590850,
+  '5':  653350,
+  '6':  715850,
+  '7':  778350,
+  '8':  840850,
+  '9':  965850,
+  '10+': 1000000,
+};
+const VET_MIN_OPTIONS = Object.entries(VET_MIN_SALARIES)
+  .map(([yr, sal]) => `<option value="${sal}">${yr} yr${yr==='1'?'':'s'} — ${fmtSal(sal)}</option>`)
+  .join('');
+
+function addVetMin(side) {
+  const list = document.getElementById(`tmVetMinList${side}`);
+  const addBtn = document.getElementById(`tmVetMinAdd${side}`);
+  if (list.children.length >= 5) return;
+
+  const row = document.createElement('div');
+  row.className = 'tm-vetmin-row';
+
+  const sel = document.createElement('select');
+  sel.innerHTML = VET_MIN_OPTIONS;
+  sel.addEventListener('change', () => tmUpdateSending(side));
+
+  const salSpan = document.createElement('span');
+  salSpan.className = 'vm-sal';
+  salSpan.textContent = fmtSal(parseInt(sel.value));
+
+  sel.addEventListener('change', () => {
+    salSpan.textContent = fmtSal(parseInt(sel.value));
+    tmUpdateSending(side);
+  });
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'vm-remove';
+  removeBtn.textContent = '✕';
+  removeBtn.title = 'Remove';
+  removeBtn.addEventListener('click', () => {
+    row.remove();
+    if (list.children.length < 5) addBtn.style.display = '';
+    tmUpdateSending(side);
+  });
+
+  row.appendChild(sel);
+  row.appendChild(salSpan);
+  row.appendChild(removeBtn);
+  list.appendChild(row);
+
+  if (list.children.length >= 5) addBtn.style.display = 'none';
+  tmUpdateSending(side);
+}
+
+function tmGetVetMinTotal(side) {
+  return [...document.querySelectorAll(`#tmVetMinList${side} select`)]
+    .reduce((sum, sel) => sum + (parseInt(sel.value) || 0), 0);
+}
+
 function clearTradeMachine() {
   ['A','B'].forEach(side => {
     // Uncheck all player checkboxes and remove selected highlight
@@ -1891,6 +2022,9 @@ function clearTradeMachine() {
       cb.checked = false;
       cb.closest('label')?.classList.remove('selected');
     });
+    // Clear vet min rows
+    document.getElementById(`tmVetMinList${side}`).innerHTML = '';
+    document.getElementById(`tmVetMinAdd${side}`).style.display = '';
     // Reset sending total
     tmUpdateSending(side);
   });
@@ -2008,18 +2142,18 @@ function tmUpdateSending(side) {
   document.getElementById('tmSendingA').textContent = fmtSal(salA);
   document.getElementById('tmSendingB').textContent = fmtSal(salB);
 
-  // Cap after trade = current total - salary going out + salary coming in
-  function capAfterEl(elId, currentTotal, outSal, inSal) {
+  // Cap after trade = (current total + vet mins) - salary going out + salary coming in
+  function capAfterEl(elId, currentTotal, vetMinTotal, outSal, inSal) {
     const el = document.getElementById(elId);
     if (!currentTotal) { el.textContent = '—'; el.style.color = '#94a3b8'; return; }
-    const adjusted = currentTotal - outSal + inSal;
+    const adjusted = currentTotal + vetMinTotal - outSal + inSal;
     const overCap  = adjusted > TM_HARD_CAP;
     el.textContent = fmtSal(adjusted) + (overCap ? ' ● Over' : ' ● Under');
     el.style.color  = overCap ? '#f87171' : '#4ade80';
   }
 
-  capAfterEl('tmCapAfterA', tmTotalA, salA, salB);
-  capAfterEl('tmCapAfterB', tmTotalB, salB, salA);
+  capAfterEl('tmCapAfterA', tmTotalA, tmGetVetMinTotal('A'), salA, salB);
+  capAfterEl('tmCapAfterB', tmTotalB, tmGetVetMinTotal('B'), salB, salA);
 }
 
 function validateTradeMatch() {
