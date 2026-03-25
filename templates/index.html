@@ -2020,8 +2020,10 @@ function validateTradeMatch() {
         `✓ Salary match OK — ${lesserTeam} sends ${fmtSal(minSal)} × 1.15 = ${fmtSal(maxAllowed)} ≥ ${greaterTeam}'s ${fmtSal(maxSal)}`
       );
     } else {
+      const salaryToAdd = Math.ceil(maxSal / 1.15) - minSal;
       errors.push(
-        `✗ Salary mismatch — ${lesserTeam} sends ${fmtSal(minSal)} × 1.15 = ${fmtSal(maxAllowed)}, but ${greaterTeam} sends ${fmtSal(maxSal)} (over by ${fmtSal(maxSal - maxAllowed)})`
+        `✗ Salary mismatch — ${lesserTeam} sends ${fmtSal(minSal)} × 1.15 = ${fmtSal(maxAllowed)}, but ${greaterTeam} sends ${fmtSal(maxSal)}. ` +
+        `${lesserTeam} needs to add at least ${fmtSal(salaryToAdd)} more in outgoing salary to make this trade work.`
       );
     }
   }
