@@ -373,7 +373,14 @@ def fetch_salary_roster():
             return jsonify({'error': 'Could not find salary data (Year 1 column) on this page.'}), 400
 
         total_salary = sum(p['salary'] for p in players)
-        return jsonify({'players': players, 'team_name': team_name, 'total_salary': total_salary})
+        return jsonify({
+            'players': players,
+            'team_name': team_name,
+            'total_salary': total_salary,
+            'debug_col_names': col_names,
+            'debug_name_idx': name_idx,
+            'debug_year1_idx': year1_idx
+        })
 
     except requests.exceptions.Timeout:
         return jsonify({'error': 'Request timed out.'}), 400

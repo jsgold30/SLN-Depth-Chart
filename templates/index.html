@@ -1874,6 +1874,13 @@ async function loadTMTeam(side) {
     const data = await res.json();
     if (data.error) { statusEl.textContent = '⚠ ' + data.error; return; }
 
+    // Debug: log column detection so we can verify indices
+    console.log('[TM Debug] col_names:', data.debug_col_names);
+    console.log('[TM Debug] name_idx:', data.debug_name_idx, '| year1_idx:', data.debug_year1_idx);
+    if (data.players && data.players.length) {
+      console.log('[TM Debug] first 3 players:', data.players.slice(0, 3));
+    }
+
     if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; }
     else              { tmRosterB = data.players; tmTotalB = data.total_salary; }
 
