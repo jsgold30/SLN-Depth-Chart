@@ -330,16 +330,21 @@ def fetch_salary_roster():
             if not all_rows:
                 continue
 
-            # Find header row containing 'name' and 'year 1'
+            # Find header row containing 'name' and 'year 1'.
+            # Prefer <th>-only matching so indices align with <td> data rows.
             header_row_index = None
             col_names = []
             for i, row in enumerate(all_rows):
-                candidate = [
-                    c.get_text(strip=True).lower()
-                    for c in row.find_all(['th', 'td'])
-                ]
-                if 'name' in candidate and 'year 1' in candidate:
-                    col_names = candidate
+                # Try th-only first (proper header cells)
+                th_cells = [c.get_text(strip=True).lower() for c in row.find_all('th')]
+                if 'name' in th_cells and 'year 1' in th_cells:
+                    col_names = th_cells
+                    header_row_index = i
+                    break
+                # Fall back to td-only
+                td_cells = [c.get_text(strip=True).lower() for c in row.find_all('td')]
+                if 'name' in td_cells and 'year 1' in td_cells:
+                    col_names = td_cells
                     header_row_index = i
                     break
 
@@ -348,7 +353,6 @@ def fetch_salary_roster():
 
             name_idx  = col_names.index('name')
             year1_idx = col_names.index('year 1')
-            pos_idx   = col_names.index('pos') if 'pos' in col_names else None
 
             rows = all_rows[header_row_index + 1:]
             for row in rows:
@@ -358,9 +362,8 @@ def fetch_salary_roster():
                 name = cells[name_idx].strip()
                 if not name:
                     continue
-                pos    = cells[pos_idx].strip().upper() if pos_idx is not None and len(cells) > pos_idx else ''
                 salary = parse_salary(cells[year1_idx])
-                players.append({'name': name, 'pos': pos, 'salary': salary})
+                players.append({'name': name, 'salary': salary})
 
             if players:
                 break

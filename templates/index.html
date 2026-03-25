@@ -378,7 +378,7 @@
     }
     .tm-list-header {
       display: grid;
-      grid-template-columns: 18px 1fr 44px 90px;
+      grid-template-columns: 18px 1fr 100px;
       gap: 6px;
       padding: 3px 6px 5px;
       font-size: 0.63rem;
@@ -391,7 +391,7 @@
     }
     .tm-player-row {
       display: grid;
-      grid-template-columns: 18px 1fr 44px 90px;
+      grid-template-columns: 18px 1fr 100px;
       gap: 6px;
       align-items: center;
       padding: 5px 6px;
@@ -406,7 +406,6 @@
     .tm-player-row input[type="checkbox"] { accent-color: #38bdf8; cursor: pointer; }
     .tm-player-row.selected { background: #0c1a2e; color: #e2e8f0; }
     .tm-player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .tm-player-pos { font-size: 0.7rem; font-weight: 700; color: #38bdf8; text-align: center; }
     .tm-salary { font-variant-numeric: tabular-nums; color: #4ade80; font-size: 0.8rem; text-align: right; white-space: nowrap; }
     .tm-total-row {
       display: flex;
@@ -767,6 +766,10 @@
           <span>Sending:</span>
           <span id="tmSendingA" style="color:#38bdf8;">$0</span>
         </div>
+        <div class="tm-total-row" style="margin-top:3px;border-top:none;padding-top:0;">
+          <span>Cap after trade:</span>
+          <span id="tmCapAfterA" style="color:#94a3b8;">—</span>
+        </div>
       </div>
 
       <!-- ── Team B ── -->
@@ -812,6 +815,10 @@
         <div class="tm-total-row">
           <span>Sending:</span>
           <span id="tmSendingB" style="color:#38bdf8;">$0</span>
+        </div>
+        <div class="tm-total-row" style="margin-top:3px;border-top:none;padding-top:0;">
+          <span>Cap after trade:</span>
+          <span id="tmCapAfterB" style="color:#94a3b8;">—</span>
         </div>
       </div>
 
@@ -1855,6 +1862,8 @@ async function loadTMTeam(side) {
   statusEl.textContent = 'Loading…';
   document.getElementById(`tmPlayerList${side}`).innerHTML = '';
   document.getElementById(`tmSending${side}`).textContent = '$0';
+  document.getElementById(`tmCapAfter${side}`).textContent = '—';
+  document.getElementById(`tmCapAfter${side}`).style.color = '#94a3b8';
 
   try {
     const res  = await fetch('/fetch_salary_roster', {
@@ -1898,7 +1907,7 @@ function buildTMPlayerList(side) {
   // Column header
   const hdr = document.createElement('div');
   hdr.className = 'tm-list-header';
-  hdr.innerHTML = '<span></span><span>Player</span><span style="text-align:center">Pos</span><span style="text-align:right">Year 1</span>';
+  hdr.innerHTML = '<span></span><span>Player</span><span style="text-align:right">Year 1 Salary</span>';
   container.appendChild(hdr);
 
   [...roster]
@@ -1921,17 +1930,12 @@ function buildTMPlayerList(side) {
       nameSpan.className = 'tm-player-name';
       nameSpan.textContent = p.name;
 
-      const posSpan = document.createElement('span');
-      posSpan.className = 'tm-player-pos';
-      posSpan.textContent = p.pos;
-
       const salSpan = document.createElement('span');
       salSpan.className = 'tm-salary';
       salSpan.textContent = fmtSal(p.salary);
 
       row.appendChild(cb);
       row.appendChild(nameSpan);
-      row.appendChild(posSpan);
       row.appendChild(salSpan);
       container.appendChild(row);
     });
@@ -1945,9 +1949,24 @@ function tmGetSelected(side) {
 }
 
 function tmUpdateSending(side) {
-  const players = tmGetSelected(side);
-  const total   = players.reduce((s, p) => s + p.salary, 0);
-  document.getElementById(`tmSending${side}`).textContent = fmtSal(total);
+  const salA = tmGetSelected('A').reduce((s, p) => s + p.salary, 0);
+  const salB = tmGetSelected('B').reduce((s, p) => s + p.salary, 0);
+
+  document.getElementById('tmSendingA').textContent = fmtSal(salA);
+  document.getElementById('tmSendingB').textContent = fmtSal(salB);
+
+  // Cap after trade = current total - salary going out + salary coming in
+  function capAfterEl(elId, currentTotal, outSal, inSal) {
+    const el = document.getElementById(elId);
+    if (!currentTotal) { el.textContent = '—'; el.style.color = '#94a3b8'; return; }
+    const adjusted = currentTotal - outSal + inSal;
+    const overCap  = adjusted > TM_SOFT_CAP;
+    el.textContent = fmtSal(adjusted) + (overCap ? ' ● Over' : ' ● Under');
+    el.style.color  = overCap ? '#f87171' : '#4ade80';
+  }
+
+  capAfterEl('tmCapAfterA', tmTotalA, salA, salB);
+  capAfterEl('tmCapAfterB', tmTotalB, salB, salA);
 }
 
 function validateTradeMatch() {
