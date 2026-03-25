@@ -279,6 +279,45 @@
     /* Tactic bold row */
     .tactic-bold { margin-top: 5px; }
 
+    /* Trade editor */
+    .trade-panel {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #334155;
+      display: none;
+    }
+    .trade-panel.open { display: block; }
+
+    .trade-section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .roster-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      font-size: 0.78rem;
+    }
+    .roster-tag .remove-btn {
+      background: none;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      padding: 0;
+    }
+    .roster-tag .remove-btn:hover { color: #fca5a5; }
+
     /* Placeholder state */
     .placeholder-msg {
       color: #475569;
@@ -392,7 +431,59 @@
     <div class="status-row">
       <div class="spinner" id="spinner"></div>
       <span id="statusMsg" class="status-info"></span>
-      <span id="savedIndicator" style="margin-left:auto;font-size:0.75rem;color:#4ade80;opacity:0;transition:opacity 0.5s;"></span>
+      <button class="btn btn-slate" id="tradeModeBtn" onclick="toggleTradePanel()" style="display:none;margin-left:auto;font-size:0.72rem;padding:4px 10px;">✏ Trade Mode</button>
+      <span id="savedIndicator" style="font-size:0.75rem;color:#4ade80;opacity:0;transition:opacity 0.5s;"></span>
+    </div>
+
+    <!-- ── TRADE EDITOR PANEL ── -->
+    <div class="trade-panel" id="tradePanel">
+
+      <!-- Current roster chips -->
+      <div class="trade-section-label">Current Roster — click × to remove a player</div>
+      <div id="rosterTagList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;"></div>
+
+      <!-- Add player from another team -->
+      <div class="trade-section-label">Add Player from Trade</div>
+      <div class="url-row" style="flex-wrap:wrap;gap:8px;align-items:center;">
+        <select id="tradeTeamSelect" style="flex:1;min-width:140px;">
+          <option value="">-- Select Team --</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster1.htm">Boston Celtics</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster2.htm">Miami Heat</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster3.htm">New Jersey Nets</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster4.htm">New York Knicks</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster5.htm">Orlando Magic</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster6.htm">Philadelphia 76ers</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster7.htm">Washington Bullets</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster8.htm">Atlanta Hawks</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster9.htm">Charlotte Hornets</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster10.htm">Chicago Bulls</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster11.htm">Cleveland Cavaliers</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster12.htm">Detroit Pistons</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster13.htm">Indiana Pacers</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster14.htm">Milwaukee Bucks</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster15.htm">Toronto Raptors</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster16.htm">Dallas Mavericks</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster17.htm">Denver Nuggets</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster18.htm">Houston Rockets</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster19.htm">Minnesota Timberwolves</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster20.htm">San Antonio Spurs</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster21.htm">Utah Jazz</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster22.htm">Vancouver Grizzlies</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster23.htm">Golden State Warriors</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster24.htm">Los Angeles Clippers</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster25.htm">Los Angeles Lakers</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster26.htm">Phoenix Suns</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster27.htm">Portland Trail Blazers</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster28.htm">Sacramento Kings</option>
+          <option value="https://www.simleaguenirvana.com/rosters/roster29.htm">Seattle SuperSonics</option>
+        </select>
+        <button class="btn btn-slate" onclick="loadTradeTeam()" style="white-space:nowrap;">Load Team</button>
+        <select id="tradePlayerSelect" style="flex:1;min-width:140px;" disabled>
+          <option value="">-- Select Player --</option>
+        </select>
+        <button class="btn btn-cyan" onclick="addTradePlayer()" style="white-space:nowrap;">Add Player</button>
+      </div>
+      <div id="tradeStatus" style="font-size:0.78rem;color:#94a3b8;margin-top:6px;min-height:18px;"></div>
     </div>
   </div>
 
@@ -542,6 +633,7 @@ async function loadRoster(restoring = false) {
     roster = data.players;
     const label = data.team_name ? `${data.team_name} — ` : '';
     setStatus(`✓ ${label}${roster.length} players loaded`, 'ok');
+    document.getElementById('tradeModeBtn').style.display = '';
 
     buildPositionRows();
     buildIR();
@@ -1348,6 +1440,121 @@ function optimizeDepthChart() {
     }
   });
   saveState();
+}
+
+// ─── Trade Mode ───────────────────────────────────────────────────────────────
+let tradeRoster = [];
+
+function toggleTradePanel() {
+  const panel = document.getElementById('tradePanel');
+  const btn   = document.getElementById('tradeModeBtn');
+  const open  = panel.classList.toggle('open');
+  btn.textContent = open ? '✕ Close Trade Mode' : '✏ Trade Mode';
+  if (open) buildRosterTagList();
+}
+
+function buildRosterTagList() {
+  const container = document.getElementById('rosterTagList');
+  container.innerHTML = '';
+  const posOrder = {'C':0,'PF':1,'SF':2,'SG':3,'PG':4};
+  [...roster]
+    .sort((a,b) => (posOrder[a.pos]??9) - (posOrder[b.pos]??9))
+    .forEach(p => {
+      const tag = document.createElement('div');
+      tag.className = 'roster-tag';
+      tag.innerHTML = `<span>${p.name} (${p.pos})</span>`;
+      const x = document.createElement('button');
+      x.className = 'remove-btn';
+      x.textContent = '×';
+      x.title = `Remove ${p.name}`;
+      x.onclick = () => removePlayerFromRoster(p.name);
+      tag.appendChild(x);
+      container.appendChild(tag);
+    });
+}
+
+function removePlayerFromRoster(name) {
+  roster = roster.filter(p => p.name !== name);
+
+  // Clear from any position slot
+  POSITIONS.forEach(pos => {
+    for (let s = 0; s < 3; s++) {
+      const sel = document.getElementById(`${pos}_${s}`);
+      if (sel && sel.value === name) {
+        sel.value = '';
+        validateSlot(pos, s);
+        updateStatBadge(pos, s);
+      }
+    }
+  });
+
+  // Rebuild IR, options, dropdowns
+  buildIR();
+  buildOptionDropdowns();
+  refreshAllDropdowns();
+  enforceIRLimit();
+  buildRosterTagList();
+}
+
+async function loadTradeTeam() {
+  const url = document.getElementById('tradeTeamSelect').value;
+  if (!url) { document.getElementById('tradeStatus').textContent = 'Select a team first.'; return; }
+
+  document.getElementById('tradeStatus').textContent = 'Loading…';
+  document.getElementById('tradePlayerSelect').disabled = true;
+
+  try {
+    const res  = await fetch('/fetch_roster', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url})
+    });
+    const data = await res.json();
+    if (data.error) { document.getElementById('tradeStatus').textContent = data.error; return; }
+
+    tradeRoster = data.players;
+    const sel = document.getElementById('tradePlayerSelect');
+    sel.innerHTML = '<option value="">-- Select Player --</option>';
+
+    const posOrder = {'C':0,'PF':1,'SF':2,'SG':3,'PG':4};
+    [...tradeRoster]
+      .sort((a,b) => (posOrder[a.pos]??9) - (posOrder[b.pos]??9))
+      .forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = `${p.name} (${p.pos})`;
+        opt.dataset.player = JSON.stringify(p);
+        sel.appendChild(opt);
+      });
+
+    sel.disabled = false;
+    document.getElementById('tradeStatus').textContent = `✓ ${data.team_name} — ${tradeRoster.length} players loaded`;
+  } catch(e) {
+    document.getElementById('tradeStatus').textContent = 'Error loading team roster.';
+  }
+}
+
+function addTradePlayer() {
+  const sel = document.getElementById('tradePlayerSelect');
+  if (!sel.value) { document.getElementById('tradeStatus').textContent = 'Select a player first.'; return; }
+
+  const opt    = sel.options[sel.selectedIndex];
+  const player = JSON.parse(opt.dataset.player);
+
+  if (roster.find(p => p.name === player.name)) {
+    document.getElementById('tradeStatus').textContent = `${player.name} is already on this roster.`;
+    return;
+  }
+
+  roster.push(player);
+  buildIR();
+  buildOptionDropdowns();
+  refreshAllDropdowns();
+  enforceIRLimit();
+  buildRosterTagList();
+
+  document.getElementById('tradeStatus').textContent = `✓ ${player.name} (${player.pos}) added to roster.`;
+  sel.value = '';
 }
 
 // ─── Auto-load last-used team on page open ───────────────────────────────────
