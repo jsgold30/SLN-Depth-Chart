@@ -1185,8 +1185,7 @@ function buildOptionDropdowns() {
     roster.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.name;
-      const num = p.roster_num ? `${p.roster_num}. ` : '';
-      opt.textContent = `${num}${p.name} (${p.pos})`;
+      opt.textContent = `${p.name} (${p.pos})`;
       sel.appendChild(opt);
     });
 
@@ -1246,12 +1245,11 @@ function refreshDropdown(pos, slot) {
     players.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.name;
-      const num = p.roster_num ? `${p.roster_num}. ` : '';
       if (irPlayers.has(p.name)) {
-        opt.textContent = `${num}${p.name} [IR]`;
+        opt.textContent = `${p.name} [IR]`;
         opt.disabled = true;
       } else {
-        opt.textContent = `${num}${p.name} (${p.pos})`;
+        opt.textContent = `${p.name} (${p.pos})`;
       }
       grp.appendChild(opt);
     });

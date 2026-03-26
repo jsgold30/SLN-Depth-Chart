@@ -285,11 +285,9 @@ def fetch_roster():
                          'Check the URL and make sure the page is accessible.'
             }), 400
 
-        # Sort by position order then name, then assign roster number
+        # Sort by position order then name
         pos_order = {'PG': 0, 'SG': 1, 'SF': 2, 'PF': 3, 'C': 4}
         players.sort(key=lambda p: (pos_order.get(p['pos'], 5), p['name']))
-        for i, p in enumerate(players):
-            p['roster_num'] = i + 1
 
         return jsonify({'players': players, 'team_name': team_name})
 
