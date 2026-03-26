@@ -142,24 +142,40 @@
       letter-spacing: 1px;
     }
 
-    .slot-wrap {
-      position: relative;
-      border-left: 3px solid transparent;
-      border-radius: 6px;
+    .slot-wrap { position: relative; display: flex; align-items: center; gap: 6px; }
+    .slot-wrap select { flex: 1; }
+    .bold-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #1e293b;
+      border: 1.5px solid #475569;
       cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
     }
-    .slot-wrap.bold-active {
-      border-left-color: #3b82f6;
-      background: rgba(59,130,246,0.07);
+    .bold-dot.active {
+      background: #3b82f6;
+      border-color: #60a5fa;
     }
     .slot-hint {
-      font-size: 0.62rem;
+      font-size: 0.65rem;
       color: #475569;
-      font-style: italic;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
       padding-left: 2px;
       user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .slot-hint-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #3b82f6;
+      border: 1.5px solid #60a5fa;
+      flex-shrink: 0;
+      display: inline-block;
     }
 
     select {
@@ -538,7 +554,7 @@
         font-size: 0.8rem;
       }
 
-      .slot-wrap { margin-bottom: 8px; }
+      .slot-wrap { margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
 
       select { font-size: 0.85rem; padding: 10px 12px; }
 
@@ -1041,7 +1057,7 @@ function buildPositionRows() {
   // Hint line
   const hint = document.createElement('div');
   hint.className = 'slot-hint';
-  hint.textContent = 'Tip: Click a row (outside the dropdown) to bold it';
+  hint.innerHTML = 'Indicate a DC change by selecting the <span class="slot-hint-dot"></span>';
   container.appendChild(hint);
 
   POSITIONS.forEach(pos => {
@@ -1076,21 +1092,24 @@ function buildPositionRows() {
       stat.id = `stat_${pos}_${slot}`;
       wrap.appendChild(stat);
 
-      // Hidden checkbox — preserves state save/load/undo; bold toggled by clicking the row
+      // Hidden checkbox — preserves state save/load/undo
       const boldCb = document.createElement('input');
       boldCb.type = 'checkbox';
       boldCb.id = `bold_${pos}_${slot}`;
       boldCb.style.display = 'none';
       wrap.appendChild(boldCb);
 
-      // Click the row (anywhere except the select) to toggle bold
-      wrap.addEventListener('click', e => {
-        if (e.target.tagName === 'SELECT') return;
+      // Colored dot — click to toggle bold
+      const dot = document.createElement('span');
+      dot.className = 'bold-dot';
+      dot.title = 'Toggle bold';
+      dot.addEventListener('click', () => {
         pushUndo();
         boldCb.checked = !boldCb.checked;
-        wrap.classList.toggle('bold-active', boldCb.checked);
+        dot.classList.toggle('active', boldCb.checked);
         saveState();
       });
+      wrap.appendChild(dot);
 
       rowDiv.appendChild(wrap);
     }
@@ -1384,7 +1403,8 @@ function applyState(state) {
       if (sel)  sel.value    = state[`${pos}_${slot}`] || '';
       if (bold) {
         bold.checked = !!state[`bold_${pos}_${slot}`];
-        bold.closest('.slot-wrap')?.classList.toggle('bold-active', bold.checked);
+        const dot = bold.closest('.slot-wrap')?.querySelector('.bold-dot');
+        if (dot) dot.classList.toggle('active', bold.checked);
       }
       validateSlot(pos, slot);
       updateStatBadge(pos, slot);
