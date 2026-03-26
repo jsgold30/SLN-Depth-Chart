@@ -386,6 +386,45 @@
       gap: 16px;
       margin-top: 4px;
     }
+    .tm-logo-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+    .tm-logo-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      padding: 5px 2px;
+      border-radius: 7px;
+      border: 2px solid transparent;
+      transition: all 0.12s;
+    }
+    .tm-logo-cell:hover { background: #1e293b; border-color: #475569; }
+    .tm-logo-cell.selected { border-color: #38bdf8; background: #0c1a2e; }
+    .tm-logo-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.52rem;
+      font-weight: 800;
+      color: #fff;
+      text-align: center;
+      line-height: 1.1;
+      flex-shrink: 0;
+    }
+    .tm-logo-abbr {
+      font-size: 0.5rem;
+      color: #64748b;
+      text-align: center;
+      line-height: 1.1;
+    }
     .tm-side {
       background: #0f172a;
       border: 1px solid #334155;
@@ -815,41 +854,8 @@
 
       <!-- ── Team A ── -->
       <div class="tm-side">
-        <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
-          <select id="tmSelectA" style="flex:1;min-width:120px;">
-            <option value="">-- Select Team --</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster1.htm">Boston Celtics</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster2.htm">Miami Heat</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster3.htm">New Jersey Nets</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster4.htm">New York Knicks</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster5.htm">Orlando Magic</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster6.htm">Philadelphia 76ers</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster7.htm">Washington Bullets</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster8.htm">Atlanta Hawks</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster9.htm">Charlotte Hornets</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster10.htm">Chicago Bulls</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster11.htm">Cleveland Cavaliers</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster12.htm">Detroit Pistons</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster13.htm">Indiana Pacers</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster14.htm">Milwaukee Bucks</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster15.htm">Toronto Raptors</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster16.htm">Dallas Mavericks</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster17.htm">Denver Nuggets</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster18.htm">Houston Rockets</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster19.htm">Minnesota Timberwolves</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster20.htm">San Antonio Spurs</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster21.htm">Utah Jazz</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster22.htm">Vancouver Grizzlies</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster23.htm">Golden State Warriors</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster24.htm">Los Angeles Clippers</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster25.htm">Los Angeles Lakers</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster26.htm">Phoenix Suns</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster27.htm">Portland Trail Blazers</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster28.htm">Sacramento Kings</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster29.htm">Seattle SuperSonics</option>
-          </select>
-          <button class="btn btn-cyan" onclick="loadTMTeam('A')" style="font-size:0.78rem;padding:6px 12px;">Load</button>
-        </div>
+        <input type="hidden" id="tmSelectA">
+        <div id="tmLogoGridA" class="tm-logo-grid"></div>
         <div id="tmStatusA" style="display:none;"></div>
         <div id="tmTeamNameA" style="font-size:0.85rem;font-weight:700;color:#7dd3fc;margin:6px 0 4px;display:none;"></div>
         <div id="tmPlayerListA" class="tm-player-list"></div>
@@ -873,41 +879,8 @@
 
       <!-- ── Team B ── -->
       <div class="tm-side">
-        <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
-          <select id="tmSelectB" style="flex:1;min-width:120px;">
-            <option value="">-- Select Team --</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster1.htm">Boston Celtics</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster2.htm">Miami Heat</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster3.htm">New Jersey Nets</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster4.htm">New York Knicks</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster5.htm">Orlando Magic</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster6.htm">Philadelphia 76ers</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster7.htm">Washington Bullets</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster8.htm">Atlanta Hawks</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster9.htm">Charlotte Hornets</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster10.htm">Chicago Bulls</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster11.htm">Cleveland Cavaliers</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster12.htm">Detroit Pistons</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster13.htm">Indiana Pacers</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster14.htm">Milwaukee Bucks</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster15.htm">Toronto Raptors</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster16.htm">Dallas Mavericks</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster17.htm">Denver Nuggets</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster18.htm">Houston Rockets</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster19.htm">Minnesota Timberwolves</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster20.htm">San Antonio Spurs</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster21.htm">Utah Jazz</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster22.htm">Vancouver Grizzlies</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster23.htm">Golden State Warriors</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster24.htm">Los Angeles Clippers</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster25.htm">Los Angeles Lakers</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster26.htm">Phoenix Suns</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster27.htm">Portland Trail Blazers</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster28.htm">Sacramento Kings</option>
-            <option value="https://www.simleaguenirvana.com/rosters/roster29.htm">Seattle SuperSonics</option>
-          </select>
-          <button class="btn btn-cyan" onclick="loadTMTeam('B')" style="font-size:0.78rem;padding:6px 12px;">Load</button>
-        </div>
+        <input type="hidden" id="tmSelectB">
+        <div id="tmLogoGridB" class="tm-logo-grid"></div>
         <div id="tmStatusB" style="display:none;"></div>
         <div id="tmTeamNameB" style="font-size:0.85rem;font-weight:700;color:#7dd3fc;margin:6px 0 4px;display:none;"></div>
         <div id="tmPlayerListB" class="tm-player-list"></div>
@@ -2045,6 +2018,63 @@ function addTradePlayer(player) {
 let tmRosterA = [], tmRosterB = [];
 let tmTotalA = 0, tmTotalB = 0;
 let tmNameA = 'Team A', tmNameB = 'Team B';
+
+const TM_TEAMS = [
+  { name:'Boston Celtics',          abbr:'BOS', url:'roster1.htm',  c1:'#007A33', c2:'#BA9653' },
+  { name:'Miami Heat',              abbr:'MIA', url:'roster2.htm',  c1:'#98002E', c2:'#F9A01B' },
+  { name:'New Jersey Nets',         abbr:'NJN', url:'roster3.htm',  c1:'#000000', c2:'#877652' },
+  { name:'New York Knicks',         abbr:'NYK', url:'roster4.htm',  c1:'#006BB6', c2:'#F58426' },
+  { name:'Orlando Magic',           abbr:'ORL', url:'roster5.htm',  c1:'#0077C0', c2:'#000000' },
+  { name:'Philadelphia 76ers',      abbr:'PHI', url:'roster6.htm',  c1:'#006BB6', c2:'#ED174C' },
+  { name:'Washington Bullets',      abbr:'WAS', url:'roster7.htm',  c1:'#002B5C', c2:'#E31837' },
+  { name:'Atlanta Hawks',           abbr:'ATL', url:'roster8.htm',  c1:'#C1D32F', c2:'#E03A3E' },
+  { name:'Charlotte Hornets',       abbr:'CHA', url:'roster9.htm',  c1:'#1D1160', c2:'#00788C' },
+  { name:'Chicago Bulls',           abbr:'CHI', url:'roster10.htm', c1:'#CE1141', c2:'#000000' },
+  { name:'Cleveland Cavaliers',     abbr:'CLE', url:'roster11.htm', c1:'#860038', c2:'#FDBB30' },
+  { name:'Detroit Pistons',         abbr:'DET', url:'roster12.htm', c1:'#C8102E', c2:'#006BB6' },
+  { name:'Indiana Pacers',          abbr:'IND', url:'roster13.htm', c1:'#002D62', c2:'#FDBB30' },
+  { name:'Milwaukee Bucks',         abbr:'MIL', url:'roster14.htm', c1:'#00471B', c2:'#EEE1C6' },
+  { name:'Toronto Raptors',         abbr:'TOR', url:'roster15.htm', c1:'#CE1141', c2:'#000000' },
+  { name:'Dallas Mavericks',        abbr:'DAL', url:'roster16.htm', c1:'#00538C', c2:'#002B5E' },
+  { name:'Denver Nuggets',          abbr:'DEN', url:'roster17.htm', c1:'#0E2240', c2:'#FEC524' },
+  { name:'Houston Rockets',         abbr:'HOU', url:'roster18.htm', c1:'#CE1141', c2:'#C4CED4' },
+  { name:'Minnesota Timberwolves',  abbr:'MIN', url:'roster19.htm', c1:'#0C2340', c2:'#236192' },
+  { name:'San Antonio Spurs',       abbr:'SAS', url:'roster20.htm', c1:'#000000', c2:'#C4CED4' },
+  { name:'Utah Jazz',               abbr:'UTA', url:'roster21.htm', c1:'#002B5C', c2:'#F9A01B' },
+  { name:'Vancouver Grizzlies',     abbr:'VAN', url:'roster22.htm', c1:'#29727C', c2:'#E43C40' },
+  { name:'Golden State Warriors',   abbr:'GSW', url:'roster23.htm', c1:'#1D428A', c2:'#FFC72C' },
+  { name:'Los Angeles Clippers',    abbr:'LAC', url:'roster24.htm', c1:'#C8102E', c2:'#1D428A' },
+  { name:'Los Angeles Lakers',      abbr:'LAL', url:'roster25.htm', c1:'#552583', c2:'#FDB927' },
+  { name:'Phoenix Suns',            abbr:'PHX', url:'roster26.htm', c1:'#1D1160', c2:'#E56020' },
+  { name:'Portland Trail Blazers',  abbr:'POR', url:'roster27.htm', c1:'#E03A3E', c2:'#000000' },
+  { name:'Sacramento Kings',        abbr:'SAC', url:'roster28.htm', c1:'#5A2D81', c2:'#63727A' },
+  { name:'Seattle SuperSonics',     abbr:'SEA', url:'roster29.htm', c1:'#00653A', c2:'#FFC200' },
+];
+const TM_BASE = 'https://www.simleaguenirvana.com/rosters/';
+
+function buildTMLogoGrids() {
+  ['A','B'].forEach(side => {
+    const container = document.getElementById(`tmLogoGrid${side}`);
+    container.innerHTML = '';
+    TM_TEAMS.forEach(t => {
+      const cell = document.createElement('div');
+      cell.className = 'tm-logo-cell';
+      cell.title = t.name;
+      cell.innerHTML = `
+        <div class="tm-logo-circle" style="background:linear-gradient(135deg,${t.c1},${t.c2})">${t.abbr}</div>
+        <div class="tm-logo-abbr">${t.abbr}</div>`;
+      cell.addEventListener('click', () => {
+        container.querySelectorAll('.tm-logo-cell').forEach(c => c.classList.remove('selected'));
+        cell.classList.add('selected');
+        document.getElementById(`tmSelect${side}`).value = TM_BASE + t.url;
+        loadTMTeam(side);
+      });
+      container.appendChild(cell);
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', buildTMLogoGrids);
 
 // Vet minimum salary table (years of service → annual salary)
 const VET_MIN_SALARIES = {
