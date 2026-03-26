@@ -142,7 +142,25 @@
       letter-spacing: 1px;
     }
 
-    .slot-wrap { position: relative; }
+    .slot-wrap {
+      position: relative;
+      border-left: 3px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .slot-wrap.bold-active {
+      border-left-color: #3b82f6;
+      background: rgba(59,130,246,0.07);
+    }
+    .slot-hint {
+      font-size: 0.62rem;
+      color: #475569;
+      font-style: italic;
+      margin-bottom: 4px;
+      padding-left: 2px;
+      user-select: none;
+    }
 
     select {
       width: 100%;
@@ -1020,6 +1038,12 @@ function buildPositionRows() {
   const container = document.getElementById('positionRows');
   container.innerHTML = '';
 
+  // Hint line
+  const hint = document.createElement('div');
+  hint.className = 'slot-hint';
+  hint.textContent = 'Tip: Click a row (outside the dropdown) to bold it';
+  container.appendChild(hint);
+
   POSITIONS.forEach(pos => {
     const rowDiv = document.createElement('div');
     rowDiv.className = 'dc-row';
@@ -1052,17 +1076,21 @@ function buildPositionRows() {
       stat.id = `stat_${pos}_${slot}`;
       wrap.appendChild(stat);
 
-      const boldLabel = document.createElement('label');
-      boldLabel.className = 'bold-check';
-      boldLabel.id = `boldlabel_${pos}_${slot}`;
+      // Hidden checkbox — preserves state save/load/undo; bold toggled by clicking the row
       const boldCb = document.createElement('input');
       boldCb.type = 'checkbox';
       boldCb.id = `bold_${pos}_${slot}`;
-      boldCb.addEventListener('mousedown', () => pushUndo());
-      boldCb.addEventListener('change', () => toggleBoldLabel(`boldlabel_${pos}_${slot}`));
-      boldLabel.appendChild(boldCb);
-      boldLabel.appendChild(document.createTextNode(' bold'));
-      wrap.appendChild(boldLabel);
+      boldCb.style.display = 'none';
+      wrap.appendChild(boldCb);
+
+      // Click the row (anywhere except the select) to toggle bold
+      wrap.addEventListener('click', e => {
+        if (e.target.tagName === 'SELECT') return;
+        pushUndo();
+        boldCb.checked = !boldCb.checked;
+        wrap.classList.toggle('bold-active', boldCb.checked);
+        saveState();
+      });
 
       rowDiv.appendChild(wrap);
     }
@@ -1351,12 +1379,13 @@ function applyState(state) {
 
   POSITIONS.forEach(pos => {
     for (let slot = 0; slot < 3; slot++) {
-      const sel       = document.getElementById(`${pos}_${slot}`);
-      const bold      = document.getElementById(`bold_${pos}_${slot}`);
-      const boldLabel = document.getElementById(`boldlabel_${pos}_${slot}`);
+      const sel  = document.getElementById(`${pos}_${slot}`);
+      const bold = document.getElementById(`bold_${pos}_${slot}`);
       if (sel)  sel.value    = state[`${pos}_${slot}`] || '';
-      if (bold) bold.checked = !!state[`bold_${pos}_${slot}`];
-      if (boldLabel) boldLabel.classList.toggle('active', !!state[`bold_${pos}_${slot}`]);
+      if (bold) {
+        bold.checked = !!state[`bold_${pos}_${slot}`];
+        bold.closest('.slot-wrap')?.classList.toggle('bold-active', bold.checked);
+      }
       validateSlot(pos, slot);
       updateStatBadge(pos, slot);
     }
