@@ -624,41 +624,8 @@
   <!-- ── ROSTER LOAD ── -->
   <div class="card">
     <div class="card-title">Select Team</div>
-    <div class="url-row">
-      <select id="teamSelect">
-        <option value="">-- Select a Team --</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster1.htm">Boston Celtics</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster2.htm">Miami Heat</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster3.htm">New Jersey Nets</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster4.htm">New York Knicks</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster5.htm">Orlando Magic</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster6.htm">Philadelphia 76ers</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster7.htm">Washington Bullets</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster8.htm">Atlanta Hawks</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster9.htm">Charlotte Hornets</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster10.htm">Chicago Bulls</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster11.htm">Cleveland Cavaliers</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster12.htm">Detroit Pistons</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster13.htm">Indiana Pacers</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster14.htm">Milwaukee Bucks</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster15.htm">Toronto Raptors</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster16.htm">Dallas Mavericks</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster17.htm">Denver Nuggets</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster18.htm">Houston Rockets</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster19.htm">Minnesota Timberwolves</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster20.htm">San Antonio Spurs</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster21.htm">Utah Jazz</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster22.htm">Vancouver Grizzlies</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster23.htm">Golden State Warriors</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster24.htm">Los Angeles Clippers</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster25.htm">Los Angeles Lakers</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster26.htm">Phoenix Suns</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster27.htm">Portland Trail Blazers</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster28.htm">Sacramento Kings</option>
-        <option value="https://www.simleaguenirvana.com/rosters/roster29.htm">Seattle SuperSonics</option>
-      </select>
-      <button class="btn btn-cyan" onclick="loadRoster()">Load Roster</button>
-    </div>
+    <input type="hidden" id="teamSelect">
+    <div id="dcLogoGrid" class="tm-logo-grid" style="grid-template-columns:repeat(6,1fr);margin-bottom:10px;"></div>
     <div class="status-row">
       <div class="status-row-top">
         <div class="spinner" id="spinner"></div>
@@ -2052,29 +2019,55 @@ const TM_TEAMS = [
 ];
 const TM_BASE = 'https://www.simleaguenirvana.com/rosters/';
 
+function buildLogoGrid(containerId, onSelect) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  TM_TEAMS.forEach(t => {
+    const cell = document.createElement('div');
+    cell.className = 'tm-logo-cell';
+    cell.title = t.name;
+    cell.dataset.url = TM_BASE + t.url;
+    cell.innerHTML = `
+      <div class="tm-logo-circle" style="background:linear-gradient(135deg,${t.c1},${t.c2})">${t.abbr}</div>
+      <div class="tm-logo-abbr">${t.abbr}</div>`;
+    cell.addEventListener('click', () => {
+      container.querySelectorAll('.tm-logo-cell').forEach(c => c.classList.remove('selected'));
+      cell.classList.add('selected');
+      onSelect(TM_BASE + t.url);
+    });
+    container.appendChild(cell);
+  });
+}
+
+function highlightLogoGrid(containerId, url) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.querySelectorAll('.tm-logo-cell').forEach(c => {
+    c.classList.toggle('selected', c.dataset.url === url);
+  });
+}
+
 function buildTMLogoGrids() {
   ['A','B'].forEach(side => {
-    const container = document.getElementById(`tmLogoGrid${side}`);
-    container.innerHTML = '';
-    TM_TEAMS.forEach(t => {
-      const cell = document.createElement('div');
-      cell.className = 'tm-logo-cell';
-      cell.title = t.name;
-      cell.innerHTML = `
-        <div class="tm-logo-circle" style="background:linear-gradient(135deg,${t.c1},${t.c2})">${t.abbr}</div>
-        <div class="tm-logo-abbr">${t.abbr}</div>`;
-      cell.addEventListener('click', () => {
-        container.querySelectorAll('.tm-logo-cell').forEach(c => c.classList.remove('selected'));
-        cell.classList.add('selected');
-        document.getElementById(`tmSelect${side}`).value = TM_BASE + t.url;
-        loadTMTeam(side);
-      });
-      container.appendChild(cell);
+    buildLogoGrid(`tmLogoGrid${side}`, url => {
+      document.getElementById(`tmSelect${side}`).value = url;
+      loadTMTeam(side);
     });
   });
 }
 
-document.addEventListener('DOMContentLoaded', buildTMLogoGrids);
+function buildDCLogoGrid() {
+  buildLogoGrid('dcLogoGrid', url => {
+    document.getElementById('teamSelect').value = url;
+    loadRoster();
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  buildTMLogoGrids();
+  buildDCLogoGrid();
+});
 
 // Vet minimum salary table (years of service → annual salary)
 const VET_MIN_SALARIES = {
@@ -2433,6 +2426,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   if (lastTeam) {
     document.getElementById('teamSelect').value = lastTeam;
+    highlightLogoGrid('dcLogoGrid', lastTeam);
     loadRoster();
   }
 });
