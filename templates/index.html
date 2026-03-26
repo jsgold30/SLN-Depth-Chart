@@ -295,8 +295,10 @@
     .option-row { display: flex; align-items: center; gap: 10px; }
     .option-row select { flex: 1; }
 
-    /* Tactic bold row */
-    .tactic-bold { margin-top: 5px; }
+    /* Tactic select + bold inline */
+    .tactic-sel-row { display: flex; align-items: center; gap: 6px; }
+    .tactic-sel-row select { flex: 1; min-width: 0; width: auto; }
+    .tactic-sel-row .bold-check { flex-shrink: 0; }
 
     /* Trade editor */
     .trade-panel {
@@ -731,39 +733,47 @@
     <div class="tactics-grid">
       <div class="tactic-item">
         <label>Pace</label>
-        <select id="t_pace" onmousedown="pushUndo()" onchange="saveState()">
-          <option>Very Fast</option><option>Fast</option>
-          <option selected>Normal</option>
-          <option>Slow</option><option>Very Slow</option>
-        </select>
-        <label class="bold-check tactic-bold" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')"> bold</label>
+        <div class="tactic-sel-row">
+          <select id="t_pace" onmousedown="pushUndo()" onchange="saveState()">
+            <option>Very Fast</option><option>Fast</option>
+            <option selected>Normal</option>
+            <option>Slow</option><option>Very Slow</option>
+          </select>
+          <label class="bold-check" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')"> bold</label>
+        </div>
       </div>
       <div class="tactic-item">
         <label>Trap</label>
-        <select id="t_trap" onmousedown="pushUndo()" onchange="saveState()">
-          <option>Always</option><option>Often</option>
-          <option selected>Normal</option>
-          <option>Sometimes</option><option>Never</option>
-        </select>
-        <label class="bold-check tactic-bold" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')"> bold</label>
+        <div class="tactic-sel-row">
+          <select id="t_trap" onmousedown="pushUndo()" onchange="saveState()">
+            <option>Always</option><option>Often</option>
+            <option selected>Normal</option>
+            <option>Sometimes</option><option>Never</option>
+          </select>
+          <label class="bold-check" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')"> bold</label>
+        </div>
       </div>
       <div class="tactic-item">
         <label>Pressure</label>
-        <select id="t_pressure" onmousedown="pushUndo()" onchange="saveState()">
-          <option>Always</option><option>Often</option>
-          <option selected>Normal</option>
-          <option>Sometimes</option><option>Never</option>
-        </select>
-        <label class="bold-check tactic-bold" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')"> bold</label>
+        <div class="tactic-sel-row">
+          <select id="t_pressure" onmousedown="pushUndo()" onchange="saveState()">
+            <option>Always</option><option>Often</option>
+            <option selected>Normal</option>
+            <option>Sometimes</option><option>Never</option>
+          </select>
+          <label class="bold-check" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')"> bold</label>
+        </div>
       </div>
       <div class="tactic-item">
         <label>Offense Focus</label>
-        <select id="t_offense" onmousedown="pushUndo()" onchange="saveState()">
-          <option>Inside</option>
-          <option selected>Balanced</option>
-          <option>Outside</option>
-        </select>
-        <label class="bold-check tactic-bold" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')"> bold</label>
+        <div class="tactic-sel-row">
+          <select id="t_offense" onmousedown="pushUndo()" onchange="saveState()">
+            <option>Inside</option>
+            <option selected>Balanced</option>
+            <option>Outside</option>
+          </select>
+          <label class="bold-check" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')"> bold</label>
+        </div>
       </div>
     </div>
   </div>
