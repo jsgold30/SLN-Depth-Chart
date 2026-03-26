@@ -2028,8 +2028,13 @@ function buildLogoGrid(containerId, onSelect) {
     cell.className = 'tm-logo-cell';
     cell.title = t.name;
     cell.dataset.url = TM_BASE + t.url;
+    const imgFile = t.url.replace('.htm', '.png');
     cell.innerHTML = `
-      <div class="tm-logo-circle" style="background:linear-gradient(135deg,${t.c1},${t.c2})">${t.abbr}</div>
+      <div class="tm-logo-circle" style="background:linear-gradient(135deg,${t.c1},${t.c2});overflow:hidden;padding:0;">
+        <img src="/static/logos/${imgFile}" alt="${t.abbr}"
+          style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"
+          onerror="this.style.display='none';this.parentElement.style.display='flex';this.parentElement.style.alignItems='center';this.parentElement.style.justifyContent='center';this.parentElement.innerHTML='<span style=\\'font-size:0.52rem;font-weight:800;\\'>${t.abbr}</span>'">
+      </div>
       <div class="tm-logo-abbr">${t.abbr}</div>`;
     cell.addEventListener('click', () => {
       container.querySelectorAll('.tm-logo-cell').forEach(c => c.classList.remove('selected'));
