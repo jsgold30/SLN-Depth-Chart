@@ -1386,21 +1386,20 @@ function showStatTooltip(sel, e) {
   if (!p) return;
 
   const rows = [
-    ['Position', p.pos],
-    ['Age',      p.age],
-    ['Height',   p.height],
-    ['Weight',   `${p.weight} lbs`],
-    ['Inside',   p.in_rating],
-    ['Outside',  p.out],
-    ['Handling', p.hn],
-    ['Rebounding', p.reb],
-    ['Defense',  p.df],
-    ['Potential', p.pot],
+    ['PPG',  p.ppg],
+    ['RPG',  p.rpg],
+    ['APG',  p.apg],
+    ['SPG',  p.spg],
+    ['BPG',  p.bpg],
+    ['TPG',  p.tpg],
+    ['FG%',  p.fg_pct],
+    ['FT%',  p.ft_pct],
+    ['3P%',  p.three_pct],
   ];
 
   _tip.innerHTML = `<div class="tip-name">${p.name}</div>` +
     rows.map(([lbl, val]) =>
-      `<div class="tip-row"><span class="tip-label">${lbl}</span><span class="tip-val">${val}</span></div>`
+      `<div class="tip-row"><span class="tip-label">${lbl}</span><span class="tip-val">${val || '—'}</span></div>`
     ).join('');
 
   _tip.style.display = 'block';

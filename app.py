@@ -285,6 +285,44 @@ def fetch_roster():
                          'Check the URL and make sure the page is accessible.'
             }), 400
 
+        # Scrape Player Statistics table (PPG, RPG, APG, SPG, BPG, TPG, FG%, FT%, 3P%)
+        stat_cols = ['ppg', 'rpg', 'apg', 'spg', 'bpg', 'tpg', 'fg%', 'ft%', '3p%']
+        stats_map = {}
+        for table in soup.find_all('table'):
+            all_rows = table.find_all('tr')
+            header_row_index = None
+            col_names = []
+            for i, row in enumerate(all_rows):
+                candidate = [c.get_text(strip=True).lower() for c in row.find_all(['th', 'td'])]
+                if 'ppg' in candidate and 'rpg' in candidate:
+                    col_names = candidate
+                    header_row_index = i
+                    break
+            if header_row_index is None:
+                continue
+            for row in all_rows[header_row_index + 1:]:
+                name_tag = row.find('a')
+                cells = [td.get_text(strip=True) for td in row.find_all('td')]
+                if not name_tag or len(cells) < len(col_names):
+                    continue
+                pname = name_tag.get_text(strip=True)
+                d = dict(zip(col_names, cells))
+                stats_map[pname] = {k: d.get(k, '') for k in stat_cols}
+            if stats_map:
+                break
+
+        for p in players:
+            s = stats_map.get(p['name'], {})
+            p['ppg'] = s.get('ppg', '')
+            p['rpg'] = s.get('rpg', '')
+            p['apg'] = s.get('apg', '')
+            p['spg'] = s.get('spg', '')
+            p['bpg'] = s.get('bpg', '')
+            p['tpg'] = s.get('tpg', '')
+            p['fg_pct'] = s.get('fg%', '')
+            p['ft_pct'] = s.get('ft%', '')
+            p['three_pct'] = s.get('3p%', '')
+
         # Sort by position order then name
         pos_order = {'PG': 0, 'SG': 1, 'SF': 2, 'PF': 3, 'C': 4}
         players.sort(key=lambda p: (pos_order.get(p['pos'], 5), p['name']))
