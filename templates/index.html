@@ -1431,7 +1431,7 @@ function hideStatTooltip() {
 let _tipTimer = null;
 function attachTooltip(sel) {
   sel.addEventListener('mouseenter', e => {
-    _tipTimer = setTimeout(() => showStatTooltip(sel, e), 300);
+    _tipTimer = setTimeout(() => showStatTooltip(sel, e), 700);
   });
   sel.addEventListener('mouseleave', () => {
     clearTimeout(_tipTimer);
