@@ -1437,6 +1437,10 @@ function attachTooltip(sel) {
     clearTimeout(_tipTimer);
     hideStatTooltip();
   });
+  sel.addEventListener('mousedown', () => {
+    clearTimeout(_tipTimer);
+    hideStatTooltip();
+  });
   sel.addEventListener('change', () => {
     clearTimeout(_tipTimer);
     if (_tipTarget === sel) hideStatTooltip();
