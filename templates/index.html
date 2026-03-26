@@ -267,18 +267,29 @@
       line-height: 1.6;
     }
 
-    /* Bold checkbox */
+    /* Bold toggle box */
     .bold-check {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      justify-content: center;
+      padding: 2px 8px;
       font-size: 0.68rem;
+      font-weight: 600;
       color: #64748b;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 4px;
       cursor: pointer;
       user-select: none;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
-    .bold-check input[type="checkbox"] { accent-color: #f59e0b; cursor: pointer; }
-    .bold-check.active { color: #f59e0b; }
+    .bold-check input[type="checkbox"] { display: none; }
+    .bold-check.active {
+      background: #f59e0b22;
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
 
     /* Options row */
     .option-row { display: flex; align-items: center; gap: 10px; }
