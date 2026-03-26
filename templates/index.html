@@ -1766,23 +1766,29 @@ function optimizeDepthChart() {
 
   const active = roster.filter(p => !p.ir);
 
-  // Weighted score for a player at a given position
-  function score(p, pos) {
-    const g = k => Math.max(0, gradeVal(p[k] || ''));
-    switch (pos) {
-      case 'C':  return g('in_rating')*3   + g('reb')*3     + g('df')*2   + g('out')*0.5 + g('hn')*0.5;
-      case 'PF': return g('in_rating')*2.5 + g('reb')*2.5   + g('df')*2   + g('out')*1   + g('hn')*0.5;
-      case 'SF': return g('out')*2         + g('in_rating')*2 + g('df')*2 + g('reb')*1.5 + g('hn')*1;
-      case 'SG': return g('out')*3         + g('hn')*2.5     + g('df')*2   + g('in_rating')*0.5;
-      case 'PG': return g('hn')*3.5        + g('out')*2.5    + g('df')*1.5 + g('in_rating')*0.5;
-      default:   return g('in_rating') + g('reb') + g('df') + g('out') + g('hn');
-    }
+  // Roster page order bonus — players listed higher on the SLN roster page
+  // are considered the team's best at their position. Bonus is higher when
+  // playing at their natural position (up to 1.5 pts) vs. elsewhere (0.75 pts).
+  function rosterBonus(p, pos) {
+    const idx = roster.findIndex(r => r.name === p.name);
+    if (idx < 0 || roster.length <= 1) return 0;
+    const normalized = (roster.length - 1 - idx) / (roster.length - 1); // 1.0 = first on page, 0 = last
+    return normalized * (p.pos === pos ? 1.5 : 0.75);
   }
 
-  // Overall quality score — used to confirm best players land as starters
-  function overall(p) {
+  // Weighted score for a player at a given position.
+  // PG/SG favor Inside + Outside equally (guards need to score from both areas).
+  function score(p, pos) {
     const g = k => Math.max(0, gradeVal(p[k] || ''));
-    return g('in_rating') + g('reb') + g('df') + g('out') + g('hn');
+    const rb = rosterBonus(p, pos);
+    switch (pos) {
+      case 'C':  return g('in_rating')*3   + g('reb')*3     + g('df')*2   + g('out')*0.5 + g('hn')*0.5 + rb;
+      case 'PF': return g('in_rating')*2.5 + g('reb')*2.5   + g('df')*2   + g('out')*1   + g('hn')*0.5 + rb;
+      case 'SF': return g('out')*2         + g('in_rating')*2 + g('df')*2 + g('reb')*1.5 + g('hn')*1   + rb;
+      case 'SG': return g('out')*2.5       + g('in_rating')*2 + g('hn')*2 + g('df')*1.5               + rb;
+      case 'PG': return g('hn')*2.5        + g('in_rating')*2 + g('out')*2 + g('df')*1.5              + rb;
+      default:   return g('in_rating') + g('reb') + g('df') + g('out') + g('hn') + rb;
+    }
   }
 
   // Whether a player's natural position is perimeter (PG/SG/SF)
