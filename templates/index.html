@@ -1782,8 +1782,14 @@ function optimizeDepthChart() {
     const g = k => Math.max(0, gradeVal(p[k] || ''));
     const rb = rosterBonus(p, pos);
     switch (pos) {
-      case 'C':  return g('in_rating')*3   + g('reb')*3     + g('df')*2   + g('out')*0.5 + g('hn')*0.5 + rb;
-      case 'PF': return g('in_rating')*2.5 + g('reb')*2.5   + g('df')*2   + g('out')*1   + g('hn')*0.5 + rb;
+      case 'C': {
+        const cBonus = (gradeGte(p.df, 'B+') && gradeGte(p.reb, 'B+')) ? 4 : 0;
+        return g('in_rating')*3 + g('reb')*3 + g('df')*2 + g('out')*0.5 + g('hn')*0.5 + rb + cBonus;
+      }
+      case 'PF': {
+        const pfBonus = (gradeGte(p.df, 'B+') && gradeGte(p.reb, 'B+')) ? 4 : 0;
+        return g('in_rating')*2.5 + g('reb')*2.5 + g('df')*2 + g('out')*1 + g('hn')*0.5 + rb + pfBonus;
+      }
       case 'SF': return g('out')*2         + g('in_rating')*2 + g('df')*2 + g('reb')*1.5 + g('hn')*1   + rb;
       case 'SG': {
         const sgBonus = (gradeGte(p.in_rating, 'B-') && gradeGte(p.out, 'A')) ? 4 : 0;
