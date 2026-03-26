@@ -2183,9 +2183,12 @@ function validateTradeMatch() {
   const vetMinCntB = document.querySelectorAll('#tmVetMinListB select').length;
   const salA      = playersA.reduce((s, p) => s + p.salary, 0) + vetMinA;
   const salB      = playersB.reduce((s, p) => s + p.salary, 0) + vetMinB;
-  const hardCap   = TM_HARD_CAP;
-  const overCapA  = tmTotalA > hardCap;
-  const overCapB  = tmTotalB > hardCap;
+  const hardCap    = TM_HARD_CAP;
+  // Cap *after* the trade: current total minus what leaves, plus what arrives
+  const capAfterA  = tmTotalA > 0 ? tmTotalA - salA + salB : 0;
+  const capAfterB  = tmTotalB > 0 ? tmTotalB - salB + salA : 0;
+  const overCapA   = tmTotalA > 0 && capAfterA > hardCap;
+  const overCapB   = tmTotalB > 0 && capAfterB > hardCap;
 
   const errors = [];
   const checks = [];
@@ -2233,12 +2236,15 @@ function validateTradeMatch() {
 
   // ── Cap status (informational only — does not block the trade) ───────────
   if (hasA && hasB) {
-    if (overCapA || overCapB) {
-      const whichOver = overCapA && overCapB ? 'Both teams are'
-                      : overCapA ? `${tmNameA} is` : `${tmNameB} is`;
-      checks.push(`⚠ ${whichOver} over the hard cap (${fmtSal(hardCap)}) — trade can still be processed`);
-    } else {
-      checks.push(`✓ Both teams under the hard cap (${fmtSal(hardCap)})`);
+    if (overCapA) {
+      checks.push(`⚠ ${tmNameA} will be over the hard cap after this trade (${fmtSal(capAfterA)} / cap: ${fmtSal(hardCap)}) — trade can still be processed`);
+    } else if (tmTotalA > 0) {
+      checks.push(`✓ ${tmNameA} under the hard cap after trade (${fmtSal(capAfterA)})`);
+    }
+    if (overCapB) {
+      checks.push(`⚠ ${tmNameB} will be over the hard cap after this trade (${fmtSal(capAfterB)} / cap: ${fmtSal(hardCap)}) — trade can still be processed`);
+    } else if (tmTotalB > 0) {
+      checks.push(`✓ ${tmNameB} under the hard cap after trade (${fmtSal(capAfterB)})`);
     }
   }
 
