@@ -142,7 +142,9 @@
       letter-spacing: 1px;
     }
 
-    .slot-wrap { position: relative; }
+    .slot-wrap { position: relative; display: flex; align-items: center; gap: 6px; }
+    .slot-wrap select { flex: 1; min-width: 0; }
+    .slot-wrap .bold-check { flex-shrink: 0; margin-top: 0; }
 
     select {
       width: 100%;
@@ -269,7 +271,6 @@
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      margin-top: 4px;
       font-size: 0.68rem;
       color: #64748b;
       cursor: pointer;
@@ -520,7 +521,7 @@
         font-size: 0.8rem;
       }
 
-      .slot-wrap { margin-bottom: 8px; }
+      .slot-wrap { margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
 
       select { font-size: 0.85rem; padding: 10px 12px; }
 
