@@ -905,6 +905,11 @@ function switchTab(tab) {
   document.getElementById('tabTrade').classList.toggle('active', tab === 'trade');
   document.getElementById('tabBtnDepth').classList.toggle('active', tab === 'depth');
   document.getElementById('tabBtnTrade').classList.toggle('active', tab === 'trade');
+  // Build Trade Machine logo grids lazily on first visit
+  if (tab === 'trade' && !tmLogoGridsBuilt) {
+    buildTMLogoGrids();
+    tmLogoGridsBuilt = true;
+  }
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -2042,7 +2047,7 @@ function buildLogoGrid(containerId, onSelect) {
     const imgFile = t.url.split('/').pop().replace('.htm', '.png');
     cell.innerHTML = `
       <img src="/static/logos/${imgFile}" alt="${t.abbr}"
-        class="tm-logo-img"
+        class="tm-logo-img" loading="lazy"
         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
       <div class="tm-logo-circle" style="background:linear-gradient(135deg,${t.c1},${t.c2});display:none;">
         <span style="font-size:0.52rem;font-weight:800;">${t.abbr}</span>
@@ -2081,9 +2086,9 @@ function buildDCLogoGrid() {
   });
 }
 
+let tmLogoGridsBuilt = false;
 document.addEventListener('DOMContentLoaded', () => {
-  buildTMLogoGrids();
-  buildDCLogoGrid();
+  buildDCLogoGrid(); // depth chart tab is visible on load — build immediately
 });
 
 // Vet minimum salary table (years of service → annual salary)
