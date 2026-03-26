@@ -1764,16 +1764,41 @@ function optimizeDepthChart() {
   if (!roster.length) { setStatus('Load a roster first.', 'err'); return; }
   pushUndo();
 
-  // Score a player for a specific position using weighted stats
+  const active = roster.filter(p => !p.ir);
+
+  // Weighted score for a player at a given position
   function score(p, pos) {
     const g = k => Math.max(0, gradeVal(p[k] || ''));
     switch (pos) {
-      case 'C':  return g('in_rating')*3 + g('reb')*3   + g('df')*2   + g('out')*0.5 + g('hn')*0.5;
-      case 'PF': return g('in_rating')*2.5 + g('reb')*2.5 + g('df')*2 + g('out')*1   + g('hn')*0.5;
-      case 'SF': return g('out')*2   + g('in_rating')*2  + g('df')*2   + g('reb')*1.5 + g('hn')*1;
-      case 'SG': return g('out')*3   + g('hn')*2.5       + g('df')*2   + g('in_rating')*0.5;
-      case 'PG': return g('hn')*3.5  + g('out')*2.5      + g('df')*1.5 + g('in_rating')*0.5;
+      case 'C':  return g('in_rating')*3   + g('reb')*3     + g('df')*2   + g('out')*0.5 + g('hn')*0.5;
+      case 'PF': return g('in_rating')*2.5 + g('reb')*2.5   + g('df')*2   + g('out')*1   + g('hn')*0.5;
+      case 'SF': return g('out')*2         + g('in_rating')*2 + g('df')*2 + g('reb')*1.5 + g('hn')*1;
+      case 'SG': return g('out')*3         + g('hn')*2.5     + g('df')*2   + g('in_rating')*0.5;
+      case 'PG': return g('hn')*3.5        + g('out')*2.5    + g('df')*1.5 + g('in_rating')*0.5;
       default:   return g('in_rating') + g('reb') + g('df') + g('out') + g('hn');
+    }
+  }
+
+  // Overall quality score — used to confirm best players land as starters
+  function overall(p) {
+    const g = k => Math.max(0, gradeVal(p[k] || ''));
+    return g('in_rating') + g('reb') + g('df') + g('out') + g('hn');
+  }
+
+  // Whether a player's natural position is perimeter (PG/SG/SF)
+  function isPerimeter(p) { return ['PG','SG','SF'].includes(p.pos); }
+  // Whether a player's natural position is frontcourt (PF/C)
+  function isFrontcourt(p) { return ['PF','C'].includes(p.pos); }
+
+  // Positional preference for backup slots — returns true for "natural fit"
+  function naturalBackup(p, pos) {
+    switch (pos) {
+      case 'PG': return isPerimeter(p);          // no PF/C backing up PG
+      case 'SG': return isPerimeter(p);          // no PF/C backing up SG
+      case 'SF': return true;                    // anyone can back up SF
+      case 'PF': return !isPerimeter(p) || p.pos === 'SF'; // prefer SF/PF/C
+      case 'C':  return isFrontcourt(p);         // prefer PF/C backing up C
+      default:   return true;
     }
   }
 
@@ -1791,34 +1816,42 @@ function optimizeDepthChart() {
     cb.disabled = false;
   });
 
-  // ── Starters ──────────────────────────────────────────────────────────────
-  // Fill positions with the fewest eligible players first (scarcity-first)
-  // to avoid painting ourselves into a corner
+  // ── Starters (scarcity-first, best-rated wins each slot) ──────────────────
   const usedStarters = new Set();
   const positionsByScarcity = [...POSITIONS].sort((a, b) => {
-    const countA = roster.filter(p => p.eligible_starter[a]).length;
-    const countB = roster.filter(p => p.eligible_starter[b]).length;
+    const countA = active.filter(p => p.eligible_starter[a]).length;
+    const countB = active.filter(p => p.eligible_starter[b]).length;
     return countA - countB;
   });
 
   positionsByScarcity.forEach(pos => {
-    const pool = roster.filter(p => p.eligible_starter[pos] && !usedStarters.has(p.name));
+    const pool = active
+      .filter(p => p.eligible_starter[pos] && !usedStarters.has(p.name))
+      .sort((a, b) => score(b, pos) - score(a, pos));
     if (!pool.length) return;
-    const best = pool.reduce((a, b) => score(a, pos) >= score(b, pos) ? a : b);
+    const best = pool[0];
     const sel = document.getElementById(`${pos}_0`);
     if (sel) sel.value = best.name;
     usedStarters.add(best.name);
   });
 
-  // ── Backups ───────────────────────────────────────────────────────────────
-  // For each position pick the top 2 highest-scoring eligible players
-  // (no uniqueness restriction on backups)
+  // ── Backups (starters excluded, positional fit preferred) ─────────────────
   POSITIONS.forEach(pos => {
-    const pool = [...roster].sort((a, b) => score(b, pos) - score(a, pos));
+    // Prefer players who naturally fit this backup slot; fall back to all eligible
+    const preferred = active
+      .filter(p => p.eligible_backup[pos] && !usedStarters.has(p.name) && naturalBackup(p, pos))
+      .sort((a, b) => score(b, pos) - score(a, pos));
+
+    const fallback = active
+      .filter(p => p.eligible_backup[pos] && !usedStarters.has(p.name) && !naturalBackup(p, pos))
+      .sort((a, b) => score(b, pos) - score(a, pos));
+
+    const candidates = [...preferred, ...fallback];
+
+    // Pick top 2 unique players; a player can back up multiple positions
     let filled = 0;
-    for (const p of pool) {
-      if (!p.eligible_backup[pos]) continue;
-      const slot = filled + 1; // slot 1 then slot 2
+    for (const p of candidates) {
+      const slot = filled + 1;
       const sel = document.getElementById(`${pos}_${slot}`);
       if (sel) sel.value = p.name;
       filled++;
