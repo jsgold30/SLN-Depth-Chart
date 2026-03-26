@@ -2034,7 +2034,7 @@ function buildLogoGrid(containerId, onSelect) {
     cell.className = 'tm-logo-cell';
     cell.title = t.name;
     cell.dataset.url = TM_BASE + t.url;
-    const imgFile = t.url.replace('.htm', '.png');
+    const imgFile = t.url.split('/').pop().replace('.htm', '.png');
     cell.innerHTML = `
       <img src="/static/logos/${imgFile}" alt="${t.abbr}"
         class="tm-logo-img"
