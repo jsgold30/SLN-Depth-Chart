@@ -2042,7 +2042,7 @@ function buildLogoGrid(containerId, onSelect) {
       <div class="tm-logo-circle" style="background:linear-gradient(135deg,${t.c1},${t.c2});display:none;">
         <span style="font-size:0.52rem;font-weight:800;">${t.abbr}</span>
       </div>
-      <div class="tm-logo-abbr">${t.abbr}</div>`;
+      `;
     cell.addEventListener('click', () => {
       container.querySelectorAll('.tm-logo-cell').forEach(c => c.classList.remove('selected'));
       cell.classList.add('selected');
