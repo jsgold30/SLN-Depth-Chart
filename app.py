@@ -150,7 +150,7 @@ def get_violation_reason(player, pos, slot):
 
     if slot == 0:  # starter
         if pos == 'PG':
-            return f"{player['name']} is not listed as PG"
+            return f"{player['name']} must be listed at PG or have the Can Play PG stip to start at PG"
         if pos == 'SG':
             if p_pos in ('PF', 'C'):
                 return "PF/C cannot start at SG"

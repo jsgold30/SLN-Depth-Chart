@@ -1343,7 +1343,7 @@ function getViolationReason(player, pos, slot) {
   const out = player.out;
 
   if (slot === 0) {
-    if (pos === 'PG') return `${player.name} must be listed as PG, SG, or SF to start at PG`;
+    if (pos === 'PG') return `${player.name} must be listed at PG or have the Can Play PG stip to start at PG`;
     if (pos === 'SG') {
       if (['PF','C'].includes(pp)) return 'PF/C cannot start at SG';
       return `Reb must be B- or worse (is ${reb})`;
