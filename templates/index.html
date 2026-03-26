@@ -622,9 +622,42 @@
       /* Trade Machine stacks on mobile */
       .tm-columns { grid-template-columns: 1fr; }
     }
+
+    /* ── Player stat hover tooltip (desktop only) ── */
+    #statTooltip {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 10px 14px;
+      pointer-events: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      min-width: 200px;
+      max-width: 280px;
+    }
+    #statTooltip .tip-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+    }
+    #statTooltip .tip-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      padding: 2px 0;
+      border-bottom: 1px solid #1e293b;
+    }
+    #statTooltip .tip-row:last-child { border-bottom: none; }
+    #statTooltip .tip-label { color: #64748b; }
+    #statTooltip .tip-val   { color: #cbd5e1; font-weight: 600; }
+    @media (max-width: 600px) { #statTooltip { display: none !important; } }
   </style>
 </head>
 <body>
+<div id="statTooltip"></div>
 <div class="container">
 
   <div style="text-align:center;">
@@ -1035,6 +1068,7 @@ function buildPositionRows() {
       sel.id = `${pos}_${slot}`;
       sel.addEventListener('mousedown', () => pushUndo());
       sel.addEventListener('change', () => onSlotChange(pos, slot));
+      attachTooltip(sel);
       selRow.appendChild(sel);
 
       const boldLabel = document.createElement('label');
@@ -1340,6 +1374,67 @@ function updateStatBadge(pos, slot) {
 
   stat.textContent = `${p.height} ${p.weight}lbs · In:${p.in_rating} Out:${p.out} Hn:${p.hn} Reb:${p.reb} Df:${p.df}`;
   stat.classList.add('show');
+}
+
+// ─── Hover tooltip ────────────────────────────────────────────────────────────
+const _tip = document.getElementById('statTooltip');
+let _tipTarget = null;
+
+function showStatTooltip(sel, e) {
+  if (!sel.value) return;
+  const p = roster.find(x => x.name === sel.value);
+  if (!p) return;
+
+  const rows = [
+    ['Position', p.pos],
+    ['Age',      p.age],
+    ['Height',   p.height],
+    ['Weight',   `${p.weight} lbs`],
+    ['Inside',   p.in_rating],
+    ['Outside',  p.out],
+    ['Handling', p.hn],
+    ['Rebounding', p.reb],
+    ['Defense',  p.df],
+    ['Potential', p.pot],
+  ];
+
+  _tip.innerHTML = `<div class="tip-name">${p.name}</div>` +
+    rows.map(([lbl, val]) =>
+      `<div class="tip-row"><span class="tip-label">${lbl}</span><span class="tip-val">${val}</span></div>`
+    ).join('');
+
+  _tip.style.display = 'block';
+  positionTooltip(e);
+  _tipTarget = sel;
+}
+
+function positionTooltip(e) {
+  const margin = 12;
+  const tw = _tip.offsetWidth, th = _tip.offsetHeight;
+  let x = e.clientX + margin;
+  let y = e.clientY + margin;
+  if (x + tw > window.innerWidth  - margin) x = e.clientX - tw - margin;
+  if (y + th > window.innerHeight - margin) y = e.clientY - th - margin;
+  _tip.style.left = x + 'px';
+  _tip.style.top  = y + 'px';
+}
+
+document.addEventListener('mousemove', e => {
+  if (_tipTarget) positionTooltip(e);
+});
+
+function hideStatTooltip() {
+  _tip.style.display = 'none';
+  _tipTarget = null;
+}
+
+// Attach hover to a slot select
+function attachTooltip(sel) {
+  sel.addEventListener('mouseenter', e => showStatTooltip(sel, e));
+  sel.addEventListener('mouseleave', hideStatTooltip);
+  sel.addEventListener('change',     () => {
+    if (_tipTarget === sel) hideStatTooltip();
+  });
 }
 
 // ─── Apply a state object to the UI ──────────────────────────────────────────
