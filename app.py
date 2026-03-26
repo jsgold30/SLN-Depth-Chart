@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify
+import os
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -169,9 +170,16 @@ def get_violation_reason(player, pos, slot):
     return "Not eligible for this slot"
 
 
+def get_version():
+    try:
+        with open(os.path.join(os.path.dirname(__file__), 'VERSION')) as f:
+            return f.read().strip()
+    except Exception:
+        return '?'
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', version=get_version())
 
 
 @app.route('/fetch_roster', methods=['POST'])
