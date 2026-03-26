@@ -1832,7 +1832,8 @@ function optimizeDepthChart() {
 
   positionsByScarcity.forEach(pos => {
     const pool = active
-      .filter(p => p.eligible_starter[pos] && !usedStarters.has(p.name))
+      .filter(p => p.eligible_starter[pos] && !usedStarters.has(p.name)
+                   && !(pos === 'SF' && p.pos === 'C'))  // C players never start at SF
       .sort((a, b) => score(b, pos) - score(a, pos));
     if (!pool.length) return;
     const best = pool[0];
