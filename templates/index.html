@@ -1428,10 +1428,17 @@ function hideStatTooltip() {
 }
 
 // Attach hover to a slot select
+let _tipTimer = null;
 function attachTooltip(sel) {
-  sel.addEventListener('mouseenter', e => showStatTooltip(sel, e));
-  sel.addEventListener('mouseleave', hideStatTooltip);
-  sel.addEventListener('change',     () => {
+  sel.addEventListener('mouseenter', e => {
+    _tipTimer = setTimeout(() => showStatTooltip(sel, e), 300);
+  });
+  sel.addEventListener('mouseleave', () => {
+    clearTimeout(_tipTimer);
+    hideStatTooltip();
+  });
+  sel.addEventListener('change', () => {
+    clearTimeout(_tipTimer);
     if (_tipTarget === sel) hideStatTooltip();
   });
 }
