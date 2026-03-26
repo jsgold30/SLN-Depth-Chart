@@ -1764,7 +1764,9 @@ function optimizeDepthChart() {
   if (!roster.length) { setStatus('Load a roster first.', 'err'); return; }
   pushUndo();
 
-  const active = roster.filter(p => !p.ir);
+  // Read IR state from DOM (roster objects don't carry an .ir flag)
+  const irNames = new Set([...document.querySelectorAll('input[name="ir"]:checked')].map(cb => cb.value));
+  const active = roster.filter(p => !irNames.has(p.name));
 
   // Roster page order bonus — players listed higher on the SLN roster page
   // are considered the team's best at their position. Bonus is higher when
@@ -1833,18 +1835,26 @@ function optimizeDepthChart() {
 
   // ── Starters (scarcity-first, best-rated wins each slot) ──────────────────
   const usedStarters = new Set();
+  // Scarcity: count only natural-position eligible starters so each position
+  // fills from its own pool first, then off-position players fill remaining gaps.
   const positionsByScarcity = [...POSITIONS].sort((a, b) => {
-    const countA = active.filter(p => p.eligible_starter[a]).length;
-    const countB = active.filter(p => p.eligible_starter[b]).length;
+    const countA = active.filter(p => p.eligible_starter[a] && p.pos === a).length;
+    const countB = active.filter(p => p.eligible_starter[b] && p.pos === b).length;
     return countA - countB;
   });
 
   positionsByScarcity.forEach(pos => {
-    const pool = active
-      .filter(p => p.eligible_starter[pos] && !usedStarters.has(p.name)
-                   && !(pos === 'SF' && p.pos === 'C')                          // C never starts at SF
-                   && !(['PF','C'].includes(pos) && ['PG','SG'].includes(p.pos))) // PG/SG never start at PF/C
-      .sort((a, b) => score(b, pos) - score(a, pos));
+    const eligible = active.filter(p =>
+      p.eligible_starter[pos] && !usedStarters.has(p.name)
+      && !(pos === 'SF' && p.pos === 'C')                          // C never starts at SF
+      && !(['PF','C'].includes(pos) && ['PG','SG'].includes(p.pos)) // PG/SG never start at PF/C
+    );
+    // Prefer players whose natural position matches the slot — only use
+    // off-position players as fallback to avoid "stealing" a player from
+    // their natural slot before it has been filled.
+    const natural    = eligible.filter(p => p.pos === pos).sort((a, b) => score(b, pos) - score(a, pos));
+    const offPos     = eligible.filter(p => p.pos !== pos).sort((a, b) => score(b, pos) - score(a, pos));
+    const pool       = natural.length ? natural : offPos;
     if (!pool.length) return;
     const best = pool[0];
     const sel = document.getElementById(`${pos}_0`);
