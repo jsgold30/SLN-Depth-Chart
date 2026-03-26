@@ -142,9 +142,9 @@
       letter-spacing: 1px;
     }
 
-    .slot-wrap { position: relative; }
-    .slot-sel-row { display: flex; align-items: center; gap: 6px; }
-    .slot-sel-row select { flex: 1; min-width: 0; width: auto; }
+    .slot-wrap { position: relative; min-width: 0; }
+    .slot-sel-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .slot-sel-row select { flex: 1; min-width: 0; width: auto; overflow: hidden; text-overflow: ellipsis; }
     .slot-sel-row .bold-check { flex-shrink: 0; }
 
     select {
@@ -535,9 +535,9 @@
         font-size: 0.8rem;
       }
 
-      .slot-wrap { margin-bottom: 8px; }
-      .slot-sel-row { display: flex; align-items: center; gap: 6px; }
-      .slot-sel-row select { flex: 1; width: auto; font-size: 0.85rem; padding: 10px 12px; }
+      .slot-wrap { margin-bottom: 8px; min-width: 0; }
+      .slot-sel-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+      .slot-sel-row select { flex: 1; min-width: 0; width: auto; font-size: 0.85rem; padding: 10px 12px; }
       .slot-sel-row .bold-check { flex-shrink: 0; }
 
       select { font-size: 0.85rem; padding: 10px 12px; }
