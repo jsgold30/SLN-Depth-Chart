@@ -142,9 +142,10 @@
       letter-spacing: 1px;
     }
 
-    .slot-wrap { position: relative; display: flex; align-items: center; gap: 6px; }
-    .slot-wrap select { flex: 1; min-width: 0; }
-    .slot-wrap .bold-check { flex-shrink: 0; margin-top: 0; }
+    .slot-wrap { position: relative; }
+    .slot-sel-row { display: flex; align-items: center; gap: 6px; }
+    .slot-sel-row select { flex: 1; min-width: 0; }
+    .slot-sel-row .bold-check { flex-shrink: 0; }
 
     select {
       width: 100%;
@@ -521,7 +522,7 @@
         font-size: 0.8rem;
       }
 
-      .slot-wrap { margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+      .slot-wrap { margin-bottom: 8px; }
 
       select { font-size: 0.85rem; padding: 10px 12px; }
 
@@ -1037,21 +1038,15 @@ function buildPositionRows() {
       const wrap = document.createElement('div');
       wrap.className = 'slot-wrap';
 
+      // Inner row: select + bold label side by side
+      const selRow = document.createElement('div');
+      selRow.className = 'slot-sel-row';
+
       const sel = document.createElement('select');
       sel.id = `${pos}_${slot}`;
-      sel.addEventListener('mousedown', () => pushUndo()); // capture state before change
+      sel.addEventListener('mousedown', () => pushUndo());
       sel.addEventListener('change', () => onSlotChange(pos, slot));
-      wrap.appendChild(sel);
-
-      const warn = document.createElement('div');
-      warn.className = 'slot-warn';
-      warn.id = `warn_${pos}_${slot}`;
-      wrap.appendChild(warn);
-
-      const stat = document.createElement('div');
-      stat.className = 'player-stat';
-      stat.id = `stat_${pos}_${slot}`;
-      wrap.appendChild(stat);
+      selRow.appendChild(sel);
 
       const boldLabel = document.createElement('label');
       boldLabel.className = 'bold-check';
@@ -1063,7 +1058,19 @@ function buildPositionRows() {
       boldCb.addEventListener('change', () => toggleBoldLabel(`boldlabel_${pos}_${slot}`));
       boldLabel.appendChild(boldCb);
       boldLabel.appendChild(document.createTextNode(' bold'));
-      wrap.appendChild(boldLabel);
+      selRow.appendChild(boldLabel);
+
+      wrap.appendChild(selRow);
+
+      const warn = document.createElement('div');
+      warn.className = 'slot-warn';
+      warn.id = `warn_${pos}_${slot}`;
+      wrap.appendChild(warn);
+
+      const stat = document.createElement('div');
+      stat.className = 'player-stat';
+      stat.id = `stat_${pos}_${slot}`;
+      wrap.appendChild(stat);
 
       rowDiv.appendChild(wrap);
     }
