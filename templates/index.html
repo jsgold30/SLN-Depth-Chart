@@ -274,16 +274,19 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 2px 8px;
-      font-size: 0.68rem;
-      font-weight: 600;
+      width: 22px;
+      height: 22px;
+      font-size: 0.85rem;
+      font-weight: 900;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-style: normal;
       color: #64748b;
       background: #1e293b;
       border: 1px solid #334155;
       border-radius: 4px;
       cursor: pointer;
       user-select: none;
-      white-space: nowrap;
+      flex-shrink: 0;
       transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
     .bold-check input[type="checkbox"] { display: none; }
@@ -1067,13 +1070,7 @@ function buildPositionRows() {
       const selRow = document.createElement('div');
       selRow.className = 'slot-sel-row';
 
-      const sel = document.createElement('select');
-      sel.id = `${pos}_${slot}`;
-      sel.addEventListener('mousedown', () => pushUndo());
-      sel.addEventListener('change', () => onSlotChange(pos, slot));
-      selRow.appendChild(sel);
-
-      // Info button
+      // Info button (left of select)
       const iBtn = document.createElement('button');
       iBtn.className = 'i-btn hidden';
       iBtn.id = `ibtn_${pos}_${slot}`;
@@ -1082,6 +1079,13 @@ function buildPositionRows() {
       iBtn.addEventListener('click', () => toggleStatPopover(pos, slot));
       selRow.appendChild(iBtn);
 
+      const sel = document.createElement('select');
+      sel.id = `${pos}_${slot}`;
+      sel.addEventListener('mousedown', () => pushUndo());
+      sel.addEventListener('change', () => onSlotChange(pos, slot));
+      selRow.appendChild(sel);
+
+      // Bold button
       const boldLabel = document.createElement('label');
       boldLabel.className = 'bold-check';
       boldLabel.id = `boldlabel_${pos}_${slot}`;
@@ -1091,7 +1095,7 @@ function buildPositionRows() {
       boldCb.addEventListener('mousedown', () => pushUndo());
       boldCb.addEventListener('change', () => toggleBoldLabel(`boldlabel_${pos}_${slot}`));
       boldLabel.appendChild(boldCb);
-      boldLabel.appendChild(document.createTextNode(' bold'));
+      boldLabel.appendChild(document.createTextNode('B'));
       selRow.appendChild(boldLabel);
 
       wrap.appendChild(selRow);
