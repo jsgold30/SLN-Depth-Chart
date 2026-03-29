@@ -185,63 +185,6 @@
     .player-stat.show { display: block; }
 
     /* Inline stat card (Option E) */
-    .slot-stat-card {
-      display: none;
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-top: none;
-      border-radius: 0 0 8px 8px;
-      padding: 10px 12px 12px;
-      margin-top: -2px;
-    }
-    .slot-stat-card.open { display: block; }
-    .ssc-player-name {
-      font-size: 1rem;
-      font-weight: 800;
-      color: #f1f5f9;
-      margin-bottom: 10px;
-    }
-    .slot-stat-card-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 0 4px;
-      margin-bottom: 8px;
-    }
-    .slot-stat-card-grid-bottom {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0 4px;
-    }
-    .ssc-cell {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      padding: 4px 2px;
-      gap: 2px;
-    }
-    .ssc-lbl { font-size: 0.6rem; color: #64748b; font-weight: 700; text-transform: uppercase; }
-    .ssc-val { font-size: 1rem; font-weight: 800; color: #38bdf8; }
-    .stat-toggle-btn {
-      display: none;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: #334155;
-      border: none;
-      color: #94a3b8;
-      font-size: 0.65rem;
-      font-weight: 800;
-      cursor: pointer;
-      flex-shrink: 0;
-      line-height: 1;
-    }
-    .stat-toggle-btn.show { display: flex; align-items: center; justify-content: center; }
-    .stat-toggle-btn.active { background: #0ea5e9; color: #fff; }
-    .stat-toggle-btn:hover { background: #475569; }
-    @media (min-width: 601px) {
-      .stat-toggle-btn { display: none !important; }
-      .slot-stat-card { display: none !important; }
-    }
 
     /* IR checkboxes */
     .ir-grid {
@@ -720,7 +663,7 @@
 <div class="container">
 
   <div style="text-align:center;">
-    <img src="/static/logos/assistant_gm_logo.png" alt="Assistant GM" style="display:block;margin:0 auto 8px;max-width:320px;width:100%;">
+    <img src="/static/logos/assistant_gm_logo.png" alt="Assistant GM" style="display:block;margin:0 auto 8px;max-width:480px;width:100%;">
     <p class="subtitle">Sim League Nirvana · Basketball</p>
   </div>
 
@@ -1125,14 +1068,6 @@ function buildPositionRows() {
       const selRow = document.createElement('div');
       selRow.className = 'slot-sel-row';
 
-      const toggleBtn = document.createElement('button');
-      toggleBtn.className = 'stat-toggle-btn';
-      toggleBtn.id = `stattoggle_${pos}_${slot}`;
-      toggleBtn.textContent = 'i';
-      toggleBtn.title = 'Player stats';
-      toggleBtn.addEventListener('click', () => toggleStatCard(pos, slot, toggleBtn));
-      selRow.appendChild(toggleBtn);
-
       const sel = document.createElement('select');
       sel.id = `${pos}_${slot}`;
       sel.addEventListener('mousedown', () => pushUndo());
@@ -1163,11 +1098,6 @@ function buildPositionRows() {
       stat.className = 'player-stat';
       stat.id = `stat_${pos}_${slot}`;
       wrap.appendChild(stat);
-
-      const card = document.createElement('div');
-      card.className = 'slot-stat-card';
-      card.id = `statcard_${pos}_${slot}`;
-      wrap.appendChild(card);
 
       rowDiv.appendChild(wrap);
     }
@@ -1435,15 +1365,11 @@ function getViolationReason(player, pos, slot) {
 function updateStatBadge(pos, slot) {
   const sel = document.getElementById(`${pos}_${slot}`);
   const stat = document.getElementById(`stat_${pos}_${slot}`);
-  const toggleBtn = document.getElementById(`stattoggle_${pos}_${slot}`);
-  const card = document.getElementById(`statcard_${pos}_${slot}`);
   if (!sel || !stat) return;
 
   if (!sel.value) {
     stat.classList.remove('show');
     stat.textContent = '';
-    if (toggleBtn) { toggleBtn.classList.remove('show', 'active'); }
-    if (card) card.classList.remove('open');
     return;
   }
 
@@ -1452,32 +1378,6 @@ function updateStatBadge(pos, slot) {
 
   stat.textContent = `${p.height} ${p.weight}lbs · In:${p.in_rating} Out:${p.out} Hn:${p.hn} Reb:${p.reb} Df:${p.df}`;
   stat.classList.add('show');
-
-  if (toggleBtn) toggleBtn.classList.add('show');
-  if (card) {
-    const stats = [
-      ['PPG', p.ppg], ['RPG', p.rpg], ['APG', p.apg],
-      ['SPG', p.spg], ['BPG', p.bpg], ['TPG', p.tpg],
-      ['FG%', p.fg_pct], ['FT%', p.ft_pct], ['3P%', p.three_pct],
-    ];
-    const topStats = stats.slice(0, 5);
-    const botStats = stats.slice(5);
-    card.innerHTML =
-      `<div class="ssc-player-name">${p.name}</div>` +
-      `<div class="slot-stat-card-grid">${topStats.map(([l,v]) =>
-        `<div class="ssc-cell"><span class="ssc-lbl">${l}</span><span class="ssc-val">${v || '—'}</span></div>`
-      ).join('')}</div>` +
-      `<div class="slot-stat-card-grid-bottom">${botStats.map(([l,v]) =>
-        `<div class="ssc-cell"><span class="ssc-lbl">${l}</span><span class="ssc-val">${v || '—'}</span></div>`
-      ).join('')}</div>`;
-  }
-}
-
-function toggleStatCard(pos, slot, btn) {
-  const card = document.getElementById(`statcard_${pos}_${slot}`);
-  if (!card) return;
-  const open = card.classList.toggle('open');
-  btn.classList.toggle('active', open);
 }
 
 // ─── Hover tooltip ────────────────────────────────────────────────────────────
