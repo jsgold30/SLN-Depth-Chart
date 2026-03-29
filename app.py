@@ -182,6 +182,10 @@ def get_version():
 def index():
     return render_template('index.html', version=get_version())
 
+@app.route('/mockups')
+def mockups():
+    return render_template('mockups.html')
+
 
 @app.route('/fetch_roster', methods=['POST'])
 def fetch_roster():
