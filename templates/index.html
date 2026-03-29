@@ -633,7 +633,7 @@
     .i-btn {
       width: 18px; height: 18px; border-radius: 50%;
       background: #1e293b; border: 1px solid #475569;
-      color: #64748b; font-size: 0.62rem; font-style: italic;
+      color: #64748b; font-size: 0.58rem; font-style: normal;
       font-family: Georgia, serif; font-weight: 700;
       cursor: pointer; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
@@ -1089,7 +1089,7 @@ function buildPositionRows() {
       const iBtn = document.createElement('button');
       iBtn.className = 'i-btn hidden';
       iBtn.id = `ibtn_${pos}_${slot}`;
-      iBtn.textContent = 'i';
+      iBtn.textContent = '#';
       iBtn.type = 'button';
       iBtn.addEventListener('click', () => toggleStatPopover(pos, slot));
       selRow.appendChild(iBtn);
