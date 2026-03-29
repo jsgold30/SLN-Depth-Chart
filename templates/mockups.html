@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stat Display Mockups — Assistant GM</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f172a; color: #f1f5f9; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; padding: 24px 16px; }
+
+  h1 { text-align:center; font-size:1.4rem; font-weight:800; color:#38bdf8; letter-spacing:3px; text-transform:uppercase; margin-bottom:4px; }
+  .subtitle { text-align:center; color:#64748b; font-size:0.8rem; margin-bottom:28px; }
+
+  /* ── Tab switcher ── */
+  .tab-bar { display:flex; justify-content:center; gap:8px; margin-bottom:28px; }
+  .tab-btn {
+    padding:8px 22px; border-radius:8px; border:1px solid #334155;
+    background:#1e293b; color:#94a3b8; font-size:0.85rem; font-weight:700;
+    cursor:pointer; transition:all 0.15s;
+  }
+  .tab-btn.active { background:#0ea5e9; color:#fff; border-color:#0ea5e9; }
+
+  .view { display:none; }
+  .view.active { display:block; }
+
+  /* ── Shared option layout ── */
+  .options-row { display:flex; gap:20px; justify-content:center; flex-wrap:wrap; }
+  .option-card { background:#111827; border-radius:14px; padding:20px; width:340px; }
+  .option-label {
+    font-size:0.7rem; font-weight:800; color:#38bdf8; letter-spacing:0.08em;
+    text-transform:uppercase; margin-bottom:14px; padding-bottom:8px;
+    border-bottom:1px solid #1e3a5f; display:flex; align-items:center; gap:8px;
+  }
+  .rec-badge {
+    font-size:0.58rem; background:#1d4ed8; color:#bfdbfe;
+    padding:2px 7px; border-radius:10px;
+  }
+
+  /* ── Shared slot ── */
+  .slot { background:#1e293b; border:1px solid #334155; border-radius:8px; overflow:hidden; margin-bottom:6px; }
+  .slot-header { display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer; }
+  .slot-pos {
+    font-size:0.65rem; font-weight:800; color:#94a3b8;
+    background:#0f172a; border-radius:4px; padding:2px 5px;
+    min-width:28px; text-align:center;
+  }
+  .slot-name { flex:1; font-size:0.85rem; font-weight:600; color:#f1f5f9; }
+  .slot-name.empty { color:#475569; font-style:italic; }
+  .chevron { color:#64748b; font-size:0.7rem; transition:transform 0.2s; }
+  .slot.open .chevron { transform:rotate(180deg); }
+
+  /* ── Option A: Accordion ── */
+  .stat-accordion { background:#0f172a; border-top:1px solid #334155; padding:10px 12px; display:none; }
+  .slot.open .stat-accordion { display:block; }
+  .stat-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px 4px; }
+  .stat-cell { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .stat-lbl { font-size:0.55rem; color:#64748b; font-weight:700; text-transform:uppercase; }
+  .stat-val { font-size:0.82rem; font-weight:700; color:#38bdf8; }
+
+  /* ── Option B: Info button ── */
+  .info-btn {
+    width:20px; height:20px; border-radius:50%; background:#334155;
+    color:#94a3b8; font-size:0.65rem; font-weight:800; border:none;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .bottom-sheet-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:100;
+    display:none; align-items:flex-end;
+  }
+  .bottom-sheet-overlay.open { display:flex; }
+  .bottom-sheet {
+    background:#1e293b; border-radius:16px 16px 0 0;
+    width:100%; max-width:480px; margin:0 auto;
+    padding:0 0 24px; animation:slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+  .bs-handle { width:36px; height:4px; background:#475569; border-radius:2px; margin:12px auto 16px; }
+  .bs-content { padding:0 20px; }
+  .bs-player-name { font-size:1.1rem; font-weight:800; color:#f1f5f9; margin-bottom:14px; }
+  .bs-stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .bs-stat-row {
+    display:flex; justify-content:space-between; align-items:center;
+    background:#0f172a; border-radius:6px; padding:8px 12px;
+  }
+  .bs-lbl { font-size:0.7rem; color:#64748b; font-weight:700; }
+  .bs-val { font-size:0.95rem; font-weight:800; color:#38bdf8; }
+  .close-btn {
+    margin-top:16px; width:100%; background:#334155; color:#f1f5f9;
+    border:none; border-radius:8px; padding:11px; font-size:0.9rem; font-weight:700; cursor:pointer;
+  }
+
+  /* ── Option C: Stat strip ── */
+  .stat-strip {
+    background:#0f172a; border-top:1px solid #1e3a5f;
+    padding:8px 12px; display:none;
+    justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;
+  }
+  .slot.open .stat-strip { display:flex; }
+  .strip-item { display:flex; flex-direction:column; align-items:center; gap:1px; }
+  .strip-lbl { font-size:0.5rem; color:#64748b; font-weight:700; }
+  .strip-val { font-size:0.75rem; font-weight:700; color:#38bdf8; }
+
+  /* ── Desktop option D: Sidebar panel ── */
+  .dc-desktop-wrapper { display:flex; gap:16px; align-items:flex-start; }
+  .dc-slots { flex:1; }
+  .dc-stat-panel {
+    width:180px; background:#1e293b; border:1px solid #334155;
+    border-radius:10px; padding:14px; flex-shrink:0;
+  }
+  .dc-panel-name { font-size:0.8rem; font-weight:800; color:#f1f5f9; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #334155; }
+  .dc-panel-hint { font-size:0.65rem; color:#475569; margin-bottom:10px; font-style:italic; }
+  .dc-stat-list { display:flex; flex-direction:column; gap:6px; }
+  .dc-stat-row { display:flex; justify-content:space-between; align-items:center; }
+  .dc-lbl { font-size:0.7rem; color:#64748b; font-weight:700; }
+  .dc-val { font-size:0.85rem; font-weight:700; color:#38bdf8; }
+
+  /* ── Desktop option E: Click to show inline card ── */
+  .slot-with-card { position:relative; }
+  .stat-card-inline {
+    background:#0f172a; border:1px solid #334155; border-top:none;
+    border-radius:0 0 8px 8px; padding:12px; display:none;
+  }
+  .slot.open .stat-card-inline { display:block; }
+  .stat-card-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .scard-cell { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .scard-lbl { font-size:0.6rem; color:#64748b; font-weight:700; }
+  .scard-val { font-size:0.9rem; font-weight:700; color:#38bdf8; }
+
+  /* ── Desktop option F: Inline row ── */
+  .slot-header-desktop { display:flex; align-items:center; gap:8px; padding:10px 12px; }
+  .stat-inline-row {
+    display:flex; gap:12px; align-items:center; margin-left:auto;
+    background:#0f172a; border-radius:6px; padding:4px 10px;
+  }
+  .sir-item { display:flex; flex-direction:column; align-items:center; }
+  .sir-lbl { font-size:0.48rem; color:#64748b; font-weight:700; }
+  .sir-val { font-size:0.72rem; font-weight:700; color:#38bdf8; }
+
+  .divider { height:1px; background:#1e293b; margin:32px 0; }
+  .section-title {
+    text-align:center; font-size:0.75rem; font-weight:800; color:#94a3b8;
+    text-transform:uppercase; letter-spacing:0.1em; margin-bottom:20px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Stat Display Mockups</h1>
+<p class="subtitle">Click/tap the slots to interact · <a href="/" style="color:#38bdf8;">← Back to app</a></p>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchView('mobile')">📱 Mobile</button>
+  <button class="tab-btn" onclick="switchView('desktop')">🖥 Desktop</button>
+</div>
+
+<!-- ══════════════ MOBILE VIEW ══════════════ -->
+<div id="view-mobile" class="view active">
+
+  <div class="options-row">
+
+    <!-- Option A -->
+    <div class="option-card">
+      <div class="option-label">Option A — Tap row to expand</div>
+
+      <div class="slot" onclick="toggleSlot(this)">
+        <div class="slot-header">
+          <div class="slot-pos">PG</div>
+          <div class="slot-name">Stephen Curry</div>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="stat-accordion">
+          <div class="stat-grid">
+            <div class="stat-cell"><span class="stat-lbl">PPG</span><span class="stat-val">29.4</span></div>
+            <div class="stat-cell"><span class="stat-lbl">RPG</span><span class="stat-val">6.1</span></div>
+            <div class="stat-cell"><span class="stat-lbl">APG</span><span class="stat-val">6.3</span></div>
+            <div class="stat-cell"><span class="stat-lbl">SPG</span><span class="stat-val">1.5</span></div>
+            <div class="stat-cell"><span class="stat-lbl">BPG</span><span class="stat-val">0.4</span></div>
+            <div class="stat-cell"><span class="stat-lbl">TPG</span><span class="stat-val">3.1</span></div>
+            <div class="stat-cell"><span class="stat-lbl">FG%</span><span class="stat-val">48%</span></div>
+            <div class="stat-cell"><span class="stat-lbl">FT%</span><span class="stat-val">91%</span></div>
+            <div class="stat-cell"><span class="stat-lbl">3P%</span><span class="stat-val">43%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slot" onclick="toggleSlot(this)">
+        <div class="slot-header">
+          <div class="slot-pos">SG</div>
+          <div class="slot-name">LeBron James</div>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="stat-accordion">
+          <div class="stat-grid">
+            <div class="stat-cell"><span class="stat-lbl">PPG</span><span class="stat-val">27.1</span></div>
+            <div class="stat-cell"><span class="stat-lbl">RPG</span><span class="stat-val">7.3</span></div>
+            <div class="stat-cell"><span class="stat-lbl">APG</span><span class="stat-val">8.2</span></div>
+            <div class="stat-cell"><span class="stat-lbl">SPG</span><span class="stat-val">1.1</span></div>
+            <div class="stat-cell"><span class="stat-lbl">BPG</span><span class="stat-val">0.6</span></div>
+            <div class="stat-cell"><span class="stat-lbl">TPG</span><span class="stat-val">3.4</span></div>
+            <div class="stat-cell"><span class="stat-lbl">FG%</span><span class="stat-val">52%</span></div>
+            <div class="stat-cell"><span class="stat-lbl">FT%</span><span class="stat-val">73%</span></div>
+            <div class="stat-cell"><span class="stat-lbl">3P%</span><span class="stat-val">38%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="slot-header">
+          <div class="slot-pos">SF</div>
+          <div class="slot-name empty">— Select player —</div>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Option B -->
+    <div class="option-card">
+      <div class="option-label">Option B — ⓘ Button → bottom sheet <span class="rec-badge">RECOMMENDED</span></div>
+
+      <div class="slot">
+        <div class="slot-header">
+          <div class="slot-pos">PG</div>
+          <div class="slot-name">Stephen Curry</div>
+          <button class="info-btn" onclick="openSheet('Stephen Curry','29.4','6.1','6.3','1.5','0.4','3.1','48%','91%','43%');event.stopPropagation()">i</button>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+      <div class="slot">
+        <div class="slot-header">
+          <div class="slot-pos">SG</div>
+          <div class="slot-name">LeBron James</div>
+          <button class="info-btn" onclick="openSheet('LeBron James','27.1','7.3','8.2','1.1','0.6','3.4','52%','73%','38%');event.stopPropagation()">i</button>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+      <div class="slot">
+        <div class="slot-header">
+          <div class="slot-pos">SF</div>
+          <div class="slot-name empty">— Select player —</div>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+
+      <p style="font-size:0.7rem;color:#64748b;margin-top:8px;text-align:center;">Tap the ⓘ to see stats ↓</p>
+    </div>
+
+    <!-- Option C -->
+    <div class="option-card">
+      <div class="option-label">Option C — Compact stat strip</div>
+
+      <div class="slot" onclick="toggleSlot(this)">
+        <div class="slot-header">
+          <div class="slot-pos">PG</div>
+          <div class="slot-name">Stephen Curry</div>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="stat-strip">
+          <div class="strip-item"><span class="strip-lbl">PPG</span><span class="strip-val">29.4</span></div>
+          <div class="strip-item"><span class="strip-lbl">RPG</span><span class="strip-val">6.1</span></div>
+          <div class="strip-item"><span class="strip-lbl">APG</span><span class="strip-val">6.3</span></div>
+          <div class="strip-item"><span class="strip-lbl">SPG</span><span class="strip-val">1.5</span></div>
+          <div class="strip-item"><span class="strip-lbl">BPG</span><span class="strip-val">0.4</span></div>
+          <div class="strip-item"><span class="strip-lbl">FG%</span><span class="strip-val">48%</span></div>
+          <div class="strip-item"><span class="strip-lbl">FT%</span><span class="strip-val">91%</span></div>
+          <div class="strip-item"><span class="strip-lbl">3P%</span><span class="strip-val">43%</span></div>
+        </div>
+      </div>
+
+      <div class="slot" onclick="toggleSlot(this)">
+        <div class="slot-header">
+          <div class="slot-pos">SG</div>
+          <div class="slot-name">LeBron James</div>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="stat-strip">
+          <div class="strip-item"><span class="strip-lbl">PPG</span><span class="strip-val">27.1</span></div>
+          <div class="strip-item"><span class="strip-lbl">RPG</span><span class="strip-val">7.3</span></div>
+          <div class="strip-item"><span class="strip-lbl">APG</span><span class="strip-val">8.2</span></div>
+          <div class="strip-item"><span class="strip-lbl">SPG</span><span class="strip-val">1.1</span></div>
+          <div class="strip-item"><span class="strip-lbl">BPG</span><span class="strip-val">0.6</span></div>
+          <div class="strip-item"><span class="strip-lbl">FG%</span><span class="strip-val">52%</span></div>
+          <div class="strip-item"><span class="strip-lbl">FT%</span><span class="strip-val">73%</span></div>
+          <div class="strip-item"><span class="strip-lbl">3P%</span><span class="strip-val">38%</span></div>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="slot-header">
+          <div class="slot-pos">SF</div>
+          <div class="slot-name empty">— Select player —</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ DESKTOP VIEW ══════════════ -->
+<div id="view-desktop" class="view">
+
+  <div class="options-row">
+
+    <!-- Option D: Sidebar panel -->
+    <div class="option-card" style="width:480px;">
+      <div class="option-label">Option D — Click slot → persistent side panel</div>
+      <div class="dc-desktop-wrapper">
+        <div class="dc-slots" style="flex:1;">
+          <div class="slot" onclick="selectSlot(this,'Stephen Curry','29.4','6.1','6.3','1.5','0.4','3.1','48%','91%','43%')">
+            <div class="slot-header">
+              <div class="slot-pos">PG</div>
+              <div class="slot-name">Stephen Curry</div>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="slot" onclick="selectSlot(this,'LeBron James','27.1','7.3','8.2','1.1','0.6','3.4','52%','73%','38%')">
+            <div class="slot-header">
+              <div class="slot-pos">SG</div>
+              <div class="slot-name">LeBron James</div>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="slot">
+            <div class="slot-header">
+              <div class="slot-pos">SF</div>
+              <div class="slot-name empty">— Select player —</div>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+          <div class="slot">
+            <div class="slot-header">
+              <div class="slot-pos">PF</div>
+              <div class="slot-name empty">— Select player —</div>
+              <span class="chevron">▼</span>
+            </div>
+          </div>
+        </div>
+        <div class="dc-stat-panel" id="sidePanel">
+          <div class="dc-panel-hint">Click a slot to see stats</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Option E: Click → inline expanded card -->
+    <div class="option-card" style="width:400px;">
+      <div class="option-label">Option E — Click slot → inline stat card <span class="rec-badge">RECOMMENDED</span></div>
+
+      <div class="slot" onclick="toggleSlot(this)">
+        <div class="slot-header">
+          <div class="slot-pos">PG</div>
+          <div class="slot-name">Stephen Curry</div>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="stat-card-inline">
+          <div class="stat-card-grid">
+            <div class="scard-cell"><span class="scard-lbl">PPG</span><span class="scard-val">29.4</span></div>
+            <div class="scard-cell"><span class="scard-lbl">RPG</span><span class="scard-val">6.1</span></div>
+            <div class="scard-cell"><span class="scard-lbl">APG</span><span class="scard-val">6.3</span></div>
+            <div class="scard-cell"><span class="scard-lbl">SPG</span><span class="scard-val">1.5</span></div>
+            <div class="scard-cell"><span class="scard-lbl">BPG</span><span class="scard-val">0.4</span></div>
+            <div class="scard-cell"><span class="scard-lbl">TPG</span><span class="scard-val">3.1</span></div>
+            <div class="scard-cell"><span class="scard-lbl">FG%</span><span class="scard-val">48%</span></div>
+            <div class="scard-cell"><span class="scard-lbl">FT%</span><span class="scard-val">91%</span></div>
+            <div class="scard-cell"><span class="scard-lbl">3P%</span><span class="scard-val">43%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slot" onclick="toggleSlot(this)">
+        <div class="slot-header">
+          <div class="slot-pos">SG</div>
+          <div class="slot-name">LeBron James</div>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="stat-card-inline">
+          <div class="stat-card-grid">
+            <div class="scard-cell"><span class="scard-lbl">PPG</span><span class="scard-val">27.1</span></div>
+            <div class="scard-cell"><span class="scard-lbl">RPG</span><span class="scard-val">7.3</span></div>
+            <div class="scard-cell"><span class="scard-lbl">APG</span><span class="scard-val">8.2</span></div>
+            <div class="scard-cell"><span class="scard-lbl">SPG</span><span class="scard-val">1.1</span></div>
+            <div class="scard-cell"><span class="scard-lbl">BPG</span><span class="scard-val">0.6</span></div>
+            <div class="scard-cell"><span class="scard-lbl">TPG</span><span class="scard-val">3.4</span></div>
+            <div class="scard-cell"><span class="scard-lbl">FG%</span><span class="scard-val">52%</span></div>
+            <div class="scard-cell"><span class="scard-lbl">FT%</span><span class="scard-val">73%</span></div>
+            <div class="scard-cell"><span class="scard-lbl">3P%</span><span class="scard-val">38%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="slot-header">
+          <div class="slot-pos">SF</div>
+          <div class="slot-name empty">— Select player —</div>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Option F: Always-visible inline stat row -->
+    <div class="option-card" style="width:520px;">
+      <div class="option-label">Option F — Stats always visible inline</div>
+
+      <div class="slot">
+        <div class="slot-header-desktop">
+          <div class="slot-pos">PG</div>
+          <div class="slot-name">S. Curry</div>
+          <div class="stat-inline-row">
+            <div class="sir-item"><span class="sir-lbl">PPG</span><span class="sir-val">29.4</span></div>
+            <div class="sir-item"><span class="sir-lbl">RPG</span><span class="sir-val">6.1</span></div>
+            <div class="sir-item"><span class="sir-lbl">APG</span><span class="sir-val">6.3</span></div>
+            <div class="sir-item"><span class="sir-lbl">SPG</span><span class="sir-val">1.5</span></div>
+            <div class="sir-item"><span class="sir-lbl">BPG</span><span class="sir-val">0.4</span></div>
+            <div class="sir-item"><span class="sir-lbl">FG%</span><span class="sir-val">48%</span></div>
+            <div class="sir-item"><span class="sir-lbl">FT%</span><span class="sir-val">91%</span></div>
+            <div class="sir-item"><span class="sir-lbl">3P%</span><span class="sir-val">43%</span></div>
+          </div>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="slot-header-desktop">
+          <div class="slot-pos">SG</div>
+          <div class="slot-name">LeBron J.</div>
+          <div class="stat-inline-row">
+            <div class="sir-item"><span class="sir-lbl">PPG</span><span class="sir-val">27.1</span></div>
+            <div class="sir-item"><span class="sir-lbl">RPG</span><span class="sir-val">7.3</span></div>
+            <div class="sir-item"><span class="sir-lbl">APG</span><span class="sir-val">8.2</span></div>
+            <div class="sir-item"><span class="sir-lbl">SPG</span><span class="sir-val">1.1</span></div>
+            <div class="sir-item"><span class="sir-lbl">BPG</span><span class="sir-val">0.6</span></div>
+            <div class="sir-item"><span class="sir-lbl">FG%</span><span class="sir-val">52%</span></div>
+            <div class="sir-item"><span class="sir-lbl">FT%</span><span class="sir-val">73%</span></div>
+            <div class="sir-item"><span class="sir-lbl">3P%</span><span class="sir-val">38%</span></div>
+          </div>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+
+      <div class="slot">
+        <div class="slot-header-desktop">
+          <div class="slot-pos">SF</div>
+          <div class="slot-name empty">— Select player —</div>
+          <span class="chevron">▼</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Bottom sheet overlay (Option B) -->
+<div class="bottom-sheet-overlay" id="sheetOverlay" onclick="closeSheet()">
+  <div class="bottom-sheet" onclick="event.stopPropagation()">
+    <div class="bs-handle"></div>
+    <div class="bs-content">
+      <div class="bs-player-name" id="sheetName"></div>
+      <div class="bs-stat-grid" id="sheetStats"></div>
+      <button class="close-btn" onclick="closeSheet()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function switchView(v) {
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('view-' + v).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  function toggleSlot(slot) {
+    slot.classList.toggle('open');
+  }
+
+  function openSheet(name, ppg, rpg, apg, spg, bpg, tpg, fg, ft, tp) {
+    document.getElementById('sheetName').textContent = name;
+    const stats = [['PPG',ppg],['RPG',rpg],['APG',apg],['SPG',spg],['BPG',bpg],['TPG',tpg],['FG%',fg],['FT%',ft],['3P%',tp]];
+    document.getElementById('sheetStats').innerHTML = stats.map(([l,v]) =>
+      `<div class="bs-stat-row"><span class="bs-lbl">${l}</span><span class="bs-val">${v}</span></div>`
+    ).join('');
+    document.getElementById('sheetOverlay').classList.add('open');
+  }
+
+  function closeSheet() {
+    document.getElementById('sheetOverlay').classList.remove('open');
+  }
+
+  function selectSlot(slot, name, ppg, rpg, apg, spg, bpg, tpg, fg, ft, tp) {
+    document.querySelectorAll('.dc-slots .slot').forEach(s => s.style.borderColor = '#334155');
+    slot.style.borderColor = '#38bdf8';
+    const stats = [['PPG',ppg],['RPG',rpg],['APG',apg],['SPG',spg],['BPG',bpg],['TPG',tpg],['FG%',fg],['FT%',ft],['3P%',tp]];
+    document.getElementById('sidePanel').innerHTML =
+      `<div class="dc-panel-name">${name}</div>
+       <div class="dc-stat-list">${stats.map(([l,v]) =>
+         `<div class="dc-stat-row"><span class="dc-lbl">${l}</span><span class="dc-val">${v}</span></div>`
+       ).join('')}</div>`;
+  }
+</script>
+</body>
+</html>
