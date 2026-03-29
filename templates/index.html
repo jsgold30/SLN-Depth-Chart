@@ -639,6 +639,7 @@
       line-height: 1; transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
     .i-btn:hover, .i-btn.active { background: #38bdf8; border-color: #38bdf8; color: #0f172a; }
+    .i-btn:focus { outline: none; }
     .i-btn.hidden { opacity: 0; pointer-events: none; }
 
     .stat-popover {
@@ -777,15 +778,15 @@
     <div class="options-col" id="optionsContainer">
       <div class="option-row">
         <select id="opt1" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 1 (optional) --</option></select>
-        <label class="bold-check" id="boldlabel_opt1"><input type="checkbox" id="bold_opt1" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt1')"> B</label>
+        <label class="bold-check" id="boldlabel_opt1"><input type="checkbox" id="bold_opt1" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt1')">B</label>
       </div>
       <div class="option-row">
         <select id="opt2" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 2 (optional) --</option></select>
-        <label class="bold-check" id="boldlabel_opt2"><input type="checkbox" id="bold_opt2" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt2')"> B</label>
+        <label class="bold-check" id="boldlabel_opt2"><input type="checkbox" id="bold_opt2" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt2')">B</label>
       </div>
       <div class="option-row">
         <select id="opt3" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 3 (optional) --</option></select>
-        <label class="bold-check" id="boldlabel_opt3"><input type="checkbox" id="bold_opt3" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt3')"> B</label>
+        <label class="bold-check" id="boldlabel_opt3"><input type="checkbox" id="bold_opt3" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt3')">B</label>
       </div>
     </div>
   </div>
@@ -802,7 +803,7 @@
             <option selected>Normal</option>
             <option>Slow</option><option>Very Slow</option>
           </select>
-          <label class="bold-check" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')"> B</label>
+          <label class="bold-check" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')">B</label>
         </div>
       </div>
       <div class="tactic-item">
@@ -813,7 +814,7 @@
             <option selected>Normal</option>
             <option>Sometimes</option><option>Never</option>
           </select>
-          <label class="bold-check" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')"> B</label>
+          <label class="bold-check" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')">B</label>
         </div>
       </div>
       <div class="tactic-item">
@@ -824,7 +825,7 @@
             <option selected>Normal</option>
             <option>Sometimes</option><option>Never</option>
           </select>
-          <label class="bold-check" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')"> B</label>
+          <label class="bold-check" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')">B</label>
         </div>
       </div>
       <div class="tactic-item">
@@ -835,7 +836,7 @@
             <option selected>Balanced</option>
             <option>Outside</option>
           </select>
-          <label class="bold-check" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')"> B</label>
+          <label class="bold-check" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')">B</label>
         </div>
       </div>
     </div>
@@ -1400,9 +1401,9 @@ function toggleStatPopover(pos, slot) {
   const sel     = document.getElementById(`${pos}_${slot}`);
   const isOpen  = popover.classList.contains('show');
 
-  // Close all other open popovers
+  // Close all open popovers and clear highlights
   document.querySelectorAll('.stat-popover.show').forEach(p => p.classList.remove('show'));
-  document.querySelectorAll('.i-btn.active').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.i-btn.active').forEach(b => { b.classList.remove('active'); b.blur(); });
 
   if (isOpen) return;
 
