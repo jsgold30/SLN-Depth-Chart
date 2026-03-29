@@ -710,7 +710,7 @@
 <div class="container">
 
   <div style="text-align:center;">
-    <h1>Assistant GM</h1>
+    <img src="/static/logos/assistant_gm_logo.png" alt="Assistant GM" style="display:block;margin:0 auto 8px;max-width:320px;width:100%;">
     <p class="subtitle">Sim League Nirvana · Basketball</p>
   </div>
 
@@ -1115,6 +1115,14 @@ function buildPositionRows() {
       const selRow = document.createElement('div');
       selRow.className = 'slot-sel-row';
 
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'stat-toggle-btn';
+      toggleBtn.id = `stattoggle_${pos}_${slot}`;
+      toggleBtn.textContent = 'i';
+      toggleBtn.title = 'Player stats';
+      toggleBtn.addEventListener('click', () => toggleStatCard(pos, slot, toggleBtn));
+      selRow.appendChild(toggleBtn);
+
       const sel = document.createElement('select');
       sel.id = `${pos}_${slot}`;
       sel.addEventListener('mousedown', () => pushUndo());
@@ -1132,14 +1140,6 @@ function buildPositionRows() {
       boldCb.addEventListener('change', () => toggleBoldLabel(`boldlabel_${pos}_${slot}`));
       boldLabel.appendChild(boldCb);
       boldLabel.appendChild(document.createTextNode(' bold'));
-      const toggleBtn = document.createElement('button');
-      toggleBtn.className = 'stat-toggle-btn';
-      toggleBtn.id = `stattoggle_${pos}_${slot}`;
-      toggleBtn.textContent = 'i';
-      toggleBtn.title = 'Player stats';
-      toggleBtn.addEventListener('click', () => toggleStatCard(pos, slot, toggleBtn));
-      selRow.appendChild(toggleBtn);
-
       selRow.appendChild(boldLabel);
 
       wrap.appendChild(selRow);
