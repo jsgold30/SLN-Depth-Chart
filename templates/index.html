@@ -885,6 +885,7 @@
           <div class="tm-vetmin-label">Vet Minimum Players</div>
           <div id="tmVetMinListA"></div>
           <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddA" onclick="addVetMin('A')">+ Add Vet Min</button>
+          <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('A')" style="margin-left:6px;">+ Custom Salary</button>
         </div>
 
         <div class="tm-total-row">
@@ -910,6 +911,7 @@
           <div class="tm-vetmin-label">Vet Minimum Players</div>
           <div id="tmVetMinListB"></div>
           <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddB" onclick="addVetMin('B')">+ Add Vet Min</button>
+          <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('B')" style="margin-left:6px;">+ Custom Salary</button>
         </div>
 
         <div class="tm-total-row">
@@ -2263,9 +2265,50 @@ function addVetMin(side) {
   tmUpdateSending(side);
 }
 
+function addCustomSalary(side) {
+  const list = document.getElementById(`tmVetMinList${side}`);
+
+  const row = document.createElement('div');
+  row.className = 'tm-vetmin-row';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = 'e.g. 5,000,000';
+  input.className = 'tm-custom-sal-input';
+  input.style.cssText = 'width:120px;background:#1e293b;border:1px solid #475569;color:#f1f5f9;border-radius:4px;padding:3px 6px;font-size:0.8rem;';
+
+  const salSpan = document.createElement('span');
+  salSpan.className = 'vm-sal';
+  salSpan.textContent = '$0';
+
+  input.addEventListener('input', () => {
+    const raw = parseInt(input.value.replace(/[^0-9]/g, '')) || 0;
+    salSpan.textContent = fmtSal(raw);
+    tmUpdateSending(side);
+  });
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'vm-remove';
+  removeBtn.textContent = '✕';
+  removeBtn.title = 'Remove';
+  removeBtn.addEventListener('click', () => {
+    row.remove();
+    tmUpdateSending(side);
+  });
+
+  row.appendChild(input);
+  row.appendChild(salSpan);
+  row.appendChild(removeBtn);
+  list.appendChild(row);
+  input.focus();
+}
+
 function tmGetVetMinTotal(side) {
-  return [...document.querySelectorAll(`#tmVetMinList${side} select`)]
+  const selectTotal = [...document.querySelectorAll(`#tmVetMinList${side} select`)]
     .reduce((sum, sel) => sum + (parseInt(sel.value) || 0), 0);
+  const customTotal = [...document.querySelectorAll(`#tmVetMinList${side} .tm-custom-sal-input`)]
+    .reduce((sum, inp) => sum + (parseInt(inp.value.replace(/[^0-9]/g, '')) || 0), 0);
+  return selectTotal + customTotal;
 }
 
 function clearTradeMachine() {
