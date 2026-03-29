@@ -271,14 +271,14 @@
 
     /* Bold toggle box */
     .bold-check {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      display: inline-block;
       width: 22px;
       height: 22px;
-      padding: 0;
-      line-height: 1;
-      font-size: 0;
+      line-height: 22px;
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 800;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       color: #64748b;
       background: #1e293b;
       border: 1px solid #334155;
@@ -286,15 +286,11 @@
       cursor: pointer;
       user-select: none;
       flex-shrink: 0;
+      vertical-align: middle;
       transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
     .bold-check input[type="checkbox"] { display: none; }
-    .bold-check span {
-      font-size: 0.72rem;
-      font-weight: 800;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      line-height: 1;
-    }
+    .bold-check span { display: none; }
     .bold-check.active {
       background: #f59e0b22;
       border-color: #f59e0b;
@@ -782,15 +778,15 @@
     <div class="card-title">Options</div>
     <div class="options-col" id="optionsContainer">
       <div class="option-row">
-        <label class="bold-check" id="boldlabel_opt1"><input type="checkbox" id="bold_opt1" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt1')"><span>B</span></label>
+        <label class="bold-check" id="boldlabel_opt1"><input type="checkbox" id="bold_opt1" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt1')">B</label>
         <select id="opt1" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 1 (optional) --</option></select>
       </div>
       <div class="option-row">
-        <label class="bold-check" id="boldlabel_opt2"><input type="checkbox" id="bold_opt2" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt2')"><span>B</span></label>
+        <label class="bold-check" id="boldlabel_opt2"><input type="checkbox" id="bold_opt2" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt2')">B</label>
         <select id="opt2" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 2 (optional) --</option></select>
       </div>
       <div class="option-row">
-        <label class="bold-check" id="boldlabel_opt3"><input type="checkbox" id="bold_opt3" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt3')"><span>B</span></label>
+        <label class="bold-check" id="boldlabel_opt3"><input type="checkbox" id="bold_opt3" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt3')">B</label>
         <select id="opt3" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 3 (optional) --</option></select>
       </div>
     </div>
@@ -803,7 +799,7 @@
       <div class="tactic-item">
         <label>Pace</label>
         <div class="tactic-sel-row">
-          <label class="bold-check" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')"><span>B</span></label>
+          <label class="bold-check" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')">B</label>
           <select id="t_pace" onmousedown="pushUndo()" onchange="saveState()">
             <option>Very Fast</option><option>Fast</option>
             <option selected>Normal</option>
@@ -814,7 +810,7 @@
       <div class="tactic-item">
         <label>Trap</label>
         <div class="tactic-sel-row">
-          <label class="bold-check" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')"><span>B</span></label>
+          <label class="bold-check" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')">B</label>
           <select id="t_trap" onmousedown="pushUndo()" onchange="saveState()">
             <option>Always</option><option>Often</option>
             <option selected>Normal</option>
@@ -825,7 +821,7 @@
       <div class="tactic-item">
         <label>Pressure</label>
         <div class="tactic-sel-row">
-          <label class="bold-check" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')"><span>B</span></label>
+          <label class="bold-check" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')">B</label>
           <select id="t_pressure" onmousedown="pushUndo()" onchange="saveState()">
             <option>Always</option><option>Often</option>
             <option selected>Normal</option>
@@ -836,7 +832,7 @@
       <div class="tactic-item">
         <label>Offense Focus</label>
         <div class="tactic-sel-row">
-          <label class="bold-check" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')"><span>B</span></label>
+          <label class="bold-check" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')">B</label>
           <select id="t_offense" onmousedown="pushUndo()" onchange="saveState()">
             <option>Inside</option>
             <option selected>Balanced</option>
@@ -1076,7 +1072,20 @@ function buildPositionRows() {
       const selRow = document.createElement('div');
       selRow.className = 'slot-sel-row';
 
-      // Info button (left of select)
+      // Bold button (leftmost)
+      const boldLabel = document.createElement('label');
+      boldLabel.className = 'bold-check';
+      boldLabel.id = `boldlabel_${pos}_${slot}`;
+      boldLabel.textContent = 'B';
+      const boldCb = document.createElement('input');
+      boldCb.type = 'checkbox';
+      boldCb.id = `bold_${pos}_${slot}`;
+      boldCb.addEventListener('mousedown', () => pushUndo());
+      boldCb.addEventListener('change', () => toggleBoldLabel(`boldlabel_${pos}_${slot}`));
+      boldLabel.prepend(boldCb);
+      selRow.appendChild(boldLabel);
+
+      // Info button
       const iBtn = document.createElement('button');
       iBtn.className = 'i-btn hidden';
       iBtn.id = `ibtn_${pos}_${slot}`;
@@ -1090,21 +1099,6 @@ function buildPositionRows() {
       sel.addEventListener('mousedown', () => pushUndo());
       sel.addEventListener('change', () => onSlotChange(pos, slot));
       selRow.appendChild(sel);
-
-      // Bold button
-      const boldLabel = document.createElement('label');
-      boldLabel.className = 'bold-check';
-      boldLabel.id = `boldlabel_${pos}_${slot}`;
-      const boldCb = document.createElement('input');
-      boldCb.type = 'checkbox';
-      boldCb.id = `bold_${pos}_${slot}`;
-      boldCb.addEventListener('mousedown', () => pushUndo());
-      boldCb.addEventListener('change', () => toggleBoldLabel(`boldlabel_${pos}_${slot}`));
-      boldLabel.appendChild(boldCb);
-      const bSpan = document.createElement('span');
-      bSpan.textContent = 'B';
-      boldLabel.appendChild(bSpan);
-      selRow.appendChild(boldLabel);
 
       wrap.appendChild(selRow);
 
