@@ -184,6 +184,49 @@
     }
     .player-stat.show { display: block; }
 
+    /* Inline stat card (Option E) */
+    .slot-stat-card {
+      display: none;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      padding: 10px 10px 8px;
+      margin-top: -2px;
+    }
+    .slot-stat-card.open { display: block; }
+    .slot-stat-card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .ssc-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #1e293b;
+      border-radius: 5px;
+      padding: 5px 4px;
+      gap: 2px;
+    }
+    .ssc-lbl { font-size: 0.58rem; color: #64748b; font-weight: 700; text-transform: uppercase; }
+    .ssc-val { font-size: 0.88rem; font-weight: 800; color: #38bdf8; }
+    .stat-toggle-btn {
+      display: none;
+      width: 100%;
+      background: none;
+      border: none;
+      border-top: 1px solid #1e293b;
+      color: #475569;
+      font-size: 0.65rem;
+      padding: 4px;
+      cursor: pointer;
+      text-align: center;
+      margin-top: 3px;
+    }
+    .stat-toggle-btn.show { display: block; }
+    .stat-toggle-btn:hover { color: #94a3b8; }
+
     /* IR checkboxes */
     .ir-grid {
       display: flex;
@@ -1097,6 +1140,18 @@ function buildPositionRows() {
       stat.id = `stat_${pos}_${slot}`;
       wrap.appendChild(stat);
 
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'stat-toggle-btn';
+      toggleBtn.id = `stattoggle_${pos}_${slot}`;
+      toggleBtn.textContent = 'Stats ▼';
+      toggleBtn.addEventListener('click', () => toggleStatCard(pos, slot, toggleBtn));
+      wrap.appendChild(toggleBtn);
+
+      const card = document.createElement('div');
+      card.className = 'slot-stat-card';
+      card.id = `statcard_${pos}_${slot}`;
+      wrap.appendChild(card);
+
       rowDiv.appendChild(wrap);
     }
 
@@ -1363,11 +1418,15 @@ function getViolationReason(player, pos, slot) {
 function updateStatBadge(pos, slot) {
   const sel = document.getElementById(`${pos}_${slot}`);
   const stat = document.getElementById(`stat_${pos}_${slot}`);
+  const toggleBtn = document.getElementById(`stattoggle_${pos}_${slot}`);
+  const card = document.getElementById(`statcard_${pos}_${slot}`);
   if (!sel || !stat) return;
 
   if (!sel.value) {
     stat.classList.remove('show');
     stat.textContent = '';
+    if (toggleBtn) { toggleBtn.classList.remove('show'); toggleBtn.textContent = 'Stats ▼'; }
+    if (card) card.classList.remove('open');
     return;
   }
 
@@ -1376,6 +1435,25 @@ function updateStatBadge(pos, slot) {
 
   stat.textContent = `${p.height} ${p.weight}lbs · In:${p.in_rating} Out:${p.out} Hn:${p.hn} Reb:${p.reb} Df:${p.df}`;
   stat.classList.add('show');
+
+  if (toggleBtn) toggleBtn.classList.add('show');
+  if (card) {
+    const stats = [
+      ['PPG', p.ppg], ['RPG', p.rpg], ['APG', p.apg],
+      ['SPG', p.spg], ['BPG', p.bpg], ['TPG', p.tpg],
+      ['FG%', p.fg_pct], ['FT%', p.ft_pct], ['3P%', p.three_pct],
+    ];
+    card.innerHTML = `<div class="slot-stat-card-grid">${stats.map(([l,v]) =>
+      `<div class="ssc-cell"><span class="ssc-lbl">${l}</span><span class="ssc-val">${v || '—'}</span></div>`
+    ).join('')}</div>`;
+  }
+}
+
+function toggleStatCard(pos, slot, btn) {
+  const card = document.getElementById(`statcard_${pos}_${slot}`);
+  if (!card) return;
+  const open = card.classList.toggle('open');
+  btn.textContent = open ? 'Stats ▲' : 'Stats ▼';
 }
 
 // ─── Hover tooltip ────────────────────────────────────────────────────────────
