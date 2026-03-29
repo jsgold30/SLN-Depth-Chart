@@ -228,6 +228,10 @@
     .stat-toggle-btn.show { display: flex; align-items: center; justify-content: center; }
     .stat-toggle-btn.active { background: #0ea5e9; color: #fff; }
     .stat-toggle-btn:hover { background: #475569; }
+    @media (min-width: 601px) {
+      .stat-toggle-btn { display: none !important; }
+      .slot-stat-card { display: none !important; }
+    }
 
     /* IR checkboxes */
     .ir-grid {
@@ -1128,8 +1132,6 @@ function buildPositionRows() {
       boldCb.addEventListener('change', () => toggleBoldLabel(`boldlabel_${pos}_${slot}`));
       boldLabel.appendChild(boldCb);
       boldLabel.appendChild(document.createTextNode(' bold'));
-      selRow.appendChild(boldLabel);
-
       const toggleBtn = document.createElement('button');
       toggleBtn.className = 'stat-toggle-btn';
       toggleBtn.id = `stattoggle_${pos}_${slot}`;
@@ -1137,6 +1139,8 @@ function buildPositionRows() {
       toggleBtn.title = 'Player stats';
       toggleBtn.addEventListener('click', () => toggleStatCard(pos, slot, toggleBtn));
       selRow.appendChild(toggleBtn);
+
+      selRow.appendChild(boldLabel);
 
       wrap.appendChild(selRow);
 
