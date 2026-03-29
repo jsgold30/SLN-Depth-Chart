@@ -626,40 +626,40 @@
     }
 
     /* ── Player stat hover tooltip (desktop only) ── */
-    #statTooltip {
-      display: none;
-      position: fixed;
-      z-index: 9999;
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 10px 14px;
-      pointer-events: none;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-      min-width: 200px;
-      max-width: 280px;
+    .i-btn {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #1e293b; border: 1px solid #475569;
+      color: #64748b; font-size: 0.62rem; font-style: italic;
+      font-family: Georgia, serif; font-weight: 700;
+      cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1; transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
-    #statTooltip .tip-name {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #e2e8f0;
-      margin-bottom: 6px;
+    .i-btn:hover, .i-btn.active { background: #38bdf8; border-color: #38bdf8; color: #0f172a; }
+    .i-btn.hidden { opacity: 0; pointer-events: none; }
+
+    .stat-popover {
+      display: none; position: absolute;
+      top: calc(100% + 4px); left: 0; right: 0;
+      background: #0f172a; border: 1px solid #334155;
+      border-radius: 8px; padding: 10px 12px;
+      font-size: 0.7rem; z-index: 100;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
     }
-    #statTooltip .tip-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.75rem;
-      padding: 2px 0;
-      border-bottom: 1px solid #1e293b;
+    .stat-popover.show { display: block; }
+    .stat-popover .sp-name {
+      color: #f1f5f9; font-weight: 700; font-size: 0.78rem;
+      margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #1e293b;
     }
-    #statTooltip .tip-row:last-child { border-bottom: none; }
-    #statTooltip .tip-label { color: #64748b; }
-    #statTooltip .tip-val   { color: #cbd5e1; font-weight: 600; }
-    @media (max-width: 600px) { #statTooltip { display: none !important; } }
+    .sp-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px 8px;
+    }
+    .sp-cell { display: flex; flex-direction: column; align-items: center; }
+    .sp-val { color: #f1f5f9; font-weight: 700; font-size: 0.78rem; }
+    .sp-lbl { color: #475569; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; }
   </style>
 </head>
 <body>
-<div id="statTooltip"></div>
 <div class="container">
 
   <div style="text-align:center;">
@@ -1071,8 +1071,16 @@ function buildPositionRows() {
       sel.id = `${pos}_${slot}`;
       sel.addEventListener('mousedown', () => pushUndo());
       sel.addEventListener('change', () => onSlotChange(pos, slot));
-      attachTooltip(sel);
       selRow.appendChild(sel);
+
+      // Info button
+      const iBtn = document.createElement('button');
+      iBtn.className = 'i-btn hidden';
+      iBtn.id = `ibtn_${pos}_${slot}`;
+      iBtn.textContent = 'i';
+      iBtn.type = 'button';
+      iBtn.addEventListener('click', () => toggleStatPopover(pos, slot));
+      selRow.appendChild(iBtn);
 
       const boldLabel = document.createElement('label');
       boldLabel.className = 'bold-check';
@@ -1093,10 +1101,10 @@ function buildPositionRows() {
       warn.id = `warn_${pos}_${slot}`;
       wrap.appendChild(warn);
 
-      const stat = document.createElement('div');
-      stat.className = 'player-stat';
-      stat.id = `stat_${pos}_${slot}`;
-      wrap.appendChild(stat);
+      const popover = document.createElement('div');
+      popover.className = 'stat-popover';
+      popover.id = `popover_${pos}_${slot}`;
+      wrap.appendChild(popover);
 
       rowDiv.appendChild(wrap);
     }
@@ -1200,6 +1208,7 @@ function refreshAllDropdowns() {
   POSITIONS.forEach(pos => {
     for (let slot = 0; slot < 3; slot++) {
       refreshDropdown(pos, slot);
+      updateIBtn(pos, slot);
     }
   });
 }
@@ -1290,6 +1299,7 @@ function onSlotChange(pos, slot) {
   }
   validateSlot(pos, slot);
   updateStatBadge(pos, slot);
+  updateIBtn(pos, slot);
   saveState();
 }
 
@@ -1379,75 +1389,58 @@ function updateStatBadge(pos, slot) {
   stat.classList.add('show');
 }
 
-// ─── Hover tooltip ────────────────────────────────────────────────────────────
-const _tip = document.getElementById('statTooltip');
-let _tipTarget = null;
+// ─── i-button stat popover ────────────────────────────────────────────────────
+function toggleStatPopover(pos, slot) {
+  const popover = document.getElementById(`popover_${pos}_${slot}`);
+  const iBtn    = document.getElementById(`ibtn_${pos}_${slot}`);
+  const sel     = document.getElementById(`${pos}_${slot}`);
+  const isOpen  = popover.classList.contains('show');
 
-function showStatTooltip(sel, e) {
-  if (!sel.value) return;
+  // Close all other open popovers
+  document.querySelectorAll('.stat-popover.show').forEach(p => p.classList.remove('show'));
+  document.querySelectorAll('.i-btn.active').forEach(b => b.classList.remove('active'));
+
+  if (isOpen) return;
+
   const p = roster.find(x => x.name === sel.value);
   if (!p) return;
 
-  const rows = [
-    ['PPG',  p.ppg],
-    ['RPG',  p.rpg],
-    ['APG',  p.apg],
-    ['SPG',  p.spg],
-    ['BPG',  p.bpg],
-    ['TPG',  p.tpg],
-    ['FG%',  p.fg_pct],
-    ['FT%',  p.ft_pct],
-    ['3P%',  p.three_pct],
+  const stats = [
+    ['PPG', p.ppg], ['RPG', p.rpg], ['APG', p.apg],
+    ['SPG', p.spg], ['BPG', p.bpg], ['TPG', p.tpg],
+    ['FG%', p.fg_pct], ['FT%', p.ft_pct], ['3P%', p.three_pct],
   ];
 
-  _tip.innerHTML = `<div class="tip-name">${p.name}</div>` +
-    rows.map(([lbl, val]) =>
-      `<div class="tip-row"><span class="tip-label">${lbl}</span><span class="tip-val">${val || '—'}</span></div>`
-    ).join('');
+  popover.innerHTML = `<div class="sp-name">${p.name}</div><div class="sp-grid">` +
+    stats.map(([lbl, val]) =>
+      `<div class="sp-cell"><span class="sp-val">${val || '—'}</span><span class="sp-lbl">${lbl}</span></div>`
+    ).join('') + `</div>`;
 
-  _tip.style.display = 'block';
-  positionTooltip(e);
-  _tipTarget = sel;
+  popover.classList.add('show');
+  iBtn.classList.add('active');
 }
 
-function positionTooltip(e) {
-  const margin = 12;
-  const tw = _tip.offsetWidth, th = _tip.offsetHeight;
-  let x = e.clientX + margin;
-  let y = e.clientY + margin;
-  if (x + tw > window.innerWidth  - margin) x = e.clientX - tw - margin;
-  if (y + th > window.innerHeight - margin) y = e.clientY - th - margin;
-  _tip.style.left = x + 'px';
-  _tip.style.top  = y + 'px';
-}
-
-document.addEventListener('mousemove', e => {
-  if (_tipTarget) positionTooltip(e);
+// Close popover when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.slot-wrap')) {
+    document.querySelectorAll('.stat-popover.show').forEach(p => p.classList.remove('show'));
+    document.querySelectorAll('.i-btn.active').forEach(b => b.classList.remove('active'));
+  }
 });
 
-function hideStatTooltip() {
-  _tip.style.display = 'none';
-  _tipTarget = null;
-}
-
-// Attach hover to a slot select
-let _tipTimer = null;
-function attachTooltip(sel) {
-  sel.addEventListener('mouseenter', e => {
-    _tipTimer = setTimeout(() => showStatTooltip(sel, e), 1000);
-  });
-  sel.addEventListener('mouseleave', () => {
-    clearTimeout(_tipTimer);
-    hideStatTooltip();
-  });
-  sel.addEventListener('mousedown', () => {
-    clearTimeout(_tipTimer);
-    hideStatTooltip();
-  });
-  sel.addEventListener('change', () => {
-    clearTimeout(_tipTimer);
-    if (_tipTarget === sel) hideStatTooltip();
-  });
+// Update i-btn visibility when slot changes
+function updateIBtn(pos, slot) {
+  const sel  = document.getElementById(`${pos}_${slot}`);
+  const iBtn = document.getElementById(`ibtn_${pos}_${slot}`);
+  const pop  = document.getElementById(`popover_${pos}_${slot}`);
+  if (!iBtn) return;
+  if (sel.value) {
+    iBtn.classList.remove('hidden');
+  } else {
+    iBtn.classList.add('hidden');
+    pop.classList.remove('show');
+    iBtn.classList.remove('active');
+  }
 }
 
 // ─── Apply a state object to the UI ──────────────────────────────────────────
