@@ -882,7 +882,7 @@
 
         <!-- Vet Min Players -->
         <div class="tm-vetmin-section">
-          <div class="tm-vetmin-label">Vet Minimum Players</div>
+          <div class="tm-vetmin-label">Add Salaries</div>
           <div id="tmVetMinListA"></div>
           <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddA" onclick="addVetMin('A')">+ Add Vet Min</button>
           <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('A')" style="margin-left:6px;">+ Custom Salary</button>
@@ -908,7 +908,7 @@
 
         <!-- Vet Min Players -->
         <div class="tm-vetmin-section">
-          <div class="tm-vetmin-label">Vet Minimum Players</div>
+          <div class="tm-vetmin-label">Add Salaries</div>
           <div id="tmVetMinListB"></div>
           <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddB" onclick="addVetMin('B')">+ Add Vet Min</button>
           <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('B')" style="margin-left:6px;">+ Custom Salary</button>
@@ -2487,9 +2487,11 @@ function validateTradeMatch() {
   const errors = [];
   const checks = [];
 
-  // ── Rule: At least 1 player per side ──────────────────────────────────────
-  if (!playersA.length && !vetMinCntA) { errors.push(`Select at least one player from ${tmNameA}.`); }
-  if (!playersB.length && !vetMinCntB) { errors.push(`Select at least one player from ${tmNameB}.`); }
+  // ── Rule: At least 1 player or salary on each side ───────────────────────
+  const customCntA = document.querySelectorAll('#tmVetMinListA .tm-custom-sal-input').length;
+  const customCntB = document.querySelectorAll('#tmVetMinListB .tm-custom-sal-input').length;
+  if (!playersA.length && !vetMinCntA && !customCntA) { errors.push(`Select at least one player or add a salary for ${tmNameA}.`); }
+  if (!playersB.length && !vetMinCntB && !customCntB) { errors.push(`Select at least one player or add a salary for ${tmNameB}.`); }
 
   // ── Rule: Max 5 players per side ──────────────────────────────────────────
   if (playersA.length > 5) {
@@ -2506,8 +2508,8 @@ function validateTradeMatch() {
   }
 
   // ── Rule: 15% salary matching (always applies, blocks the trade) ─────────
-  const hasA = playersA.length > 0 || vetMinCntA > 0;
-  const hasB = playersB.length > 0 || vetMinCntB > 0;
+  const hasA = playersA.length > 0 || vetMinCntA > 0 || customCntA > 0;
+  const hasB = playersB.length > 0 || vetMinCntB > 0 || customCntB > 0;
   if (hasA && hasB) {
     const minSal      = Math.min(salA, salB);
     const maxSal      = Math.max(salA, salB);
