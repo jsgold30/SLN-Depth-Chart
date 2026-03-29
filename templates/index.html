@@ -187,30 +187,40 @@
     /* Inline stat card (Option E) */
     .slot-stat-card {
       display: none;
-      background: #0f172a;
+      background: #1e293b;
       border: 1px solid #334155;
       border-top: none;
-      border-radius: 0 0 6px 6px;
-      padding: 10px 10px 8px;
+      border-radius: 0 0 8px 8px;
+      padding: 10px 12px 12px;
       margin-top: -2px;
     }
     .slot-stat-card.open { display: block; }
+    .ssc-player-name {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #f1f5f9;
+      margin-bottom: 10px;
+    }
     .slot-stat-card-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0 4px;
+      margin-bottom: 8px;
+    }
+    .slot-stat-card-grid-bottom {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0 4px;
     }
     .ssc-cell {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      background: #1e293b;
-      border-radius: 5px;
-      padding: 5px 4px;
+      align-items: flex-start;
+      padding: 4px 2px;
       gap: 2px;
     }
-    .ssc-lbl { font-size: 0.58rem; color: #64748b; font-weight: 700; text-transform: uppercase; }
-    .ssc-val { font-size: 0.88rem; font-weight: 800; color: #38bdf8; }
+    .ssc-lbl { font-size: 0.6rem; color: #64748b; font-weight: 700; text-transform: uppercase; }
+    .ssc-val { font-size: 1rem; font-weight: 800; color: #38bdf8; }
     .stat-toggle-btn {
       display: none;
       width: 20px;
@@ -1450,9 +1460,16 @@ function updateStatBadge(pos, slot) {
       ['SPG', p.spg], ['BPG', p.bpg], ['TPG', p.tpg],
       ['FG%', p.fg_pct], ['FT%', p.ft_pct], ['3P%', p.three_pct],
     ];
-    card.innerHTML = `<div class="slot-stat-card-grid">${stats.map(([l,v]) =>
-      `<div class="ssc-cell"><span class="ssc-lbl">${l}</span><span class="ssc-val">${v || '—'}</span></div>`
-    ).join('')}</div>`;
+    const topStats = stats.slice(0, 5);
+    const botStats = stats.slice(5);
+    card.innerHTML =
+      `<div class="ssc-player-name">${p.name}</div>` +
+      `<div class="slot-stat-card-grid">${topStats.map(([l,v]) =>
+        `<div class="ssc-cell"><span class="ssc-lbl">${l}</span><span class="ssc-val">${v || '—'}</span></div>`
+      ).join('')}</div>` +
+      `<div class="slot-stat-card-grid-bottom">${botStats.map(([l,v]) =>
+        `<div class="ssc-cell"><span class="ssc-lbl">${l}</span><span class="ssc-val">${v || '—'}</span></div>`
+      ).join('')}</div>`;
   }
 }
 
