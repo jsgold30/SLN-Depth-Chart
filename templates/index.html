@@ -290,10 +290,9 @@
     }
     .bold-check input[type="checkbox"] { display: none; }
     .bold-check span {
-      font-size: 0.78rem;
-      font-weight: 900;
-      font-family: 'Georgia', 'Times New Roman', serif;
-      font-style: normal;
+      font-size: 0.72rem;
+      font-weight: 800;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       line-height: 1;
     }
     .bold-check.active {
@@ -783,16 +782,16 @@
     <div class="card-title">Options</div>
     <div class="options-col" id="optionsContainer">
       <div class="option-row">
-        <select id="opt1" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 1 (optional) --</option></select>
         <label class="bold-check" id="boldlabel_opt1"><input type="checkbox" id="bold_opt1" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt1')"><span>B</span></label>
+        <select id="opt1" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 1 (optional) --</option></select>
       </div>
       <div class="option-row">
-        <select id="opt2" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 2 (optional) --</option></select>
         <label class="bold-check" id="boldlabel_opt2"><input type="checkbox" id="bold_opt2" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt2')"><span>B</span></label>
+        <select id="opt2" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 2 (optional) --</option></select>
       </div>
       <div class="option-row">
-        <select id="opt3" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 3 (optional) --</option></select>
         <label class="bold-check" id="boldlabel_opt3"><input type="checkbox" id="bold_opt3" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt3')"><span>B</span></label>
+        <select id="opt3" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 3 (optional) --</option></select>
       </div>
     </div>
   </div>
@@ -804,45 +803,45 @@
       <div class="tactic-item">
         <label>Pace</label>
         <div class="tactic-sel-row">
+          <label class="bold-check" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')"><span>B</span></label>
           <select id="t_pace" onmousedown="pushUndo()" onchange="saveState()">
             <option>Very Fast</option><option>Fast</option>
             <option selected>Normal</option>
             <option>Slow</option><option>Very Slow</option>
           </select>
-          <label class="bold-check" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')"><span>B</span></label>
         </div>
       </div>
       <div class="tactic-item">
         <label>Trap</label>
         <div class="tactic-sel-row">
+          <label class="bold-check" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')"><span>B</span></label>
           <select id="t_trap" onmousedown="pushUndo()" onchange="saveState()">
             <option>Always</option><option>Often</option>
             <option selected>Normal</option>
             <option>Sometimes</option><option>Never</option>
           </select>
-          <label class="bold-check" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')"><span>B</span></label>
         </div>
       </div>
       <div class="tactic-item">
         <label>Pressure</label>
         <div class="tactic-sel-row">
+          <label class="bold-check" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')"><span>B</span></label>
           <select id="t_pressure" onmousedown="pushUndo()" onchange="saveState()">
             <option>Always</option><option>Often</option>
             <option selected>Normal</option>
             <option>Sometimes</option><option>Never</option>
           </select>
-          <label class="bold-check" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')"><span>B</span></label>
         </div>
       </div>
       <div class="tactic-item">
         <label>Offense Focus</label>
         <div class="tactic-sel-row">
+          <label class="bold-check" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')"><span>B</span></label>
           <select id="t_offense" onmousedown="pushUndo()" onchange="saveState()">
             <option>Inside</option>
             <option selected>Balanced</option>
             <option>Outside</option>
           </select>
-          <label class="bold-check" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')"><span>B</span></label>
         </div>
       </div>
     </div>
