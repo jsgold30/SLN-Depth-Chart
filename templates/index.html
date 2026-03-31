@@ -662,6 +662,106 @@
     .sp-cell { display: flex; flex-direction: column; align-items: center; }
     .sp-val { color: #f1f5f9; font-weight: 700; font-size: 0.78rem; }
     .sp-lbl { color: #475569; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ── Free Agent Panel ── */
+    .fa-panel {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #334155;
+      display: none;
+    }
+    .fa-panel.open { display: block; }
+
+    .fa-pos-filter {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .fa-filter-btn {
+      padding: 4px 14px;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .fa-filter-btn:hover { border-color: #475569; color: #e2e8f0; }
+    .fa-filter-btn.active { background: #0e7490; border-color: #0891b2; color: #fff; }
+
+    .fa-list {
+      max-height: 340px;
+      overflow-y: auto;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+    }
+    .fa-player-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-bottom: 1px solid #1e293b;
+      transition: background 0.1s;
+    }
+    .fa-player-row:last-child { border-bottom: none; }
+    .fa-player-row:hover { background: #0f172a; }
+
+    .fa-player-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .fa-player-name {
+      color: #e2e8f0;
+      font-weight: 600;
+      font-size: 0.82rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .fa-player-meta {
+      color: #64748b;
+      font-size: 0.67rem;
+    }
+    .fa-grades {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .fa-grade {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 22px;
+    }
+    .fa-grade-val { color: #e2e8f0; font-weight: 700; font-size: 0.72rem; }
+    .fa-grade-lbl { color: #475569; font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .fa-add-btn {
+      padding: 4px 12px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.12s;
+    }
+    .fa-add-btn:hover { background: #15803d; }
+    .fa-add-btn.added { background: #1e293b; color: #475569; cursor: default; border: 1px solid #334155; }
+
+    @media (max-width: 600px) {
+      .fa-grades { gap: 5px; }
+      .fa-grade { min-width: 18px; }
+    }
   </style>
 </head>
 <body>
@@ -696,6 +796,7 @@
         <button class="btn btn-slate" id="tradeModeBtn" onclick="toggleTradePanel()" style="display:none;font-size:0.72rem;padding:4px 10px;">✏ Trade Mode</button>
         <button class="btn btn-slate" onclick="randomizeDepthChart()" style="font-size:0.72rem;padding:4px 10px;">Randomize</button>
         <button class="btn btn-green" onclick="optimizeDepthChart()" style="font-size:0.72rem;padding:4px 10px;">Optimize</button>
+        <button class="btn btn-cyan" id="faBtn" onclick="toggleFAPanel()" style="font-size:0.72rem;padding:4px 10px;display:none;">＋ Free Agents</button>
       </div>
     </div>
 
@@ -745,6 +846,23 @@
       </div>
       <div id="tradeStatus" style="font-size:0.78rem;color:#94a3b8;margin-top:6px;min-height:18px;"></div>
       <div id="tradePlayerList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
+    </div>
+
+    <!-- ── FREE AGENT PANEL ── -->
+    <div class="fa-panel" id="faPanel">
+      <div class="trade-section-label" style="margin-bottom:10px;">Free Agents — click Add to place on your roster</div>
+      <div class="fa-pos-filter">
+        <button class="fa-filter-btn active" data-pos="ALL" onclick="filterFA('ALL')">All</button>
+        <button class="fa-filter-btn" data-pos="PG" onclick="filterFA('PG')">PG</button>
+        <button class="fa-filter-btn" data-pos="SG" onclick="filterFA('SG')">SG</button>
+        <button class="fa-filter-btn" data-pos="SF" onclick="filterFA('SF')">SF</button>
+        <button class="fa-filter-btn" data-pos="PF" onclick="filterFA('PF')">PF</button>
+        <button class="fa-filter-btn" data-pos="C" onclick="filterFA('C')">C</button>
+      </div>
+      <div id="faStatus" style="font-size:0.78rem;color:#94a3b8;margin-bottom:8px;min-height:18px;"></div>
+      <div class="fa-list" id="faPlayerList">
+        <p class="placeholder-msg" style="padding:12px;">Loading free agents…</p>
+      </div>
     </div>
   </div>
 
@@ -1012,12 +1130,21 @@ async function loadRoster(restoring = false) {
     if (data.error) { setStatus(data.error, 'err'); return; }
 
     roster = data.players;
+    // Reset FA state on new roster load
+    faLoaded = false;
+    faPlayers = [];
+    faFilter = 'ALL';
+    document.querySelectorAll('.fa-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.pos === 'ALL'));
+    document.getElementById('faPanel').classList.remove('open');
+    const faBtnEl = document.getElementById('faBtn');
+    if (faBtnEl) faBtnEl.textContent = '＋ Free Agents';
     undoStack = [];
     const undoBtnEl = document.getElementById('undoBtn');
     if (undoBtnEl) undoBtnEl.disabled = true;
     const label = data.team_name ? `${data.team_name} — ` : '';
     setStatus(`✓ ${label}${roster.length} players loaded`, 'ok');
     document.getElementById('tradeModeBtn').style.display = '';
+    document.getElementById('faBtn').style.display = '';
 
     buildPositionRows();
     buildIR();
@@ -1393,6 +1520,121 @@ function updateStatBadge(pos, slot) {
 
   stat.textContent = `${p.height} ${p.weight}lbs · In:${p.in_rating} Out:${p.out} Hn:${p.hn} Reb:${p.reb} Df:${p.df}`;
   stat.classList.add('show');
+}
+
+// ─── Free Agent Panel ─────────────────────────────────────────────────────────
+let faPlayers = [];
+let faFilter = 'ALL';
+let faLoaded = false;
+
+function toggleFAPanel() {
+  const panel = document.getElementById('faPanel');
+  const btn   = document.getElementById('faBtn');
+  const isOpen = panel.classList.toggle('open');
+  btn.textContent = isOpen ? '✕ Free Agents' : '＋ Free Agents';
+  if (isOpen && !faLoaded) loadFreeAgents();
+}
+
+async function loadFreeAgents() {
+  const statusEl = document.getElementById('faStatus');
+  const listEl   = document.getElementById('faPlayerList');
+  statusEl.textContent = 'Fetching free agents…';
+  statusEl.style.color = '#94a3b8';
+  listEl.innerHTML = '<p class="placeholder-msg" style="padding:12px;">Loading…</p>';
+
+  try {
+    const res  = await fetch('/fetch_free_agents', { method: 'POST' });
+    const data = await res.json();
+
+    if (data.error) {
+      statusEl.textContent = data.error;
+      statusEl.style.color = '#f87171';
+      listEl.innerHTML = '';
+      return;
+    }
+
+    faPlayers = data.players;
+    faLoaded  = true;
+    statusEl.textContent = `${faPlayers.length} free agents available`;
+    statusEl.style.color = '#4ade80';
+    renderFAList();
+  } catch(e) {
+    statusEl.textContent = 'Network error loading free agents.';
+    statusEl.style.color = '#f87171';
+  }
+}
+
+function filterFA(pos) {
+  faFilter = pos;
+  document.querySelectorAll('.fa-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.pos === pos);
+  });
+  renderFAList();
+}
+
+function renderFAList() {
+  const listEl = document.getElementById('faPlayerList');
+  const addedNames = new Set(roster.filter(p => p.is_fa).map(p => p.name));
+
+  const filtered = faFilter === 'ALL'
+    ? faPlayers
+    : faPlayers.filter(p => p.pos === faFilter);
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<p class="placeholder-msg" style="padding:12px;">No free agents found.</p>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(p => {
+    const added = addedNames.has(p.name);
+    const safeId = p.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const meta = [p.pos, p.height, `Age ${p.age}`, p.last_team].filter(Boolean).join(' · ');
+    return `
+      <div class="fa-player-row" id="farow_${safeId}">
+        <div class="fa-player-info">
+          <span class="fa-player-name">${p.name}</span>
+          <span class="fa-player-meta">${meta}</span>
+        </div>
+        <div class="fa-grades">
+          <div class="fa-grade"><span class="fa-grade-val">${p.in_rating||'—'}</span><span class="fa-grade-lbl">In</span></div>
+          <div class="fa-grade"><span class="fa-grade-val">${p.out||'—'}</span><span class="fa-grade-lbl">Out</span></div>
+          <div class="fa-grade"><span class="fa-grade-val">${p.df||'—'}</span><span class="fa-grade-lbl">Df</span></div>
+          <div class="fa-grade"><span class="fa-grade-val">${p.reb||'—'}</span><span class="fa-grade-lbl">Reb</span></div>
+        </div>
+        <button class="fa-add-btn${added ? ' added' : ''}"
+          id="fabtn_${safeId}"
+          onclick="addFAtoRoster('${p.name.replace(/'/g, "\\'")}')"
+          ${added ? 'disabled' : ''}>
+          ${added ? '✓ Added' : '+ Add'}
+        </button>
+      </div>`;
+  }).join('');
+}
+
+function addFAtoRoster(name) {
+  const p = faPlayers.find(x => x.name === name);
+  if (!p || roster.find(x => x.name === name)) return;
+
+  pushUndo();
+  roster.push(p);
+
+  // Update button state
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+  const btn = document.getElementById(`fabtn_${safeId}`);
+  if (btn) { btn.classList.add('added'); btn.disabled = true; btn.textContent = '✓ Added'; }
+
+  // Update status count
+  const addedCount = roster.filter(r => r.is_fa).length;
+  const statusEl = document.getElementById('faStatus');
+  if (statusEl) {
+    statusEl.textContent = `${faPlayers.length} free agents available · ${addedCount} added to roster`;
+    statusEl.style.color = '#4ade80';
+  }
+
+  buildIR();
+  buildOptionDropdowns();
+  refreshAllDropdowns();
+  saveState();
 }
 
 // ─── i-button stat popover ────────────────────────────────────────────────────
