@@ -1055,8 +1055,26 @@
         <div class="tm-vetmin-section">
           <div class="tm-vetmin-label">Add Salaries</div>
           <div id="tmVetMinListA"></div>
-          <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddA" onclick="addVetMin('A')">+ Add Vet Min</button>
-          <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('A')" style="margin-left:6px;">+ Custom Salary</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+            <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddA" onclick="addVetMin('A')">+ Add Vet Min</button>
+            <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('A')">+ Custom Salary</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tmFABtnA" onclick="toggleSideFAPanel('A')" style="display:none;">+ Free Agent</button>
+          </div>
+          <!-- Per-side FA panel -->
+          <div id="tmFAPanelA" style="display:none;margin-top:10px;">
+            <div class="fa-pos-filter" id="tmFAPosFilterA">
+              <button class="fa-filter-btn active" data-pos="ALL" onclick="filterSideFA('A','ALL')">All</button>
+              <button class="fa-filter-btn" data-pos="PG"  onclick="filterSideFA('A','PG')">PG</button>
+              <button class="fa-filter-btn" data-pos="SG"  onclick="filterSideFA('A','SG')">SG</button>
+              <button class="fa-filter-btn" data-pos="SF"  onclick="filterSideFA('A','SF')">SF</button>
+              <button class="fa-filter-btn" data-pos="PF"  onclick="filterSideFA('A','PF')">PF</button>
+              <button class="fa-filter-btn" data-pos="C"   onclick="filterSideFA('A','C')">C</button>
+            </div>
+            <div id="tmFAStatusA" style="font-size:0.75rem;color:#94a3b8;margin:5px 0 3px;min-height:16px;"></div>
+            <div class="fa-list" id="tmFAPlayerListA">
+              <p class="placeholder-msg" style="padding:10px;">Loading…</p>
+            </div>
+          </div>
         </div>
 
         <div class="tm-total-row">
@@ -1081,8 +1099,26 @@
         <div class="tm-vetmin-section">
           <div class="tm-vetmin-label">Add Salaries</div>
           <div id="tmVetMinListB"></div>
-          <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddB" onclick="addVetMin('B')">+ Add Vet Min</button>
-          <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('B')" style="margin-left:6px;">+ Custom Salary</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+            <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddB" onclick="addVetMin('B')">+ Add Vet Min</button>
+            <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('B')">+ Custom Salary</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tmFABtnB" onclick="toggleSideFAPanel('B')" style="display:none;">+ Free Agent</button>
+          </div>
+          <!-- Per-side FA panel -->
+          <div id="tmFAPanelB" style="display:none;margin-top:10px;">
+            <div class="fa-pos-filter" id="tmFAPosFilterB">
+              <button class="fa-filter-btn active" data-pos="ALL" onclick="filterSideFA('B','ALL')">All</button>
+              <button class="fa-filter-btn" data-pos="PG"  onclick="filterSideFA('B','PG')">PG</button>
+              <button class="fa-filter-btn" data-pos="SG"  onclick="filterSideFA('B','SG')">SG</button>
+              <button class="fa-filter-btn" data-pos="SF"  onclick="filterSideFA('B','SF')">SF</button>
+              <button class="fa-filter-btn" data-pos="PF"  onclick="filterSideFA('B','PF')">PF</button>
+              <button class="fa-filter-btn" data-pos="C"   onclick="filterSideFA('B','C')">C</button>
+            </div>
+            <div id="tmFAStatusB" style="font-size:0.75rem;color:#94a3b8;margin:5px 0 3px;min-height:16px;"></div>
+            <div class="fa-list" id="tmFAPlayerListB">
+              <p class="placeholder-msg" style="padding:10px;">Loading…</p>
+            </div>
+          </div>
         </div>
 
         <div class="tm-total-row">
@@ -1096,29 +1132,6 @@
       </div>
 
     </div><!-- /tm-columns -->
-
-    <!-- ── TM FREE AGENT SECTION ── -->
-    <div style="margin-top:16px;border-top:1px solid #334155;padding-top:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-        <span class="trade-section-label" style="margin:0;">Add Free Agent to Trade</span>
-        <button class="btn btn-cyan" id="tmFABtn" onclick="toggleTMFAPanel()" style="font-size:0.72rem;padding:4px 12px;">＋ Browse Free Agents</button>
-      </div>
-      <div id="tmFAPanel" style="display:none;">
-        <div class="fa-pos-filter" id="tmFAPosFilter">
-          <button class="fa-filter-btn active" data-pos="ALL" onclick="filterTMFA('ALL')">All</button>
-          <button class="fa-filter-btn" data-pos="PG"  onclick="filterTMFA('PG')">PG</button>
-          <button class="fa-filter-btn" data-pos="SG"  onclick="filterTMFA('SG')">SG</button>
-          <button class="fa-filter-btn" data-pos="SF"  onclick="filterTMFA('SF')">SF</button>
-          <button class="fa-filter-btn" data-pos="PF"  onclick="filterTMFA('PF')">PF</button>
-          <button class="fa-filter-btn" data-pos="C"   onclick="filterTMFA('C')">C</button>
-        </div>
-        <div id="tmFAStatus" style="font-size:0.78rem;color:#94a3b8;margin:6px 0 4px;min-height:18px;"></div>
-        <div style="font-size:0.68rem;color:#475569;margin-bottom:6px;">Enter a salary, then add the player to Side A or Side B</div>
-        <div class="fa-list" id="tmFAPlayerList">
-          <p class="placeholder-msg" style="padding:12px;">Loading free agents…</p>
-        </div>
-      </div>
-    </div>
 
     <!-- Validate / Clear buttons -->
     <div style="text-align:center;margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
@@ -2445,27 +2458,27 @@ function addTradePlayer(player) {
   document.getElementById('tradeStatus').textContent = `✓ ${player.name} (${player.pos}) added to roster.`;
 }
 
-// ─── Trade Machine Free Agent Panel ──────────────────────────────────────────
-let tmFAFilter = 'ALL';
+// ─── Trade Machine Free Agent Panel (per-side) ───────────────────────────────
+const tmFAFilter = { A: 'ALL', B: 'ALL' };
 
-function toggleTMFAPanel() {
-  const panel  = document.getElementById('tmFAPanel');
-  const btn    = document.getElementById('tmFABtn');
-  const isOpen = panel.style.display !== 'none';
+function toggleSideFAPanel(side) {
+  const panel    = document.getElementById(`tmFAPanel${side}`);
+  const btn      = document.getElementById(`tmFABtn${side}`);
+  const isOpen   = panel.style.display !== 'none';
   panel.style.display = isOpen ? 'none' : 'block';
-  btn.textContent = isOpen ? '＋ Browse Free Agents' : '✕ Close Free Agents';
+  btn.textContent = isOpen ? '+ Free Agent' : '✕ Free Agent';
 
-  if (!isOpen) { // opening
-    const statusEl = document.getElementById('tmFAStatus');
-    const listEl   = document.getElementById('tmFAPlayerList');
+  if (!isOpen) {
+    const statusEl = document.getElementById(`tmFAStatus${side}`);
+    const listEl   = document.getElementById(`tmFAPlayerList${side}`);
     if (faLoaded) {
       statusEl.textContent = `${faPlayers.length} free agents available`;
       statusEl.style.color = '#4ade80';
-      renderTMFAList();
+      renderSideFAPanel(side);
     } else {
       statusEl.textContent = 'Fetching free agents…';
       statusEl.style.color = '#94a3b8';
-      listEl.innerHTML = '<p class="placeholder-msg" style="padding:12px;">Loading…</p>';
+      listEl.innerHTML = '<p class="placeholder-msg" style="padding:10px;">Loading…</p>';
       fetch('/fetch_free_agents', { method: 'POST' })
         .then(r => r.json())
         .then(data => {
@@ -2479,7 +2492,12 @@ function toggleTMFAPanel() {
           faLoaded  = true;
           statusEl.textContent = `${faPlayers.length} free agents available`;
           statusEl.style.color = '#4ade80';
-          renderTMFAList();
+          renderSideFAPanel(side);
+          // Also render the other side's panel if it's open
+          const other = side === 'A' ? 'B' : 'A';
+          if (document.getElementById(`tmFAPanel${other}`).style.display !== 'none') {
+            renderSideFAPanel(other);
+          }
         })
         .catch(() => {
           statusEl.textContent = 'Network error loading free agents.';
@@ -2489,38 +2507,35 @@ function toggleTMFAPanel() {
   }
 }
 
-function filterTMFA(pos) {
-  tmFAFilter = pos;
-  document.querySelectorAll('#tmFAPosFilter .fa-filter-btn').forEach(btn => {
+function filterSideFA(side, pos) {
+  tmFAFilter[side] = pos;
+  document.querySelectorAll(`#tmFAPosFilter${side} .fa-filter-btn`).forEach(btn => {
     btn.classList.toggle('active', btn.dataset.pos === pos);
   });
-  renderTMFAList();
+  renderSideFAPanel(side);
 }
 
-function renderTMFAList() {
-  const listEl   = document.getElementById('tmFAPlayerList');
+function renderSideFAPanel(side) {
+  const listEl = document.getElementById(`tmFAPlayerList${side}`);
   if (!listEl) return;
 
-  const inA = new Set((tmRosterA || []).filter(p => p.is_fa).map(p => p.name));
-  const inB = new Set((tmRosterB || []).filter(p => p.is_fa).map(p => p.name));
-
-  const filtered = tmFAFilter === 'ALL'
-    ? faPlayers
-    : faPlayers.filter(p => p.pos === tmFAFilter);
+  const sideRoster = side === 'A' ? tmRosterA : tmRosterB;
+  const addedNames = new Set(sideRoster.filter(p => p.is_fa).map(p => p.name));
+  const filter     = tmFAFilter[side];
+  const filtered   = filter === 'ALL' ? faPlayers : faPlayers.filter(p => p.pos === filter);
 
   if (!filtered.length) {
-    listEl.innerHTML = '<p class="placeholder-msg" style="padding:12px;">No free agents found.</p>';
+    listEl.innerHTML = '<p class="placeholder-msg" style="padding:10px;">No free agents found.</p>';
     return;
   }
 
   listEl.innerHTML = filtered.map(p => {
     const safeId = p.name.replace(/[^a-zA-Z0-9]/g, '_');
     const meta   = [p.pos, p.height, `Age ${p.age}`, p.last_team].filter(Boolean).join(' · ');
-    const addedA = inA.has(p.name);
-    const addedB = inB.has(p.name);
+    const added  = addedNames.has(p.name);
     return `
-      <div class="tm-fa-row" id="tmfarow_${safeId}">
-        <div class="fa-player-info" style="flex:1;min-width:120px;">
+      <div class="tm-fa-row">
+        <div class="fa-player-info" style="flex:1;min-width:0;">
           <span class="fa-player-name">${p.name}</span>
           <span class="fa-player-meta">${meta}</span>
         </div>
@@ -2530,43 +2545,34 @@ function renderTMFAList() {
           <div class="fa-grade"><span class="fa-grade-val">${p.df||'—'}</span><span class="fa-grade-lbl">Df</span></div>
           <div class="fa-grade"><span class="fa-grade-val">${p.reb||'—'}</span><span class="fa-grade-lbl">Reb</span></div>
         </div>
-        <input type="text" id="tmfasal_${safeId}" class="tm-fa-sal-input"
-          placeholder="e.g. 2,000,000"
+        <input type="text" id="tmfasal_${side}_${safeId}" class="tm-fa-sal-input"
+          placeholder="Salary"
           oninput="this.value=this.value.replace(/[^0-9,]/g,'')">
-        <button class="tm-fa-add-btn tm-fa-add-a${addedA ? ' added' : ''}"
-          id="tmfabtnA_${safeId}"
-          onclick="addFAtoTM('${p.name.replace(/'/g, "\\'")}',' A')"
-          ${addedA ? 'disabled' : ''}>
-          ${addedA ? '✓ A' : '＋ A'}
-        </button>
-        <button class="tm-fa-add-btn tm-fa-add-b${addedB ? ' added' : ''}"
-          id="tmfabtnB_${safeId}"
-          onclick="addFAtoTM('${p.name.replace(/'/g, "\\'")}',' B')"
-          ${addedB ? 'disabled' : ''}>
-          ${addedB ? '✓ B' : '＋ B'}
+        <button class="tm-fa-add-btn tm-fa-add-a${added ? ' added' : ''}"
+          id="tmfabtn_${side}_${safeId}"
+          onclick="addFAtoSide('${p.name.replace(/'/g, "\\'")}','${side}')"
+          ${added ? 'disabled' : ''}>
+          ${added ? '✓ Added' : '+ Add'}
         </button>
       </div>`;
   }).join('');
 }
 
-function addFAtoTM(name, side) {
-  side = side.trim(); // strip accidental space from inline onclick
+function addFAtoSide(name, side) {
   const p = faPlayers.find(x => x.name === name);
   if (!p) return;
 
-  const safeId   = name.replace(/[^a-zA-Z0-9]/g, '_');
-  const input    = document.getElementById(`tmfasal_${safeId}`);
-  const rawSal   = parseInt((input ? input.value : '').replace(/[^0-9]/g, '')) || 0;
-  const player   = { ...p, salary: rawSal };
-
+  const safeId       = name.replace(/[^a-zA-Z0-9]/g, '_');
+  const input        = document.getElementById(`tmfasal_${side}_${safeId}`);
+  const rawSal       = parseInt((input ? input.value : '').replace(/[^0-9]/g, '')) || 0;
+  const player       = { ...p, salary: rawSal };
   const targetRoster = side === 'A' ? tmRosterA : tmRosterB;
-  if (targetRoster.find(r => r.name === name)) return; // already added
 
+  if (targetRoster.find(r => r.name === name)) return; // already added
   targetRoster.push(player);
   buildTMPlayerList(side);
 
-  // Check the newly added player (buildTMPlayerList preserved prior checked state,
-  // but this FA is new so we must manually check it)
+  // Manually check the newly added FA (it wasn't in the preserved checked set)
   document.querySelectorAll(`#tmPlayerList${side} input[type="checkbox"]`).forEach(cb => {
     if (cb.dataset.name === name) {
       cb.checked = true;
@@ -2575,16 +2581,9 @@ function addFAtoTM(name, side) {
   });
   tmUpdateSending(side);
 
-  // Show the side's team name / status area if hidden (no team loaded yet)
-  const nameEl = document.getElementById(`tmTeamName${side}`);
-  if (nameEl && nameEl.style.display === 'none') {
-    nameEl.textContent = side === 'A' ? 'Team A' : 'Team B';
-    nameEl.style.display = '';
-  }
-
-  // Update FA button state
-  const btn = document.getElementById(`tmfabtn${side}_${safeId}`);
-  if (btn) { btn.classList.add('added'); btn.disabled = true; btn.textContent = `✓ ${side}`; }
+  // Update Add button state in the FA panel
+  const btn = document.getElementById(`tmfabtn_${side}_${safeId}`);
+  if (btn) { btn.classList.add('added'); btn.disabled = true; btn.textContent = '✓ Added'; }
 }
 
 // ─── Trade Machine ────────────────────────────────────────────────────────────
@@ -2803,11 +2802,16 @@ function clearTradeMachine() {
     document.getElementById(`tmVetMinAdd${side}`).style.display = '';
     // Reset sending total
     tmUpdateSending(side);
+
+    // Close FA panel and reset its button label
+    document.getElementById(`tmFAPanel${side}`).style.display = 'none';
+    const faBtnEl = document.getElementById(`tmFABtn${side}`);
+    if (faBtnEl) faBtnEl.textContent = '+ Free Agent';
+    // Refresh FA panel Add buttons (all back to "+ Add")
+    if (faLoaded) renderSideFAPanel(side);
   });
   // Clear result panel
   document.getElementById('tmResult').innerHTML = '';
-  // Reset FA list Add buttons
-  if (faLoaded) renderTMFAList();
 }
 
 function fmtSal(n) {
@@ -2850,8 +2854,13 @@ async function loadTMTeam(side) {
     nameEl.style.display = '';
 
     buildTMPlayerList(side);
-    // Refresh TM FA panel button states if it's open
-    if (document.getElementById('tmFAPanel').style.display !== 'none' && faLoaded) renderTMFAList();
+    // Reveal the + Free Agent button now that a team is loaded for this side
+    const faBtnEl = document.getElementById(`tmFABtn${side}`);
+    if (faBtnEl) faBtnEl.style.display = '';
+    // If this side's FA panel is open and data is loaded, refresh it
+    if (document.getElementById(`tmFAPanel${side}`).style.display !== 'none' && faLoaded) {
+      renderSideFAPanel(side);
+    }
 
     const total = side === 'A' ? tmTotalA : tmTotalB;
     const overCap = total > TM_HARD_CAP;
