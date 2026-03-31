@@ -341,6 +341,107 @@ def fetch_roster():
         return jsonify({'error': f'Error parsing roster: {str(e)}'}), 500
 
 
+@app.route('/fetch_free_agents', methods=['POST'])
+def fetch_free_agents():
+    url = 'https://www.simleaguenirvana.com/fa/fa-pos.htm'
+    try:
+        headers = {
+            'User-Agent': (
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/120.0.0.0 Safari/537.36'
+            )
+        }
+        resp = requests.get(url, timeout=15, headers=headers)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, 'html.parser')
+
+        players = []
+        valid_positions = {'PG', 'SG', 'SF', 'PF', 'C'}
+
+        for table in soup.find_all('table'):
+            all_rows = table.find_all('tr')
+            if not all_rows:
+                continue
+
+            header_row_index = None
+            col_names = []
+            for i, row in enumerate(all_rows):
+                candidate = [
+                    c.get_text(strip=True).lower()
+                    for c in row.find_all(['th', 'td'])
+                ]
+                if 'pos' in candidate and 'reb' in candidate and 'hn' in candidate:
+                    col_names = candidate
+                    header_row_index = i
+                    break
+
+            if header_row_index is None:
+                continue
+
+            rows = all_rows[header_row_index + 1:]
+            for row in rows:
+                cells = [td.get_text(strip=True) for td in row.find_all('td')]
+                if len(cells) < len(col_names):
+                    continue
+
+                d = dict(zip(col_names, cells))
+                name = d.get('name', '').strip()
+                pos = d.get('pos', '').strip().upper()
+
+                if not name or pos not in valid_positions:
+                    continue
+
+                height_str = d.get('height', '')
+                height_inches = parse_height_inches(height_str)
+
+                wt_match = re.search(r'(\d+)', str(d.get('weight', '0')))
+                weight = int(wt_match.group(1)) if wt_match else 0
+
+                player = {
+                    'name': name,
+                    'pos': pos,
+                    'age': d.get('age', ''),
+                    'height': height_str,
+                    'height_inches': height_inches,
+                    'weight': weight,
+                    'in_rating': d.get('in', ''),
+                    'out': d.get('out', ''),
+                    'hn': d.get('hn', ''),
+                    'df': d.get('df', ''),
+                    'reb': d.get('reb', ''),
+                    'pot': d.get('pot', ''),
+                    'last_team': d.get('last team', ''),
+                    'ppg': '', 'rpg': '', 'apg': '', 'spg': '',
+                    'bpg': '', 'tpg': '', 'fg_pct': '', 'ft_pct': '', 'three_pct': '',
+                    'is_fa': True,
+                }
+
+                elig = compute_eligibility(player)
+                player['eligible_starter'] = elig['starter']
+                player['eligible_backup'] = elig['backup']
+
+                players.append(player)
+
+            if players:
+                break
+
+        if not players:
+            return jsonify({'error': 'Could not find free agent data on this page.'}), 400
+
+        pos_order = {'PG': 0, 'SG': 1, 'SF': 2, 'PF': 3, 'C': 4}
+        players.sort(key=lambda p: (pos_order.get(p['pos'], 5), p['name']))
+
+        return jsonify({'players': players})
+
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Request timed out.'}), 400
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Failed to fetch FA page: {str(e)}'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Error parsing FA data: {str(e)}'}), 500
+
+
 def parse_salary(salary_str):
     """Parse salary string like '$2,863,892' to integer."""
     if not salary_str:

@@ -662,6 +662,151 @@
     .sp-cell { display: flex; flex-direction: column; align-items: center; }
     .sp-val { color: #f1f5f9; font-weight: 700; font-size: 0.78rem; }
     .sp-lbl { color: #475569; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ── Free Agent Panel ── */
+    .fa-panel {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #334155;
+      display: none;
+    }
+    .fa-panel.open { display: block; }
+
+    .fa-pos-filter {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .fa-filter-btn {
+      padding: 4px 14px;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .fa-filter-btn:hover { border-color: #475569; color: #e2e8f0; }
+    .fa-filter-btn.active { background: #0e7490; border-color: #0891b2; color: #fff; }
+
+    .fa-list {
+      max-height: 340px;
+      overflow-y: auto;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+    }
+    .fa-player-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-bottom: 1px solid #1e293b;
+      transition: background 0.1s;
+    }
+    .fa-player-row:last-child { border-bottom: none; }
+    .fa-player-row:hover { background: #0f172a; }
+
+    .fa-player-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .fa-player-name {
+      color: #e2e8f0;
+      font-weight: 600;
+      font-size: 0.82rem;
+    }
+    .fa-player-meta {
+      color: #64748b;
+      font-size: 0.67rem;
+    }
+    .fa-grades {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .fa-grade {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 22px;
+    }
+    .fa-grade-val { color: #e2e8f0; font-weight: 700; font-size: 0.72rem; }
+    .fa-grade-lbl { color: #475569; font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .fa-add-btn {
+      padding: 4px 12px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.12s;
+    }
+    .fa-add-btn:hover { background: #15803d; }
+    .fa-add-btn.added { background: #1e293b; color: #475569; cursor: default; border: 1px solid #334155; }
+
+    @media (max-width: 600px) {
+      .fa-grades { gap: 5px; }
+      .fa-grade { min-width: 18px; }
+    }
+
+    /* ── Trade Machine Free Agent rows ── */
+    .tm-fa-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 8px 10px;
+      border-bottom: 1px solid #1e293b;
+      transition: background 0.1s;
+    }
+    .tm-fa-row:last-child { border-bottom: none; }
+    .tm-fa-row:hover { background: #0a1120; }
+    .tm-fa-row-top { display: flex; flex-direction: column; gap: 1px; }
+    .tm-fa-row-bottom { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+    .tm-fa-sal-input {
+      width: 105px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #f1f5f9;
+      border-radius: 4px;
+      padding: 5px 7px;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+    .tm-fa-sal-input:focus { outline: none; border-color: #38bdf8; }
+    .tm-fa-sal-input::placeholder { color: #475569; }
+
+    .tm-fa-add-btn {
+      padding: 5px 10px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.12s;
+    }
+    .tm-fa-add-a { background: #0e7490; color: #fff; }
+    .tm-fa-add-a:hover { background: #0891b2; }
+    .tm-fa-add-b { background: #7c3aed; color: #fff; }
+    .tm-fa-add-b:hover { background: #6d28d9; }
+    .tm-fa-add-btn.added { background: #1e293b; color: #475569; cursor: default; border: 1px solid #334155; }
+
+    @media (max-width: 600px) {
+      .tm-fa-sal-input { width: 90px; }
+    }
   </style>
 </head>
 <body>
@@ -696,6 +841,7 @@
         <button class="btn btn-slate" id="tradeModeBtn" onclick="toggleTradePanel()" style="display:none;font-size:0.72rem;padding:4px 10px;">✏ Trade Mode</button>
         <button class="btn btn-slate" onclick="randomizeDepthChart()" style="font-size:0.72rem;padding:4px 10px;">Randomize</button>
         <button class="btn btn-green" onclick="optimizeDepthChart()" style="font-size:0.72rem;padding:4px 10px;">Optimize</button>
+        <button class="btn btn-cyan" id="faBtn" onclick="toggleFAPanel()" style="font-size:0.72rem;padding:4px 10px;display:none;">＋ Free Agents</button>
       </div>
     </div>
 
@@ -745,6 +891,23 @@
       </div>
       <div id="tradeStatus" style="font-size:0.78rem;color:#94a3b8;margin-top:6px;min-height:18px;"></div>
       <div id="tradePlayerList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"></div>
+    </div>
+
+    <!-- ── FREE AGENT PANEL ── -->
+    <div class="fa-panel" id="faPanel">
+      <div class="trade-section-label" style="margin-bottom:10px;">Free Agents — click Add to place on your roster</div>
+      <div class="fa-pos-filter">
+        <button class="fa-filter-btn active" data-pos="ALL" onclick="filterFA('ALL')">All</button>
+        <button class="fa-filter-btn" data-pos="PG" onclick="filterFA('PG')">PG</button>
+        <button class="fa-filter-btn" data-pos="SG" onclick="filterFA('SG')">SG</button>
+        <button class="fa-filter-btn" data-pos="SF" onclick="filterFA('SF')">SF</button>
+        <button class="fa-filter-btn" data-pos="PF" onclick="filterFA('PF')">PF</button>
+        <button class="fa-filter-btn" data-pos="C" onclick="filterFA('C')">C</button>
+      </div>
+      <div id="faStatus" style="font-size:0.78rem;color:#94a3b8;margin-bottom:8px;min-height:18px;"></div>
+      <div class="fa-list" id="faPlayerList">
+        <p class="placeholder-msg" style="padding:12px;">Loading free agents…</p>
+      </div>
     </div>
   </div>
 
@@ -890,8 +1053,26 @@
         <div class="tm-vetmin-section">
           <div class="tm-vetmin-label">Add Salaries</div>
           <div id="tmVetMinListA"></div>
-          <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddA" onclick="addVetMin('A')">+ Add Vet Min</button>
-          <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('A')" style="margin-left:6px;">+ Custom Salary</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+            <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddA" onclick="addVetMin('A')">+ Add Vet Min</button>
+            <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('A')">+ Custom Salary</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tmFABtnA" onclick="toggleSideFAPanel('A')" style="display:none;">+ Free Agent</button>
+          </div>
+          <!-- Per-side FA panel -->
+          <div id="tmFAPanelA" style="display:none;margin-top:10px;">
+            <div class="fa-pos-filter" id="tmFAPosFilterA">
+              <button class="fa-filter-btn active" data-pos="ALL" onclick="filterSideFA('A','ALL')">All</button>
+              <button class="fa-filter-btn" data-pos="PG"  onclick="filterSideFA('A','PG')">PG</button>
+              <button class="fa-filter-btn" data-pos="SG"  onclick="filterSideFA('A','SG')">SG</button>
+              <button class="fa-filter-btn" data-pos="SF"  onclick="filterSideFA('A','SF')">SF</button>
+              <button class="fa-filter-btn" data-pos="PF"  onclick="filterSideFA('A','PF')">PF</button>
+              <button class="fa-filter-btn" data-pos="C"   onclick="filterSideFA('A','C')">C</button>
+            </div>
+            <div id="tmFAStatusA" style="font-size:0.75rem;color:#94a3b8;margin:5px 0 3px;min-height:16px;"></div>
+            <div class="fa-list" id="tmFAPlayerListA">
+              <p class="placeholder-msg" style="padding:10px;">Loading…</p>
+            </div>
+          </div>
         </div>
 
         <div class="tm-total-row">
@@ -916,8 +1097,26 @@
         <div class="tm-vetmin-section">
           <div class="tm-vetmin-label">Add Salaries</div>
           <div id="tmVetMinListB"></div>
-          <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddB" onclick="addVetMin('B')">+ Add Vet Min</button>
-          <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('B')" style="margin-left:6px;">+ Custom Salary</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+            <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddB" onclick="addVetMin('B')">+ Add Vet Min</button>
+            <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('B')">+ Custom Salary</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tmFABtnB" onclick="toggleSideFAPanel('B')" style="display:none;">+ Free Agent</button>
+          </div>
+          <!-- Per-side FA panel -->
+          <div id="tmFAPanelB" style="display:none;margin-top:10px;">
+            <div class="fa-pos-filter" id="tmFAPosFilterB">
+              <button class="fa-filter-btn active" data-pos="ALL" onclick="filterSideFA('B','ALL')">All</button>
+              <button class="fa-filter-btn" data-pos="PG"  onclick="filterSideFA('B','PG')">PG</button>
+              <button class="fa-filter-btn" data-pos="SG"  onclick="filterSideFA('B','SG')">SG</button>
+              <button class="fa-filter-btn" data-pos="SF"  onclick="filterSideFA('B','SF')">SF</button>
+              <button class="fa-filter-btn" data-pos="PF"  onclick="filterSideFA('B','PF')">PF</button>
+              <button class="fa-filter-btn" data-pos="C"   onclick="filterSideFA('B','C')">C</button>
+            </div>
+            <div id="tmFAStatusB" style="font-size:0.75rem;color:#94a3b8;margin:5px 0 3px;min-height:16px;"></div>
+            <div class="fa-list" id="tmFAPlayerListB">
+              <p class="placeholder-msg" style="padding:10px;">Loading…</p>
+            </div>
+          </div>
         </div>
 
         <div class="tm-total-row">
@@ -1012,12 +1211,21 @@ async function loadRoster(restoring = false) {
     if (data.error) { setStatus(data.error, 'err'); return; }
 
     roster = data.players;
+    // Reset FA state on new roster load
+    faLoaded = false;
+    faPlayers = [];
+    faFilter = 'ALL';
+    document.querySelectorAll('.fa-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.pos === 'ALL'));
+    document.getElementById('faPanel').classList.remove('open');
+    const faBtnEl = document.getElementById('faBtn');
+    if (faBtnEl) faBtnEl.textContent = '＋ Free Agents';
     undoStack = [];
     const undoBtnEl = document.getElementById('undoBtn');
     if (undoBtnEl) undoBtnEl.disabled = true;
     const label = data.team_name ? `${data.team_name} — ` : '';
     setStatus(`✓ ${label}${roster.length} players loaded`, 'ok');
     document.getElementById('tradeModeBtn').style.display = '';
+    document.getElementById('faBtn').style.display = '';
 
     buildPositionRows();
     buildIR();
@@ -1395,6 +1603,121 @@ function updateStatBadge(pos, slot) {
   stat.classList.add('show');
 }
 
+// ─── Free Agent Panel ─────────────────────────────────────────────────────────
+let faPlayers = [];
+let faFilter = 'ALL';
+let faLoaded = false;
+
+function toggleFAPanel() {
+  const panel = document.getElementById('faPanel');
+  const btn   = document.getElementById('faBtn');
+  const isOpen = panel.classList.toggle('open');
+  btn.textContent = isOpen ? '✕ Free Agents' : '＋ Free Agents';
+  if (isOpen && !faLoaded) loadFreeAgents();
+}
+
+async function loadFreeAgents() {
+  const statusEl = document.getElementById('faStatus');
+  const listEl   = document.getElementById('faPlayerList');
+  statusEl.textContent = 'Fetching free agents…';
+  statusEl.style.color = '#94a3b8';
+  listEl.innerHTML = '<p class="placeholder-msg" style="padding:12px;">Loading…</p>';
+
+  try {
+    const res  = await fetch('/fetch_free_agents', { method: 'POST' });
+    const data = await res.json();
+
+    if (data.error) {
+      statusEl.textContent = data.error;
+      statusEl.style.color = '#f87171';
+      listEl.innerHTML = '';
+      return;
+    }
+
+    faPlayers = data.players;
+    faLoaded  = true;
+    statusEl.textContent = `${faPlayers.length} free agents available`;
+    statusEl.style.color = '#4ade80';
+    renderFAList();
+  } catch(e) {
+    statusEl.textContent = 'Network error loading free agents.';
+    statusEl.style.color = '#f87171';
+  }
+}
+
+function filterFA(pos) {
+  faFilter = pos;
+  document.querySelectorAll('.fa-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.pos === pos);
+  });
+  renderFAList();
+}
+
+function renderFAList() {
+  const listEl = document.getElementById('faPlayerList');
+  const addedNames = new Set(roster.filter(p => p.is_fa).map(p => p.name));
+
+  const filtered = faFilter === 'ALL'
+    ? faPlayers
+    : faPlayers.filter(p => p.pos === faFilter);
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<p class="placeholder-msg" style="padding:12px;">No free agents found.</p>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(p => {
+    const added = addedNames.has(p.name);
+    const safeId = p.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const meta = [p.pos, p.height, `Age ${p.age}`, p.last_team].filter(Boolean).join(' · ');
+    return `
+      <div class="fa-player-row" id="farow_${safeId}">
+        <div class="fa-player-info">
+          <span class="fa-player-name">${p.name}</span>
+          <span class="fa-player-meta">${meta}</span>
+        </div>
+        <div class="fa-grades">
+          <div class="fa-grade"><span class="fa-grade-val">${p.in_rating||'—'}</span><span class="fa-grade-lbl">In</span></div>
+          <div class="fa-grade"><span class="fa-grade-val">${p.out||'—'}</span><span class="fa-grade-lbl">Out</span></div>
+          <div class="fa-grade"><span class="fa-grade-val">${p.df||'—'}</span><span class="fa-grade-lbl">Df</span></div>
+          <div class="fa-grade"><span class="fa-grade-val">${p.reb||'—'}</span><span class="fa-grade-lbl">Reb</span></div>
+        </div>
+        <button class="fa-add-btn${added ? ' added' : ''}"
+          id="fabtn_${safeId}"
+          onclick="addFAtoRoster('${p.name.replace(/'/g, "\\'")}')"
+          ${added ? 'disabled' : ''}>
+          ${added ? '✓ Added' : '+ Add'}
+        </button>
+      </div>`;
+  }).join('');
+}
+
+function addFAtoRoster(name) {
+  const p = faPlayers.find(x => x.name === name);
+  if (!p || roster.find(x => x.name === name)) return;
+
+  pushUndo();
+  roster.push(p);
+
+  // Update button state
+  const safeId = name.replace(/[^a-zA-Z0-9]/g, '_');
+  const btn = document.getElementById(`fabtn_${safeId}`);
+  if (btn) { btn.classList.add('added'); btn.disabled = true; btn.textContent = '✓ Added'; }
+
+  // Update status count
+  const addedCount = roster.filter(r => r.is_fa).length;
+  const statusEl = document.getElementById('faStatus');
+  if (statusEl) {
+    statusEl.textContent = `${faPlayers.length} free agents available · ${addedCount} added to roster`;
+    statusEl.style.color = '#4ade80';
+  }
+
+  buildIR();
+  buildOptionDropdowns();
+  refreshAllDropdowns();
+  saveState();
+}
+
 // ─── i-button stat popover ────────────────────────────────────────────────────
 function toggleStatPopover(pos, slot) {
   const popover = document.getElementById(`popover_${pos}_${slot}`);
@@ -1492,6 +1815,24 @@ function applyState(state) {
     if (bold) bold.checked = !!state[`bold_${id}`];
     if (boldLabel) boldLabel.classList.toggle('active', !!state[`bold_${id}`]);
   });
+
+  // Restore FA players on the roster to match the snapshot
+  if (state.fa_names !== undefined) {
+    const keepNames = new Set(state.fa_names);
+    // Remove FA players that weren't on the roster at snapshot time
+    roster = roster.filter(p => !p.is_fa || keepNames.has(p.name));
+    // Re-add any FA players that were on the roster at snapshot time but got removed
+    keepNames.forEach(name => {
+      if (!roster.find(p => p.name === name)) {
+        const faP = faPlayers.find(p => p.name === name);
+        if (faP) roster.push(faP);
+      }
+    });
+    buildIR();
+    buildOptionDropdowns();
+    // Refresh FA panel Add buttons to reflect current added state
+    if (faLoaded) renderFAList();
+  }
 
   refreshAllDropdowns();
   enforceIRLimit();
@@ -1647,6 +1988,8 @@ function buildStateObject() {
     }
   });
   state.ir = [...document.querySelectorAll('input[name="ir"]:checked')].map(cb => cb.value);
+  // Snapshot which FA players are currently on the roster so undo can restore it
+  state.fa_names = roster.filter(p => p.is_fa).map(p => p.name);
   ['opt1','opt2','opt3'].forEach(id => {
     const sel  = document.getElementById(id);
     const bold = document.getElementById(`bold_${id}`);
@@ -2113,6 +2456,136 @@ function addTradePlayer(player) {
   document.getElementById('tradeStatus').textContent = `✓ ${player.name} (${player.pos}) added to roster.`;
 }
 
+// ─── Trade Machine Free Agent Panel (per-side) ───────────────────────────────
+const tmFAFilter = { A: 'ALL', B: 'ALL' };
+
+function toggleSideFAPanel(side) {
+  const panel    = document.getElementById(`tmFAPanel${side}`);
+  const btn      = document.getElementById(`tmFABtn${side}`);
+  const isOpen   = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? '+ Free Agent' : '✕ Free Agent';
+
+  if (!isOpen) {
+    const statusEl = document.getElementById(`tmFAStatus${side}`);
+    const listEl   = document.getElementById(`tmFAPlayerList${side}`);
+    if (faLoaded) {
+      statusEl.textContent = `${faPlayers.length} free agents available`;
+      statusEl.style.color = '#4ade80';
+      renderSideFAPanel(side);
+    } else {
+      statusEl.textContent = 'Fetching free agents…';
+      statusEl.style.color = '#94a3b8';
+      listEl.innerHTML = '<p class="placeholder-msg" style="padding:10px;">Loading…</p>';
+      fetch('/fetch_free_agents', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) {
+            statusEl.textContent = data.error;
+            statusEl.style.color = '#f87171';
+            listEl.innerHTML = '';
+            return;
+          }
+          faPlayers = data.players;
+          faLoaded  = true;
+          statusEl.textContent = `${faPlayers.length} free agents available`;
+          statusEl.style.color = '#4ade80';
+          renderSideFAPanel(side);
+          // Also render the other side's panel if it's open
+          const other = side === 'A' ? 'B' : 'A';
+          if (document.getElementById(`tmFAPanel${other}`).style.display !== 'none') {
+            renderSideFAPanel(other);
+          }
+        })
+        .catch(() => {
+          statusEl.textContent = 'Network error loading free agents.';
+          statusEl.style.color = '#f87171';
+        });
+    }
+  }
+}
+
+function filterSideFA(side, pos) {
+  tmFAFilter[side] = pos;
+  document.querySelectorAll(`#tmFAPosFilter${side} .fa-filter-btn`).forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.pos === pos);
+  });
+  renderSideFAPanel(side);
+}
+
+function renderSideFAPanel(side) {
+  const listEl = document.getElementById(`tmFAPlayerList${side}`);
+  if (!listEl) return;
+
+  const sideRoster = side === 'A' ? tmRosterA : tmRosterB;
+  const addedNames = new Set(sideRoster.filter(p => p.is_fa).map(p => p.name));
+  const filter     = tmFAFilter[side];
+  const filtered   = filter === 'ALL' ? faPlayers : faPlayers.filter(p => p.pos === filter);
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<p class="placeholder-msg" style="padding:10px;">No free agents found.</p>';
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(p => {
+    const safeId = p.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const meta   = [p.height, `Age ${p.age}`, p.last_team].filter(Boolean).join(' · ');
+    const added  = addedNames.has(p.name);
+    return `
+      <div class="tm-fa-row">
+        <div class="tm-fa-row-top">
+          <span class="fa-player-name">${p.name}</span>
+          <span class="fa-player-meta">${p.pos}${meta ? ' · ' + meta : ''}</span>
+        </div>
+        <div class="tm-fa-row-bottom">
+          <div class="fa-grades" style="flex-shrink:0;">
+            <div class="fa-grade"><span class="fa-grade-val">${p.in_rating||'—'}</span><span class="fa-grade-lbl">In</span></div>
+            <div class="fa-grade"><span class="fa-grade-val">${p.out||'—'}</span><span class="fa-grade-lbl">Out</span></div>
+            <div class="fa-grade"><span class="fa-grade-val">${p.df||'—'}</span><span class="fa-grade-lbl">Df</span></div>
+            <div class="fa-grade"><span class="fa-grade-val">${p.reb||'—'}</span><span class="fa-grade-lbl">Reb</span></div>
+          </div>
+          <input type="text" id="tmfasal_${side}_${safeId}" class="tm-fa-sal-input"
+            placeholder="Salary"
+            oninput="this.value=this.value.replace(/[^0-9,]/g,'')">
+          <button class="tm-fa-add-btn tm-fa-add-a${added ? ' added' : ''}"
+            id="tmfabtn_${side}_${safeId}"
+            onclick="addFAtoSide('${p.name.replace(/'/g, "\\'")}','${side}')"
+            ${added ? 'disabled' : ''}>
+            ${added ? '✓ Added' : '+ Add'}
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function addFAtoSide(name, side) {
+  const p = faPlayers.find(x => x.name === name);
+  if (!p) return;
+
+  const safeId       = name.replace(/[^a-zA-Z0-9]/g, '_');
+  const input        = document.getElementById(`tmfasal_${side}_${safeId}`);
+  const rawSal       = parseInt((input ? input.value : '').replace(/[^0-9]/g, '')) || 0;
+  const player       = { ...p, salary: rawSal };
+  const targetRoster = side === 'A' ? tmRosterA : tmRosterB;
+
+  if (targetRoster.find(r => r.name === name)) return; // already added
+  targetRoster.push(player);
+  buildTMPlayerList(side);
+
+  // Manually check the newly added FA (it wasn't in the preserved checked set)
+  document.querySelectorAll(`#tmPlayerList${side} input[type="checkbox"]`).forEach(cb => {
+    if (cb.dataset.name === name) {
+      cb.checked = true;
+      cb.closest('label')?.classList.add('selected');
+    }
+  });
+  tmUpdateSending(side);
+
+  // Update Add button state in the FA panel
+  const btn = document.getElementById(`tmfabtn_${side}_${safeId}`);
+  if (btn) { btn.classList.add('added'); btn.disabled = true; btn.textContent = '✓ Added'; }
+}
+
 // ─── Trade Machine ────────────────────────────────────────────────────────────
 let tmRosterA = [], tmRosterB = [];
 let tmTotalA = 0, tmTotalB = 0;
@@ -2313,6 +2786,11 @@ function tmGetVetMinTotal(side) {
 
 function clearTradeMachine() {
   ['A','B'].forEach(side => {
+    // Remove FA players from this side's roster and rebuild list
+    if (side === 'A') tmRosterA = tmRosterA.filter(p => !p.is_fa);
+    else              tmRosterB = tmRosterB.filter(p => !p.is_fa);
+    buildTMPlayerList(side);
+
     // Uncheck all player checkboxes and remove selected highlight
     const container = document.getElementById(`tmPlayerList${side}`);
     container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
@@ -2324,6 +2802,13 @@ function clearTradeMachine() {
     document.getElementById(`tmVetMinAdd${side}`).style.display = '';
     // Reset sending total
     tmUpdateSending(side);
+
+    // Close FA panel and reset its button label
+    document.getElementById(`tmFAPanel${side}`).style.display = 'none';
+    const faBtnEl = document.getElementById(`tmFABtn${side}`);
+    if (faBtnEl) faBtnEl.textContent = '+ Free Agent';
+    // Refresh FA panel Add buttons (all back to "+ Add")
+    if (faLoaded) renderSideFAPanel(side);
   });
   // Clear result panel
   document.getElementById('tmResult').innerHTML = '';
@@ -2369,6 +2854,13 @@ async function loadTMTeam(side) {
     nameEl.style.display = '';
 
     buildTMPlayerList(side);
+    // Reveal the + Free Agent button now that a team is loaded for this side
+    const faBtnEl = document.getElementById(`tmFABtn${side}`);
+    if (faBtnEl) faBtnEl.style.display = '';
+    // If this side's FA panel is open and data is loaded, refresh it
+    if (document.getElementById(`tmFAPanel${side}`).style.display !== 'none' && faLoaded) {
+      renderSideFAPanel(side);
+    }
 
     const total = side === 'A' ? tmTotalA : tmTotalB;
     const overCap = total > TM_HARD_CAP;
