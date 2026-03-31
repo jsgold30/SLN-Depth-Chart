@@ -1735,6 +1735,24 @@ function applyState(state) {
     if (boldLabel) boldLabel.classList.toggle('active', !!state[`bold_${id}`]);
   });
 
+  // Restore FA players on the roster to match the snapshot
+  if (state.fa_names !== undefined) {
+    const keepNames = new Set(state.fa_names);
+    // Remove FA players that weren't on the roster at snapshot time
+    roster = roster.filter(p => !p.is_fa || keepNames.has(p.name));
+    // Re-add any FA players that were on the roster at snapshot time but got removed
+    keepNames.forEach(name => {
+      if (!roster.find(p => p.name === name)) {
+        const faP = faPlayers.find(p => p.name === name);
+        if (faP) roster.push(faP);
+      }
+    });
+    buildIR();
+    buildOptionDropdowns();
+    // Refresh FA panel Add buttons to reflect current added state
+    if (faLoaded) renderFAList();
+  }
+
   refreshAllDropdowns();
   enforceIRLimit();
 }
@@ -1889,6 +1907,8 @@ function buildStateObject() {
     }
   });
   state.ir = [...document.querySelectorAll('input[name="ir"]:checked')].map(cb => cb.value);
+  // Snapshot which FA players are currently on the roster so undo can restore it
+  state.fa_names = roster.filter(p => p.is_fa).map(p => p.name);
   ['opt1','opt2','opt3'].forEach(id => {
     const sel  = document.getElementById(id);
     const bold = document.getElementById(`bold_${id}`);
