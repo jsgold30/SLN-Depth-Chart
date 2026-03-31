@@ -720,9 +720,6 @@
       color: #e2e8f0;
       font-weight: 600;
       font-size: 0.82rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
     .fa-player-meta {
       color: #64748b;
@@ -766,15 +763,16 @@
     /* ── Trade Machine Free Agent rows ── */
     .tm-fa-row {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 8px;
+      flex-direction: column;
+      gap: 5px;
+      padding: 8px 10px;
       border-bottom: 1px solid #1e293b;
-      flex-wrap: wrap;
       transition: background 0.1s;
     }
     .tm-fa-row:last-child { border-bottom: none; }
     .tm-fa-row:hover { background: #0a1120; }
+    .tm-fa-row-top { display: flex; flex-direction: column; gap: 1px; }
+    .tm-fa-row-bottom { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
     .tm-fa-sal-input {
       width: 105px;
@@ -2531,29 +2529,31 @@ function renderSideFAPanel(side) {
 
   listEl.innerHTML = filtered.map(p => {
     const safeId = p.name.replace(/[^a-zA-Z0-9]/g, '_');
-    const meta   = [p.pos, p.height, `Age ${p.age}`, p.last_team].filter(Boolean).join(' · ');
+    const meta   = [p.height, `Age ${p.age}`, p.last_team].filter(Boolean).join(' · ');
     const added  = addedNames.has(p.name);
     return `
       <div class="tm-fa-row">
-        <div class="fa-player-info" style="flex:1;min-width:0;">
+        <div class="tm-fa-row-top">
           <span class="fa-player-name">${p.name}</span>
-          <span class="fa-player-meta">${meta}</span>
+          <span class="fa-player-meta">${p.pos}${meta ? ' · ' + meta : ''}</span>
         </div>
-        <div class="fa-grades">
-          <div class="fa-grade"><span class="fa-grade-val">${p.in_rating||'—'}</span><span class="fa-grade-lbl">In</span></div>
-          <div class="fa-grade"><span class="fa-grade-val">${p.out||'—'}</span><span class="fa-grade-lbl">Out</span></div>
-          <div class="fa-grade"><span class="fa-grade-val">${p.df||'—'}</span><span class="fa-grade-lbl">Df</span></div>
-          <div class="fa-grade"><span class="fa-grade-val">${p.reb||'—'}</span><span class="fa-grade-lbl">Reb</span></div>
+        <div class="tm-fa-row-bottom">
+          <div class="fa-grades" style="flex-shrink:0;">
+            <div class="fa-grade"><span class="fa-grade-val">${p.in_rating||'—'}</span><span class="fa-grade-lbl">In</span></div>
+            <div class="fa-grade"><span class="fa-grade-val">${p.out||'—'}</span><span class="fa-grade-lbl">Out</span></div>
+            <div class="fa-grade"><span class="fa-grade-val">${p.df||'—'}</span><span class="fa-grade-lbl">Df</span></div>
+            <div class="fa-grade"><span class="fa-grade-val">${p.reb||'—'}</span><span class="fa-grade-lbl">Reb</span></div>
+          </div>
+          <input type="text" id="tmfasal_${side}_${safeId}" class="tm-fa-sal-input"
+            placeholder="Salary"
+            oninput="this.value=this.value.replace(/[^0-9,]/g,'')">
+          <button class="tm-fa-add-btn tm-fa-add-a${added ? ' added' : ''}"
+            id="tmfabtn_${side}_${safeId}"
+            onclick="addFAtoSide('${p.name.replace(/'/g, "\\'")}','${side}')"
+            ${added ? 'disabled' : ''}>
+            ${added ? '✓ Added' : '+ Add'}
+          </button>
         </div>
-        <input type="text" id="tmfasal_${side}_${safeId}" class="tm-fa-sal-input"
-          placeholder="Salary"
-          oninput="this.value=this.value.replace(/[^0-9,]/g,'')">
-        <button class="tm-fa-add-btn tm-fa-add-a${added ? ' added' : ''}"
-          id="tmfabtn_${side}_${safeId}"
-          onclick="addFAtoSide('${p.name.replace(/'/g, "\\'")}','${side}')"
-          ${added ? 'disabled' : ''}>
-          ${added ? '✓ Added' : '+ Add'}
-        </button>
       </div>`;
   }).join('');
 }
