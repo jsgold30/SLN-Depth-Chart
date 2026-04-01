@@ -807,6 +807,301 @@
     @media (max-width: 600px) {
       .tm-fa-sal-input { width: 90px; }
     }
+
+    /* ══════════════════════════════════════════
+       Cap Sheet — cs- prefixed to avoid conflicts
+       ══════════════════════════════════════════ */
+    .cs-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .cs-toolbar {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid #334155;
+      flex-wrap: wrap; gap: 10px;
+    }
+    .cs-toolbar-left  { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .cs-toolbar-right { display: flex; gap: 7px; flex-wrap: wrap; }
+    .cs-team-name   { font-size: 0.92rem; font-weight: 700; color: #e2e8f0; }
+    .cs-team-record { font-size: 0.65rem; color: #64748b; }
+    .cs-season-badge {
+      background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+      padding: 3px 10px; font-size: 0.68rem; color: #94a3b8; font-weight: 600;
+    }
+    .cs-team-logo-wrap {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, #334155, #475569);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.58rem; font-weight: 900; color: #fff; letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    /* Cap bar */
+    .cs-cap-bar-wrap {
+      padding: 11px 16px 10px;
+      border-bottom: 1px solid #334155;
+      background: #162032;
+    }
+    .cs-cap-bar-top {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 6px; flex-wrap: wrap; gap: 4px;
+    }
+    .cs-cap-bar-total { font-size: 0.85rem; font-weight: 800; color: #38bdf8; }
+    .cs-cap-bar-meta  { font-size: 0.63rem; color: #64748b; }
+    .cs-cap-bar-track {
+      height: 7px; background: #0f172a; border-radius: 4px;
+      position: relative; overflow: visible;
+    }
+    .cs-cap-bar-fill {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(90deg, #0891b2, #38bdf8);
+      position: relative; transition: width 0.4s ease;
+    }
+    .cs-cap-bar-fill.cs-over-hard { background: linear-gradient(90deg, #dc2626, #f87171); }
+    .cs-marker {
+      position: absolute; top: -4px; bottom: -4px;
+      width: 2px; border-radius: 1px;
+    }
+    .cs-marker-soft { background: #f59e0b; }
+    .cs-marker-hard { background: #f87171; left: calc(100% - 2px); }
+    .cs-cap-bar-legend {
+      display: flex; gap: 14px; margin-top: 7px;
+      font-size: 0.6rem; color: #64748b; flex-wrap: wrap;
+    }
+    .cs-leg-dot {
+      display: inline-block; width: 7px; height: 7px;
+      border-radius: 50%; margin-right: 3px; vertical-align: middle;
+    }
+    /* Team selector for cap sheet */
+    .cs-selector-wrap {
+      padding: 14px 16px;
+      border-bottom: 1px solid #334155;
+      background: #162032;
+    }
+    .cs-selector-wrap .cs-selector-label {
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1.5px; color: #475569; margin-bottom: 8px;
+    }
+    /* Table */
+    .cs-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .cs-table {
+      width: 100%; min-width: 860px;
+      border-collapse: collapse; font-size: 0.775rem;
+    }
+    .cs-table thead th {
+      background: #162032; padding: 7px 10px;
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: #64748b;
+      border-bottom: 1px solid #334155; white-space: nowrap;
+      position: sticky; top: 0; z-index: 2;
+    }
+    .cs-table thead th.cs-th-name {
+      color: #64748b; min-width: 170px;
+      position: sticky; left: 0; z-index: 3; background: #162032;
+      text-align: left;
+    }
+    .cs-table thead th.cs-th-yr {
+      color: #a78bfa; background: #1a1833;
+      text-align: right; min-width: 108px;
+    }
+    .cs-table thead th.cs-th-sm  { text-align: center; width: 44px; }
+    .cs-table thead th.cs-th-del { width: 32px; }
+    .cs-table tbody tr td {
+      padding: 7px 10px; border-bottom: 1px solid #1a2744;
+      vertical-align: middle;
+    }
+    .cs-table tbody tr:hover td { background: rgba(56,189,248,0.04); }
+    .cs-td-name {
+      font-weight: 600; color: #e2e8f0; white-space: nowrap;
+      position: sticky; left: 0; background: #1e293b; z-index: 1;
+    }
+    .cs-table tbody tr:hover .cs-td-name { background: #1c2e46; }
+    .cs-td-pos { color: #38bdf8; font-weight: 700; font-size: 0.68rem; text-align: center; }
+    .cs-td-sm  { text-align: center; color: #94a3b8; font-size: 0.7rem; }
+    .cs-td-sal { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .cs-td-sal input {
+      background: transparent; border: none; color: #e2e8f0;
+      font-size: 0.775rem; text-align: right; width: 100%;
+      font-variant-numeric: tabular-nums; font-family: inherit;
+      cursor: default; border-radius: 4px; padding: 2px 4px;
+      transition: background 0.1s, color 0.1s, outline 0.1s;
+    }
+    .cs-td-sal input.cs-dim { color: #334155; }
+    .cs-td-sal input:focus {
+      outline: 1px solid #7c3aed; background: #0f172a;
+      color: #a78bfa; cursor: text;
+    }
+    .cs-td-sal input:hover:not(:focus) { background: rgba(255,255,255,0.03); cursor: text; }
+    /* Section header rows */
+    .cs-tr-sec td {
+      background: #162032 !important;
+      font-size: 0.62rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      color: #64748b; padding: 5px 10px !important;
+      border-bottom: 1px solid #334155 !important;
+      border-top: 2px solid #334155;
+    }
+    .cs-tr-sec .cs-td-sec-inner {
+      display: flex; align-items: center; gap: 7px;
+      position: sticky; left: 0; background: #162032;
+    }
+    .cs-sec-count {
+      background: #1e293b; border: 1px solid #334155;
+      color: #475569; font-size: 0.58rem; padding: 1px 6px;
+      border-radius: 10px; font-weight: 700;
+    }
+    /* Empty placeholder */
+    .cs-tr-empty td {
+      text-align: center; font-size: 0.68rem;
+      color: #334155; padding: 8px 10px !important;
+      font-style: italic; border-bottom: 1px solid #1a2744 !important;
+    }
+    /* Delete button */
+    .cs-del-btn {
+      background: none; border: none; color: #1e3a5f;
+      font-size: 0.75rem; cursor: pointer; padding: 2px 4px;
+      border-radius: 4px; transition: color 0.1s;
+    }
+    .cs-del-btn:hover { color: #f87171; }
+    /* Summary rows */
+    .cs-tr-sum td { padding: 9px 10px !important; border-bottom: none !important; }
+    .cs-tr-sum-total-border td { border-top: 2px solid #334155 !important; }
+    .cs-td-sum-label {
+      font-size: 0.7rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      white-space: nowrap;
+      position: sticky; left: 0; z-index: 1;
+    }
+    .cs-tr-total .cs-td-sum-label,
+    .cs-tr-total .cs-td-sal input { color: #38bdf8; font-weight: 700; }
+    .cs-tr-soft  .cs-td-sum-label { color: #4ade80; }
+    .cs-tr-soft  .cs-td-sal input.cs-over  { color: #f87171 !important; }
+    .cs-tr-soft  .cs-td-sal input.cs-under { color: #4ade80 !important; }
+    .cs-tr-hard  .cs-td-sum-label { color: #e2e8f0; }
+    .cs-tr-hard  .cs-td-sal input { color: #94a3b8; }
+    .cs-tr-total .cs-td-sum-label { background: #1e293b; }
+    .cs-tr-soft  .cs-td-sum-label { background: #1e293b; }
+    .cs-tr-hard  .cs-td-sum-label { background: #1e293b; }
+    /* Manually edited highlight */
+    .cs-td-sal input.cs-manual-edit {
+      color: #fbbf24 !important;
+      background: rgba(251, 191, 36, 0.07) !important;
+      font-style: italic; border-radius: 3px;
+    }
+    /* Badge tags */
+    .cs-badge {
+      display: inline-block; font-size: 0.56rem; font-weight: 700;
+      padding: 1px 5px; border-radius: 3px; margin-left: 5px;
+      vertical-align: middle; white-space: nowrap;
+    }
+    .cs-badge-fa     { background: #7c3aed22; border: 1px solid #7c3aed55; color: #a78bfa; }
+    .cs-badge-manual { background: #16a34a22; border: 1px solid #16a34a55; color: #4ade80; }
+    /* Modal */
+    .cs-modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); z-index: 200;
+      display: none; align-items: center; justify-content: center; padding: 16px;
+    }
+    .cs-modal-overlay.cs-open { display: flex; }
+    .cs-modal-box {
+      background: #1e293b; border: 1px solid #334155; border-radius: 14px;
+      width: 100%; max-width: 460px; max-height: 86vh;
+      overflow: hidden; display: flex; flex-direction: column;
+      box-shadow: 0 30px 70px rgba(0,0,0,0.7);
+    }
+    .cs-modal-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 18px; border-bottom: 1px solid #334155;
+    }
+    .cs-modal-hdr-title { font-size: 0.82rem; font-weight: 700; }
+    .cs-modal-x {
+      background: none; border: none; color: #64748b;
+      font-size: 1rem; cursor: pointer; padding: 2px 5px;
+      border-radius: 4px; line-height: 1;
+    }
+    .cs-modal-x:hover { color: #f87171; }
+    .cs-modal-tabs-row { display: flex; border-bottom: 1px solid #334155; }
+    .cs-mtab {
+      flex: 1; padding: 9px 6px; font-size: 0.7rem; font-weight: 600;
+      text-align: center; cursor: pointer; color: #64748b;
+      border: none; background: none; border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .cs-mtab:hover { color: #e2e8f0; }
+    .cs-mtab.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+    .cs-modal-body { flex: 1; overflow-y: auto; padding: 14px 18px; }
+    .cs-msearch { display: flex; gap: 8px; margin-bottom: 12px; }
+    .cs-msearch input, .cs-msearch select {
+      flex: 1; padding: 8px 11px; background: #0f172a;
+      border: 1px solid #334155; border-radius: 7px;
+      color: #e2e8f0; font-size: 0.78rem;
+    }
+    .cs-msearch input:focus, .cs-msearch select:focus { outline: none; border-color: #38bdf8; }
+    .cs-mpi {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px; border-radius: 7px; border: 1px solid transparent;
+      cursor: pointer; margin-bottom: 4px; transition: all 0.1s;
+    }
+    .cs-mpi:hover { background: #0f172a; border-color: #334155; }
+    .cs-mpi.cs-sel { background: #0c1a2e; border-color: #0891b2; }
+    .cs-mpi-pos {
+      font-size: 0.62rem; font-weight: 700; color: #38bdf8;
+      background: #0891b222; border: 1px solid #0891b255;
+      padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
+    }
+    .cs-mpi-info { flex: 1; min-width: 0; }
+    .cs-mpi-name { font-size: 0.8rem; font-weight: 600; color: #e2e8f0; }
+    .cs-mpi-meta { font-size: 0.63rem; color: #64748b; }
+    .cs-mpi-sal  { font-size: 0.75rem; font-weight: 600; color: #4ade80; font-variant-numeric: tabular-nums; text-align: right; flex-shrink: 0; }
+    .cs-frow { margin-bottom: 11px; }
+    .cs-frow label {
+      display: block; font-size: 0.64rem; font-weight: 700;
+      color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;
+    }
+    .cs-frow input, .cs-frow select {
+      width: 100%; padding: 8px 11px; background: #0f172a;
+      border: 1px solid #334155; border-radius: 7px;
+      color: #e2e8f0; font-size: 0.82rem;
+    }
+    .cs-frow input:focus, .cs-frow select:focus { outline: none; border-color: #38bdf8; }
+    .cs-frow2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 11px; }
+    .cs-frow3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 11px; }
+    .cs-yr-grp .cs-yr-lbl { font-size: 0.6rem; color: #a78bfa; font-weight: 700; margin-bottom: 4px; }
+    .cs-yr-grp input {
+      width: 100%; padding: 6px 9px; background: #0f172a;
+      border: 1px solid #334155; border-radius: 6px;
+      color: #e2e8f0; font-size: 0.75rem; font-variant-numeric: tabular-nums;
+    }
+    .cs-yr-grp input:focus { outline: none; border-color: #a78bfa; }
+    .cs-modal-ftr {
+      padding: 11px 18px; border-top: 1px solid #334155;
+      display: flex; gap: 8px; justify-content: flex-end;
+    }
+    .cs-btn {
+      padding: 6px 11px; border: none; border-radius: 7px;
+      font-size: 0.7rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s; white-space: nowrap;
+    }
+    .cs-btn-ghost { background: #0f172a; border: 1px solid #334155; color: #94a3b8; }
+    .cs-btn-ghost:hover { background: #1e293b; color: #e2e8f0; }
+    .cs-btn-cyan  { background: #0891b2; color: #fff; }
+    .cs-btn-cyan:hover  { background: #0e7490; }
+    .cs-spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid #334155; border-top-color: #38bdf8;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    .cs-status-msg { font-size: 0.8rem; color: #94a3b8; padding: 12px 16px; }
+    .cs-placeholder {
+      text-align: center; padding: 40px 20px;
+      font-size: 0.82rem; color: #475569;
+    }
   </style>
 </head>
 <body>
@@ -820,6 +1115,7 @@
   <div class="tab-nav">
     <button class="tab-btn active" id="tabBtnDepth" onclick="switchTab('depth')">⛹ Depth Chart</button>
     <button class="tab-btn" id="tabBtnTrade" onclick="switchTab('trade')">⇄ Trade Machine</button>
+    <button class="tab-btn" id="tabBtnCap" onclick="switchTab('cap')">⊞ Cap Sheet</button>
   </div>
 
   <!-- ── TAB 1: Depth Chart Builder ── -->
@@ -1144,6 +1440,159 @@
 
   </div><!-- /tabTrade -->
 
+  <!-- ── TAB 3: Cap Sheet ── -->
+  <div class="tab-panel" id="tabCap">
+
+    <div class="cs-card">
+
+      <!-- ── Team Selector ── -->
+      <div class="cs-selector-wrap">
+        <div class="cs-selector-label">Select Team</div>
+        <div id="csLogoGrid" class="tm-logo-grid" style="grid-template-columns:repeat(6,1fr);margin-bottom:0;"></div>
+      </div>
+
+      <!-- ── Placeholder (shown before team selected) ── -->
+      <div class="cs-placeholder" id="csPlaceholder">
+        Select a team above to load their cap sheet.
+      </div>
+
+      <!-- ── Toolbar (hidden until team loaded) ── -->
+      <div class="cs-toolbar" id="csToolbar" style="display:none;">
+        <div class="cs-toolbar-left">
+          <div class="cs-team-logo-wrap" id="csTeamLogoWrap"></div>
+          <div>
+            <div class="cs-team-name" id="csTeamName">—</div>
+            <div class="cs-team-record" id="csTeamRecord"></div>
+          </div>
+          <span class="cs-season-badge" id="csSeasonBadge">League Year —</span>
+        </div>
+        <div class="cs-toolbar-right">
+          <button class="cs-btn cs-btn-cyan" onclick="openCapModal('roster')">＋ Add Player</button>
+        </div>
+      </div>
+
+      <!-- ── Cap Bar (hidden until team loaded) ── -->
+      <div class="cs-cap-bar-wrap" id="csCapBarWrap" style="display:none;">
+        <div class="cs-cap-bar-top">
+          <span>
+            <span class="cs-cap-bar-total" id="csCapBarTotal">$0</span>
+            <span class="cs-cap-bar-meta" id="csCapBarMeta"></span>
+          </span>
+          <span class="cs-cap-bar-meta">
+            <span style="color:#f59e0b;font-weight:700;">Soft Cap $50M</span>
+            &nbsp;·&nbsp;
+            <span style="color:#f87171;font-weight:700;">Hard Cap $85M</span>
+          </span>
+        </div>
+        <div class="cs-cap-bar-track">
+          <div class="cs-cap-bar-fill" id="csCapBarFill" style="width:0%;"></div>
+          <div class="cs-marker cs-marker-soft" id="csMarkerSoft" style="left:58.8%;"></div>
+          <div class="cs-marker cs-marker-hard"></div>
+        </div>
+        <div class="cs-cap-bar-legend" id="csCapBarLegend">
+          <span id="csLeg0"><span class="cs-leg-dot" style="background:#38bdf8;"></span>Current: $0</span>
+          <span id="csLeg1"><span class="cs-leg-dot" style="background:#f59e0b;"></span>Soft cap room</span>
+          <span id="csLeg2"><span class="cs-leg-dot" style="background:#f87171;"></span>Hard cap room</span>
+        </div>
+      </div>
+
+      <!-- ── Table (hidden until team loaded) ── -->
+      <div id="csTableWrap" style="display:none;">
+        <div class="cs-table-wrap">
+          <table class="cs-table" id="csTable">
+            <thead>
+              <tr>
+                <th class="cs-th-name">Player</th>
+                <th class="cs-th-sm">Pos</th>
+                <th class="cs-th-sm">Age</th>
+                <th class="cs-th-sm">Bird</th>
+                <th class="cs-th-yr" id="csThYr0">2035</th>
+                <th class="cs-th-yr" id="csThYr1">2036</th>
+                <th class="cs-th-yr" id="csThYr2">2037</th>
+                <th class="cs-th-yr" id="csThYr3">2038</th>
+                <th class="cs-th-yr" id="csThYr4">2039</th>
+                <th class="cs-th-yr" id="csThYr5">2040</th>
+                <th class="cs-th-del"></th>
+              </tr>
+            </thead>
+            <tbody id="csTableBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /cs-card -->
+
+  </div><!-- /tabCap -->
+
+  <!-- ══════════════════ CAP SHEET MODAL ══════════════════ -->
+  <div class="cs-modal-overlay" id="csModalOverlay" onclick="csBgClose(event)">
+    <div class="cs-modal-box">
+      <div class="cs-modal-hdr">
+        <span class="cs-modal-hdr-title" id="csModalTitle">Add Player</span>
+        <button class="cs-modal-x" onclick="closeCapModal()">✕</button>
+      </div>
+      <div class="cs-modal-tabs-row">
+        <button class="cs-mtab active" id="csmt-roster" onclick="switchCapModalTab('roster')">From Roster</button>
+        <button class="cs-mtab" id="csmt-fa" onclick="switchCapModalTab('fa')">Free Agents</button>
+        <button class="cs-mtab" id="csmt-manual" onclick="switchCapModalTab('manual')">Manual Entry</button>
+      </div>
+
+      <!-- FROM ROSTER -->
+      <div id="csmb-roster" class="cs-modal-body">
+        <div class="cs-msearch">
+          <select id="csRosterTeamSelect" onchange="csLoadModalRoster()">
+            <option value="">— Select a team —</option>
+          </select>
+        </div>
+        <div id="csRosterList">
+          <div style="font-size:0.72rem;color:#475569;text-align:center;padding:24px;">
+            Select a team above to browse their roster.
+          </div>
+        </div>
+      </div>
+
+      <!-- FREE AGENTS -->
+      <div id="csmb-fa" class="cs-modal-body" style="display:none;">
+        <div class="cs-msearch">
+          <input type="text" id="csFaSearch" placeholder="Search name…" oninput="csFilterFaModal()">
+        </div>
+        <div id="csFaList">
+          <div style="font-size:0.72rem;color:#475569;text-align:center;padding:24px;">
+            Loading free agents…
+          </div>
+        </div>
+      </div>
+
+      <!-- MANUAL ENTRY -->
+      <div id="csmb-manual" class="cs-modal-body" style="display:none;">
+        <div class="cs-frow2">
+          <div class="cs-frow"><label>Player Name</label><input type="text" id="csManualName" placeholder="Full name"></div>
+          <div class="cs-frow"><label>Position</label>
+            <select id="csManualPos"><option>PG</option><option>SG</option><option>SF</option><option>PF</option><option>C</option></select>
+          </div>
+        </div>
+        <div class="cs-frow2">
+          <div class="cs-frow"><label>Age</label><input type="text" id="csManualAge" placeholder="e.g. 25"></div>
+          <div class="cs-frow"><label>Bird Rights</label>
+            <select id="csManualBird"><option value="0">None</option><option value="1">1 Year</option><option value="2">2 Years</option><option value="3">Full (3+)</option></select>
+          </div>
+        </div>
+        <div class="cs-frow">
+          <label>Salary by Year</label>
+          <div class="cs-frow3" style="margin-top:6px;" id="csManualYrGrid">
+            <!-- populated by JS with correct year labels -->
+          </div>
+        </div>
+      </div>
+
+      <div class="cs-modal-ftr">
+        <button class="cs-btn cs-btn-ghost" onclick="closeCapModal()">Cancel</button>
+        <button class="cs-btn cs-btn-cyan" onclick="csAddFromModal()">Add to Cap Sheet</button>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /container -->
 <div style="text-align:right;padding:8px 16px;font-size:0.68rem;color:#334155;">v{{ version }}</div>
 
@@ -1152,12 +1601,19 @@
 function switchTab(tab) {
   document.getElementById('tabDepth').classList.toggle('active', tab === 'depth');
   document.getElementById('tabTrade').classList.toggle('active', tab === 'trade');
+  document.getElementById('tabCap').classList.toggle('active', tab === 'cap');
   document.getElementById('tabBtnDepth').classList.toggle('active', tab === 'depth');
   document.getElementById('tabBtnTrade').classList.toggle('active', tab === 'trade');
+  document.getElementById('tabBtnCap').classList.toggle('active', tab === 'cap');
   // Build Trade Machine logo grids lazily on first visit
   if (tab === 'trade' && !tmLogoGridsBuilt) {
     buildTMLogoGrids();
     tmLogoGridsBuilt = true;
+  }
+  // Build Cap Sheet logo grid lazily on first visit
+  if (tab === 'cap' && !csLogoGridBuilt) {
+    buildCSLogoGrid();
+    csLogoGridBuilt = true;
   }
 }
 
@@ -3103,6 +3559,606 @@ window.addEventListener('DOMContentLoaded', () => {
     loadRoster();
   }
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CAP SHEET
+// ══════════════════════════════════════════════════════════════════════════════
+
+const CS_SOFT_CAP = 50_000_000;
+const CS_HARD_CAP = 85_000_000;
+const CS_NUM_YRS  = 6;   // display 6 year columns
+
+// State
+let csLogoGridBuilt  = false;
+let csCurrentTeamNum = null;
+let csPlayers        = [];   // array of row objects
+let csDeadCap        = 0;
+let csManualEdits    = {};   // { rowId_colIdx: true }
+let csLeagueYear     = 2035; // first column year label
+let csFaPlayersCache = null; // lazy-loaded FA players for modal
+
+// ─── Build logo grid for cap sheet tab ───────────────────────────────────────
+function buildCSLogoGrid() {
+  buildLogoGrid('csLogoGrid', url => {
+    // Extract team number from url like .../roster20.htm
+    const m = url.match(/roster(\d+)\.htm/);
+    if (!m) return;
+    const teamNum = m[1];
+    // Highlight selected logo
+    document.querySelectorAll('#csLogoGrid .tm-logo-cell').forEach(c => {
+      c.classList.toggle('selected', c.dataset.url === url);
+    });
+    loadCapSheet(teamNum);
+  });
+
+  // Populate modal team-select with the same 30 teams
+  const sel = document.getElementById('csRosterTeamSelect');
+  TM_TEAMS.forEach(t => {
+    const opt = document.createElement('option');
+    const m = t.url.match(/roster(\d+)/);
+    opt.value = m ? m[1] : '';
+    opt.textContent = t.name;
+    sel.appendChild(opt);
+  });
+
+  // Build manual year grid
+  csRebuildManualYrGrid();
+}
+
+function csRebuildManualYrGrid() {
+  const grid = document.getElementById('csManualYrGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  for (let i = 0; i < CS_NUM_YRS; i++) {
+    const yr = csLeagueYear + i;
+    const div = document.createElement('div');
+    div.className = 'cs-yr-grp';
+    div.innerHTML = `<div class="cs-yr-lbl">${yr}</div><input type="text" id="csManualYr${i}" placeholder="$0">`;
+    grid.appendChild(div);
+  }
+}
+
+// ─── Load cap sheet for a team ────────────────────────────────────────────────
+async function loadCapSheet(teamNum) {
+  csCurrentTeamNum = teamNum;
+
+  // Try to restore from localStorage first while we fetch
+  csRestoreState(teamNum);
+
+  // Show loading state
+  document.getElementById('csPlaceholder').innerHTML =
+    '<span class="cs-spinner"></span> Loading cap data…';
+  document.getElementById('csPlaceholder').style.display = 'block';
+  document.getElementById('csToolbar').style.display     = 'none';
+  document.getElementById('csCapBarWrap').style.display  = 'none';
+  document.getElementById('csTableWrap').style.display   = 'none';
+
+  try {
+    const res  = await fetch('/fetch_cap_sheet_roster', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ team_num: teamNum })
+    });
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById('csPlaceholder').textContent = '⚠ ' + data.error;
+      return;
+    }
+
+    // Convert server players to cap sheet rows
+    csDeadCap = data.dead_cap || 0;
+
+    // Determine league year from localStorage if available
+    // (no explicit year endpoint — default 2035 unless overridden by saved state)
+    const savedState = csLoadSavedState(teamNum);
+    if (savedState && savedState.leagueYear) {
+      csLeagueYear = savedState.leagueYear;
+    }
+
+    // Build player rows
+    csPlayers = data.players.map((p, idx) => {
+      const saved = savedState && savedState.players ? savedState.players.find(s => s.name === p.name) : null;
+      return {
+        id: 'p' + idx,
+        name: p.name,
+        pos: p.pos,
+        age: p.age,
+        bird: p.bird,
+        player_id: p.player_id,
+        sals: [
+          saved ? (saved.sals[0] !== undefined ? saved.sals[0] : p.sal_y1) : p.sal_y1,
+          saved ? (saved.sals[1] !== undefined ? saved.sals[1] : p.sal_y2) : p.sal_y2,
+          saved ? (saved.sals[2] !== undefined ? saved.sals[2] : p.sal_y3) : p.sal_y3,
+          saved ? (saved.sals[3] !== undefined ? saved.sals[3] : p.sal_y4) : p.sal_y4,
+          saved ? (saved.sals[4] !== undefined ? saved.sals[4] : p.sal_y5) : p.sal_y5,
+          saved ? (saved.sals[5] !== undefined ? saved.sals[5] : p.sal_y6) : p.sal_y6,
+        ],
+        manualEdits: saved ? (saved.manualEdits || []) : [],
+        source: 'roster',
+      };
+    });
+
+    // Merge any manually-added players from saved state
+    if (savedState && savedState.addedPlayers) {
+      savedState.addedPlayers.forEach(ap => {
+        if (!csPlayers.find(p => p.id === ap.id)) {
+          csPlayers.push(ap);
+        }
+      });
+    }
+
+    // Update team info in toolbar
+    document.getElementById('csTeamName').textContent = data.team_name || `Team ${teamNum}`;
+    const abbr = (data.team_name || '???').replace(/[^A-Z]/g, '').slice(0, 3) ||
+                 TM_TEAMS.find(t => t.url.includes(`roster${teamNum}`))?.abbr || '???';
+    document.getElementById('csTeamLogoWrap').textContent = abbr;
+    document.getElementById('csSeasonBadge').textContent  = `League Year ${csLeagueYear}`;
+    document.getElementById('csTeamRecord').textContent   = '';
+
+    // Update year column headers
+    for (let i = 0; i < CS_NUM_YRS; i++) {
+      const th = document.getElementById(`csThYr${i}`);
+      if (th) th.textContent = csLeagueYear + i;
+    }
+    csRebuildManualYrGrid();
+
+    // Render
+    document.getElementById('csPlaceholder').style.display = 'none';
+    document.getElementById('csToolbar').style.display     = '';
+    document.getElementById('csCapBarWrap').style.display  = '';
+    document.getElementById('csTableWrap').style.display   = '';
+    csRenderTable();
+    csRecalcCap();
+
+  } catch (e) {
+    document.getElementById('csPlaceholder').textContent = 'Network error loading cap sheet.';
+  }
+}
+
+// ─── Restore state from localStorage ─────────────────────────────────────────
+function csLoadSavedState(teamNum) {
+  try {
+    const raw = localStorage.getItem(`capSheet_${teamNum}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function csRestoreState(teamNum) {
+  // Just reads; actual use happens in loadCapSheet after data arrives
+}
+
+function csSaveState() {
+  if (!csCurrentTeamNum) return;
+  const state = {
+    leagueYear: csLeagueYear,
+    players: csPlayers.map(p => ({
+      id: p.id,
+      name: p.name,
+      pos: p.pos,
+      age: p.age,
+      bird: p.bird,
+      player_id: p.player_id,
+      sals: p.sals,
+      manualEdits: p.manualEdits || [],
+      source: p.source,
+    })),
+    addedPlayers: csPlayers.filter(p => p.source !== 'roster'),
+    deadCap: csDeadCap,
+  };
+  localStorage.setItem(`capSheet_${csCurrentTeamNum}`, JSON.stringify(state));
+}
+
+// ─── Render table ─────────────────────────────────────────────────────────────
+function csRenderTable() {
+  const tbody = document.getElementById('csTableBody');
+  tbody.innerHTML = '';
+
+  // Section header: Roster
+  const rCount = csPlayers.filter(p => p.source === 'roster').length;
+  tbody.insertAdjacentHTML('beforeend', `
+    <tr class="cs-tr-sec">
+      <td colspan="11">
+        <div class="cs-td-sec-inner">
+          <span>Roster</span>
+          <span class="cs-sec-count">${rCount}</span>
+        </div>
+      </td>
+    </tr>`);
+
+  csPlayers.filter(p => p.source === 'roster').forEach(p => csRenderPlayerRow(tbody, p));
+
+  // Added players sections
+  const added = csPlayers.filter(p => p.source !== 'roster');
+  if (added.length) {
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr class="cs-tr-sec">
+        <td colspan="11">
+          <div class="cs-td-sec-inner">
+            <span>Added</span>
+            <span class="cs-sec-count">${added.length}</span>
+          </div>
+        </td>
+      </tr>`);
+    added.forEach(p => csRenderPlayerRow(tbody, p));
+  }
+
+  // Dead cap row
+  tbody.insertAdjacentHTML('beforeend', csDeadCapRow());
+
+  // Summary rows
+  tbody.insertAdjacentHTML('beforeend', `
+    <tr class="cs-tr-sum cs-tr-sum-total-border cs-tr-total" id="csTrTotal">
+      <td class="cs-td-sum-label cs-td-name" colspan="4" style="background:#1e293b;">Total Salary</td>
+      ${Array.from({length: CS_NUM_YRS}, (_, i) =>
+        `<td class="cs-td-sal"><input id="csTotalY${i}" value="—" readonly></td>`
+      ).join('')}
+      <td></td>
+    </tr>
+    <tr class="cs-tr-sum cs-tr-soft" id="csTrSoft">
+      <td class="cs-td-sum-label cs-td-name" colspan="4" style="background:#1e293b;">Soft Cap Room</td>
+      ${Array.from({length: CS_NUM_YRS}, (_, i) =>
+        `<td class="cs-td-sal"><input id="csSoftY${i}" value="—" readonly></td>`
+      ).join('')}
+      <td></td>
+    </tr>
+    <tr class="cs-tr-sum cs-tr-hard" id="csTrHard">
+      <td class="cs-td-sum-label cs-td-name" colspan="4" style="background:#1e293b;">Hard Cap Room</td>
+      ${Array.from({length: CS_NUM_YRS}, (_, i) =>
+        `<td class="cs-td-sal"><input id="csHardY${i}" value="—" readonly></td>`
+      ).join('')}
+      <td></td>
+    </tr>
+  `);
+
+  csWireEditableInputs();
+}
+
+function csDeadCapRow() {
+  const sal = csDeadCap > 0 ? csFmtSal(csDeadCap) : '—';
+  const salsHtml = Array.from({length: CS_NUM_YRS}, (_, i) => {
+    if (i === 0 && csDeadCap > 0) {
+      return `<td class="cs-td-sal"><input value="${sal}" style="color:#f87171;" readonly></td>`;
+    }
+    return `<td class="cs-td-sal"><input class="cs-dim" value="—" readonly></td>`;
+  }).join('');
+  return `
+    <tr id="csDeadCapRow">
+      <td class="cs-td-name" style="color:#f87171;font-size:0.73rem;">Cut Players</td>
+      <td class="cs-td-pos" style="color:#64748b;">—</td>
+      <td class="cs-td-sm">—</td>
+      <td class="cs-td-sm">—</td>
+      ${salsHtml}
+      <td></td>
+    </tr>`;
+}
+
+function csRenderPlayerRow(tbody, p) {
+  const birdDisplay = p.bird !== null && p.bird !== undefined
+    ? `<span style="color:${p.bird > 0 ? '#4ade80' : ''};font-weight:${p.bird > 0 ? '700' : ''};">${p.bird}</span>`
+    : '—';
+
+  const badge = p.source === 'fa' ? '<span class="cs-badge cs-badge-fa">FA</span>'
+               : p.source === 'manual' ? '<span class="cs-badge cs-badge-manual">Manual</span>'
+               : '';
+
+  const salsHtml = Array.from({length: CS_NUM_YRS}, (_, i) => {
+    const val = p.sals[i];
+    const isManual = p.manualEdits && p.manualEdits.includes(i);
+    const isDim = !val || val === 0;
+    const cls = isManual ? 'cs-manual-edit' : isDim ? 'cs-dim' : '';
+    const display = val && val > 0 ? csFmtSal(val) : '—';
+    return `<td class="cs-td-sal"><input data-pid="${p.id}" data-yi="${i}" class="${cls}" value="${display}"></td>`;
+  }).join('');
+
+  const tr = document.createElement('tr');
+  tr.id = `csRow_${p.id}`;
+  tr.innerHTML = `
+    <td class="cs-td-name">${p.name}${badge}</td>
+    <td class="cs-td-pos">${p.pos}</td>
+    <td class="cs-td-sm">${p.age || '—'}</td>
+    <td class="cs-td-sm">${birdDisplay}</td>
+    ${salsHtml}
+    <td><button class="cs-del-btn" onclick="csDeletePlayer('${p.id}')">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function csWireEditableInputs() {
+  document.querySelectorAll('#csTableBody .cs-td-sal input:not([readonly])').forEach(inp => {
+    inp.addEventListener('focus', function () {
+      if (this.value === '—') this.value = '';
+      else this.select();
+    });
+    inp.addEventListener('input', function () {
+      this.classList.add('cs-manual-edit');
+      this.classList.remove('cs-dim');
+      csRecalcCap();
+    });
+    inp.addEventListener('blur', function () {
+      const n = csParseSal(this.value);
+      if (n > 0) {
+        this.value = csFmtSal(n);
+      } else {
+        this.value = '—';
+        this.classList.remove('cs-manual-edit');
+        this.classList.add('cs-dim');
+      }
+      // Persist manual edit back to csPlayers
+      const pid = this.dataset.pid;
+      const yi  = parseInt(this.dataset.yi);
+      const row = csPlayers.find(p => p.id === pid);
+      if (row) {
+        row.sals[yi] = n;
+        if (!row.manualEdits) row.manualEdits = [];
+        if (n > 0 && !row.manualEdits.includes(yi)) row.manualEdits.push(yi);
+        else if (n === 0) row.manualEdits = row.manualEdits.filter(x => x !== yi);
+      }
+      csRecalcCap();
+      csSaveState();
+    });
+  });
+}
+
+// ─── Recalculate totals and update cap bar ────────────────────────────────────
+function csRecalcCap() {
+  const colTotals = Array(CS_NUM_YRS).fill(0);
+
+  // Sum every non-summary row in the table body
+  document.querySelectorAll('#csTableBody tr').forEach(row => {
+    if (row.classList.contains('cs-tr-sec') ||
+        row.classList.contains('cs-tr-empty') ||
+        row.classList.contains('cs-tr-sum')) return;
+    row.querySelectorAll('.cs-td-sal input').forEach((inp, i) => {
+      if (i < CS_NUM_YRS) colTotals[i] += csParseSal(inp.value);
+    });
+  });
+
+  // Total row
+  for (let i = 0; i < CS_NUM_YRS; i++) {
+    const el = document.getElementById(`csTotalY${i}`);
+    if (el) el.value = colTotals[i] > 0 ? csFmtSal(colTotals[i]) : '—';
+  }
+
+  // Soft cap room
+  for (let i = 0; i < CS_NUM_YRS; i++) {
+    const el = document.getElementById(`csSoftY${i}`);
+    if (!el) continue;
+    if (colTotals[i] === 0) { el.value = '—'; el.className = 'cs-dim'; continue; }
+    const room = CS_SOFT_CAP - colTotals[i];
+    el.value = (room >= 0 ? '+' : '-') + csFmtSal(Math.abs(room));
+    el.className = room < 0 ? 'cs-over' : 'cs-under';
+  }
+
+  // Hard cap room
+  for (let i = 0; i < CS_NUM_YRS; i++) {
+    const el = document.getElementById(`csHardY${i}`);
+    if (!el) continue;
+    if (colTotals[i] === 0) { el.value = '—'; el.style.color = ''; continue; }
+    const room = CS_HARD_CAP - colTotals[i];
+    el.value = (room >= 0 ? '' : '-') + csFmtSal(Math.abs(room));
+    el.style.color = room < 0 ? '#f87171' : '#94a3b8';
+  }
+
+  // Cap bar (year 1 = col 0)
+  const total = colTotals[0];
+  const pct   = Math.min(total / CS_HARD_CAP * 100, 100);
+  const fill  = document.getElementById('csCapBarFill');
+  if (fill) {
+    fill.style.width = pct + '%';
+    fill.classList.toggle('cs-over-hard', total > CS_HARD_CAP);
+  }
+  const totalEl = document.getElementById('csCapBarTotal');
+  if (totalEl) totalEl.textContent = csFmtSal(total);
+
+  const metaEl = document.getElementById('csCapBarMeta');
+  if (metaEl && csDeadCap > 0) {
+    metaEl.textContent = ` · ${csLeagueYear} total salary (incl. ${csFmtSal(csDeadCap)} dead cap)`;
+  }
+
+  // Soft marker position
+  const softMarker = document.getElementById('csMarkerSoft');
+  if (softMarker) softMarker.style.left = (CS_SOFT_CAP / CS_HARD_CAP * 100).toFixed(1) + '%';
+
+  // Legend
+  const softRoom = CS_SOFT_CAP - total;
+  const hardRoom = CS_HARD_CAP - total;
+  const leg0 = document.getElementById('csLeg0');
+  const leg1 = document.getElementById('csLeg1');
+  const leg2 = document.getElementById('csLeg2');
+  if (leg0) leg0.innerHTML = `<span class="cs-leg-dot" style="background:#38bdf8;"></span>Current: ${csFmtSal(total)} (${(total / CS_HARD_CAP * 100).toFixed(1)}% of hard cap)`;
+  if (leg1) leg1.innerHTML = `<span class="cs-leg-dot" style="background:#f59e0b;"></span>${softRoom >= 0 ? csFmtSal(softRoom) + ' soft cap room' : 'Over soft cap by ' + csFmtSal(-softRoom)}`;
+  if (leg2) leg2.innerHTML = `<span class="cs-leg-dot" style="background:#f87171;"></span>${csFmtSal(Math.max(hardRoom, 0))} hard cap room remaining`;
+}
+
+// ─── Delete player row ────────────────────────────────────────────────────────
+function csDeletePlayer(pid) {
+  csPlayers = csPlayers.filter(p => p.id !== pid);
+  const row = document.getElementById(`csRow_${pid}`);
+  if (row) row.remove();
+  csRecalcCap();
+  csSaveState();
+  // Update roster count badge
+  const rCount = csPlayers.filter(p => p.source === 'roster').length;
+  const secCounts = document.querySelectorAll('.cs-tr-sec .cs-sec-count');
+  if (secCounts.length) secCounts[0].textContent = rCount;
+}
+
+// ─── Cap Modal ────────────────────────────────────────────────────────────────
+function openCapModal(tab) {
+  document.getElementById('csModalOverlay').classList.add('cs-open');
+  switchCapModalTab(tab || 'roster');
+}
+function closeCapModal() {
+  document.getElementById('csModalOverlay').classList.remove('cs-open');
+}
+function csBgClose(e) {
+  if (e.target === document.getElementById('csModalOverlay')) closeCapModal();
+}
+function switchCapModalTab(tab) {
+  const titles = { roster: 'Add from Another Roster', fa: 'Browse Free Agents', manual: 'Manual Entry' };
+  ['roster', 'fa', 'manual'].forEach(t => {
+    document.getElementById(`csmt-${t}`).classList.toggle('active', t === tab);
+    document.getElementById(`csmb-${t}`).style.display = t === tab ? 'block' : 'none';
+    if (t === tab) document.getElementById('csModalTitle').textContent = titles[t];
+  });
+  // Lazy-load FA list
+  if (tab === 'fa' && !csFaPlayersCache) csLoadModalFA();
+}
+
+// Roster tab in modal
+async function csLoadModalRoster() {
+  const teamNum = document.getElementById('csRosterTeamSelect').value;
+  const listEl  = document.getElementById('csRosterList');
+  if (!teamNum) {
+    listEl.innerHTML = '<div style="font-size:0.72rem;color:#475569;text-align:center;padding:24px;">Select a team above.</div>';
+    return;
+  }
+  listEl.innerHTML = '<div style="font-size:0.72rem;color:#94a3b8;text-align:center;padding:16px;"><span class="cs-spinner"></span> Loading…</div>';
+  try {
+    const res  = await fetch('/fetch_cap_sheet_roster', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ team_num: teamNum })
+    });
+    const data = await res.json();
+    if (data.error) { listEl.innerHTML = `<div style="color:#f87171;padding:12px;">${data.error}</div>`; return; }
+
+    listEl.innerHTML = data.players.map(p => {
+      const sal = p.sal_y1 > 0 ? csFmtSal(p.sal_y1) : '—';
+      return `
+        <div class="cs-mpi" onclick="this.classList.toggle('cs-sel')"
+          data-name="${p.name.replace(/"/g, '&quot;')}" data-pos="${p.pos}"
+          data-age="${p.age}" data-bird="${p.bird !== null ? p.bird : ''}"
+          data-pid="${p.player_id || ''}"
+          data-s0="${p.sal_y1}" data-s1="${p.sal_y2}" data-s2="${p.sal_y3}"
+          data-s3="${p.sal_y4}" data-s4="${p.sal_y5}" data-s5="${p.sal_y6}">
+          <div class="cs-mpi-pos">${p.pos}</div>
+          <div class="cs-mpi-info">
+            <div class="cs-mpi-name">${p.name}</div>
+            <div class="cs-mpi-meta">Age ${p.age || '?'}</div>
+          </div>
+          <div class="cs-mpi-sal">${sal}</div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:#f87171;padding:12px;">Network error.</div>';
+  }
+}
+
+// FA tab in modal
+async function csLoadModalFA() {
+  const listEl = document.getElementById('csFaList');
+  listEl.innerHTML = '<div style="font-size:0.72rem;color:#94a3b8;text-align:center;padding:16px;"><span class="cs-spinner"></span> Loading…</div>';
+  try {
+    if (!faLoaded) {
+      const res  = await fetch('/fetch_free_agents', { method: 'POST' });
+      const data = await res.json();
+      if (!data.error) { faPlayers = data.players; faLoaded = true; }
+    }
+    csFaPlayersCache = faLoaded ? faPlayers : [];
+    csRenderModalFA(document.getElementById('csFaSearch')?.value || '');
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:#f87171;padding:12px;">Network error.</div>';
+  }
+}
+
+function csFilterFaModal() {
+  const q = document.getElementById('csFaSearch').value;
+  csRenderModalFA(q);
+}
+
+function csRenderModalFA(query) {
+  const listEl = document.getElementById('csFaList');
+  const q = (query || '').toLowerCase();
+  const filtered = (csFaPlayersCache || []).filter(p =>
+    !q || p.name.toLowerCase().includes(q)
+  );
+  if (!filtered.length) {
+    listEl.innerHTML = '<div style="font-size:0.72rem;color:#475569;text-align:center;padding:24px;">No free agents found.</div>';
+    return;
+  }
+  listEl.innerHTML = filtered.map(p => `
+    <div class="cs-mpi" onclick="this.classList.toggle('cs-sel')"
+      data-name="${p.name.replace(/"/g, '&quot;')}" data-pos="${p.pos}"
+      data-age="${p.age}" data-bird="" data-pid="">
+      <div class="cs-mpi-pos">${p.pos}</div>
+      <div class="cs-mpi-info">
+        <div class="cs-mpi-name">${p.name}</div>
+        <div class="cs-mpi-meta">Age ${p.age || '?'} · ${p.last_team || 'FA'}</div>
+      </div>
+      <div class="cs-mpi-sal">FA</div>
+    </div>`).join('');
+}
+
+// ─── Add from modal ───────────────────────────────────────────────────────────
+function csAddFromModal() {
+  const activeTab = document.querySelector('.cs-mtab.active')?.id?.replace('csmt-', '') || 'roster';
+
+  if (activeTab === 'manual') {
+    // Manual entry
+    const name = document.getElementById('csManualName').value.trim();
+    if (!name) { alert('Enter a player name.'); return; }
+    const pos  = document.getElementById('csManualPos').value;
+    const age  = document.getElementById('csManualAge').value.trim();
+    const bird = parseInt(document.getElementById('csManualBird').value) || 0;
+    const sals = [];
+    for (let i = 0; i < CS_NUM_YRS; i++) {
+      sals.push(csParseSal(document.getElementById(`csManualYr${i}`)?.value || ''));
+    }
+    const newRow = {
+      id: 'manual_' + Date.now(),
+      name, pos, age, bird,
+      player_id: null,
+      sals,
+      manualEdits: [],
+      source: 'manual',
+    };
+    csPlayers.push(newRow);
+    closeCapModal();
+    csRenderTable();
+    csRecalcCap();
+    csSaveState();
+    return;
+  }
+
+  // Roster or FA tab — collect all .cs-sel items
+  const selected = [...document.querySelectorAll(`#csmb-${activeTab} .cs-mpi.cs-sel`)];
+  if (!selected.length) { alert('Select at least one player.'); return; }
+
+  selected.forEach(el => {
+    const name = el.dataset.name;
+    if (csPlayers.find(p => p.name === name)) return; // already on sheet
+    const bird = el.dataset.bird !== '' ? parseInt(el.dataset.bird) : null;
+    const sals = [0,1,2,3,4,5].map(i => parseInt(el.dataset[`s${i}`]) || 0);
+    csPlayers.push({
+      id: activeTab + '_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+      name,
+      pos:       el.dataset.pos,
+      age:       el.dataset.age,
+      bird,
+      player_id: el.dataset.pid || null,
+      sals,
+      manualEdits: [],
+      source:    activeTab === 'fa' ? 'fa' : 'roster',
+    });
+  });
+
+  closeCapModal();
+  csRenderTable();
+  csRecalcCap();
+  csSaveState();
+}
+
+// ─── Salary helpers ───────────────────────────────────────────────────────────
+function csParseSal(str) {
+  if (!str || str.trim() === '' || str.trim() === '—') return 0;
+  const n = parseInt(String(str).replace(/[$,\s+\-]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+function csFmtSal(n) {
+  return '$' + Math.round(n).toLocaleString('en-US');
+}
+
 </script>
 </body>
 </html>
