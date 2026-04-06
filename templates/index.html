@@ -1369,14 +1369,22 @@
       <div class="card">
         <div class="card-title">Draft Order</div>
         <div class="dc-order-controls">
-          <button class="dc-add-round-btn" style="background:#0ea5e9;border-color:#0ea5e9;color:#fff;font-weight:700;" onclick="dcShowAddPick()">+ Add Pick</button>
-          <button class="dc-add-round-btn" onclick="dcAddRound()">+ Add Round</button>
-          <label class="dc-add-round-btn" style="cursor:pointer;" title="Import draft order from CSV">
-            ⬆ Import CSV
-            <input type="file" id="dcCsvInput" accept=".csv,.txt" style="display:none" onchange="dcLoadCsv(this)">
-          </label>
-          <button class="dc-add-round-btn" id="dcUndoBtn" onclick="dcUndoPick()" style="display:none;">⎌ Undo</button>
-          <button class="dc-reset-btn" onclick="dcResetDraft()">↺ Reset</button>
+          <!-- Locked state -->
+          <button class="dc-add-round-btn" id="dcModLockBtn" onclick="dcShowModPin()" style="display:flex;align-items:center;gap:5px;">
+            🔒 <span>Draft Mod</span>
+          </button>
+          <!-- Unlocked controls (hidden until correct PIN) -->
+          <div id="dcModControls" style="display:none;display:none;flex-wrap:wrap;gap:8px;align-items:center;">
+            <button class="dc-add-round-btn" style="background:#0ea5e9;border-color:#0ea5e9;color:#fff;font-weight:700;" onclick="dcShowAddPick()">+ Add Pick</button>
+            <button class="dc-add-round-btn" onclick="dcAddRound()">+ Add Round</button>
+            <label class="dc-add-round-btn" style="cursor:pointer;" title="Import draft order from CSV">
+              ⬆ Import CSV
+              <input type="file" id="dcCsvInput" accept=".csv,.txt" style="display:none" onchange="dcLoadCsv(this)">
+            </label>
+            <button class="dc-add-round-btn" id="dcUndoBtn" onclick="dcUndoPick()" style="display:none;">⎌ Undo</button>
+            <button class="dc-reset-btn" onclick="dcResetDraft()">↺ Reset</button>
+            <button class="dc-add-round-btn" onclick="dcLockMod()" style="margin-left:auto;color:#f87171;border-color:#7f1d1d;">🔒 Lock</button>
+          </div>
         </div>
         <!-- ON THE CLOCK banner -->
         <div class="dc-on-clock-banner" id="dcClockBanner">
@@ -1418,6 +1426,25 @@
   </div><!-- /tabDraft -->
 
 </div><!-- /container -->
+
+<!-- Draft Mod PIN Modal -->
+<div class="dc-add-pick-overlay" id="dcModPinOverlay" onclick="if(event.target===this)dcHideModPin()">
+  <div class="dc-add-pick-modal" style="max-width:300px;">
+    <h3>Draft Mod</h3>
+    <div class="dc-add-pick-field">
+      <label>Enter PIN to unlock</label>
+      <input id="dcModPinInput" type="password" inputmode="numeric" maxlength="4"
+        style="background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;padding:8px 12px;font-size:1.2rem;letter-spacing:0.3em;text-align:center;width:100%;"
+        onkeydown="if(event.key==='Enter')dcConfirmModPin()"
+        oninput="document.getElementById('dcModPinError').textContent=''">
+      <span id="dcModPinError" style="color:#f87171;font-size:0.72rem;min-height:16px;display:block;margin-top:4px;"></span>
+    </div>
+    <div class="dc-add-pick-actions">
+      <button class="dc-btn-cancel" onclick="dcHideModPin()">Cancel</button>
+      <button class="dc-btn-confirm" onclick="dcConfirmModPin()">Unlock</button>
+    </div>
+  </div>
+</div>
 
 <!-- Add / Edit Pick Modal -->
 <div class="dc-add-pick-overlay" id="dcAddPickOverlay" onclick="if(event.target===this)dcHideAddPick()">
@@ -3635,8 +3662,7 @@ function dcRenderOrder() {
   const clockTeamEl = document.getElementById('dcClockTeam');
   const clockPickEl = document.getElementById('dcClockPickNum');
   const undoBtn     = document.getElementById('dcUndoBtn');
-
-  if (undoBtn) undoBtn.style.display = dcCurrentPick > 0 ? '' : 'none';
+  if (undoBtn) undoBtn.style.display = dcCurrentPick > 0 ? 'inline-block' : 'none';
 
   if (dcOrder.length === 0) {
     list.innerHTML = '<div style="color:#64748b;font-size:0.78rem;text-align:center;padding:16px 0;">Use + Add Pick or Import CSV to build the draft order</div>';
@@ -3827,6 +3853,41 @@ function dcAddRound() {
   round1.forEach(t => dcOrder.push({ ...t }));
   dcSave();
   dcRenderOrder();
+}
+
+// ── Draft Mod PIN ────────────────────────────────────────────────────────
+const DC_MOD_PIN = '3256';
+let dcModUnlocked = false;
+
+function dcShowModPin() {
+  document.getElementById('dcModPinInput').value = '';
+  document.getElementById('dcModPinError').textContent = '';
+  document.getElementById('dcModPinOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('dcModPinInput').focus(), 80);
+}
+
+function dcHideModPin() {
+  document.getElementById('dcModPinOverlay').classList.remove('open');
+}
+
+function dcConfirmModPin() {
+  const entered = document.getElementById('dcModPinInput').value.trim();
+  if (entered === DC_MOD_PIN) {
+    dcModUnlocked = true;
+    dcHideModPin();
+    document.getElementById('dcModLockBtn').style.display  = 'none';
+    document.getElementById('dcModControls').style.display = 'flex';
+  } else {
+    document.getElementById('dcModPinError').textContent = 'Incorrect PIN. Try again.';
+    document.getElementById('dcModPinInput').value = '';
+    document.getElementById('dcModPinInput').focus();
+  }
+}
+
+function dcLockMod() {
+  dcModUnlocked = false;
+  document.getElementById('dcModControls').style.display = 'none';
+  document.getElementById('dcModLockBtn').style.display  = '';
 }
 
 // ── Add Pick modal ────────────────────────────────────────────────────────
