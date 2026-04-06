@@ -4264,7 +4264,7 @@ function dcRenderLog() {
       <td style="color:#64748b;">${r.pick}</td>
       <td>${r.teamName}</td>
       ${tradeTd}
-      <td style="font-weight:600;">${r.playerName}</td>
+      <td style="font-weight:600;">${r.playerName || '<span style="color:#334155;">—</span>'}</td>
       ${posTd}
     `;
     tbody.appendChild(tr);
