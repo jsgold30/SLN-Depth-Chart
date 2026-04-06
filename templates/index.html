@@ -3676,6 +3676,7 @@ function dcRenderOrder() {
   dcOrder.forEach((team, idx) => {
     const onClock = idx === dcCurrentPick;
     const drafted = idx < dcCurrentPick;
+    if (drafted) return; // already in Draft Results — hide from order list
 
 
     // Trade: show full chain e.g. SAS → SAC → DEN
