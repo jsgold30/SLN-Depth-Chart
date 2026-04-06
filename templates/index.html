@@ -1552,9 +1552,12 @@ function switchTab(tab) {
     buildTMLogoGrids();
     tmLogoGridsBuilt = true;
   }
-  // Load draft players lazily on first visit
-  if (tab === 'draft' && !dcPlayersLoaded) {
-    dcFetchPlayers();
+  // Load draft players lazily on first visit; start/stop polling with tab
+  if (tab === 'draft') {
+    if (!dcPlayersLoaded) dcFetchPlayers();
+    dcStartPolling();
+  } else {
+    dcStopPolling();
   }
 }
 
@@ -3527,7 +3530,8 @@ function dcGradeClass(g) {
 
 // ── Persist / restore state ──────────────────────────────────────────────
 function dcSave() {
-  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, results: dcResults };
+  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, results: dcResults, ts: Date.now() };
+  dcLastSyncStamp = payload.ts;
   // Save to server (shared across all devices)
   fetch('/save_draft', {
     method: 'POST',
@@ -3548,6 +3552,7 @@ async function dcLoadFromServer() {
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
+    dcLastSyncStamp = s.ts || 0;
     _dcMigrateTrades();
     // Cache locally
     try { localStorage.setItem(DC_LS_KEY, JSON.stringify(s)); } catch(e) {}
@@ -3564,6 +3569,7 @@ function dcLoad() {
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
+    dcLastSyncStamp = s.ts || 0;
     _dcMigrateTrades();
     return dcPool.length > 0 || dcOrder.length > 0;
   } catch(e) { return false; }
@@ -4188,6 +4194,41 @@ function dcClearAll() {
   dcRenderOrder();
   dcRenderLog();
   document.getElementById('dcPoolStatus').textContent = '';
+}
+
+// ── Real-time sync polling ────────────────────────────────────────────────
+let dcPollInterval  = null;
+let dcLastSyncStamp = 0; // server updated_at we last loaded
+
+function dcStartPolling() {
+  if (dcPollInterval) return;
+  dcPollInterval = setInterval(dcPollServer, 4000);
+}
+
+function dcStopPolling() {
+  if (dcPollInterval) { clearInterval(dcPollInterval); dcPollInterval = null; }
+}
+
+async function dcPollServer() {
+  try {
+    const res = await fetch('/load_draft');
+    if (!res.ok) return;
+    const s = await res.json();
+    if (!s || !s.ts) return;
+    // Only update if server has newer data than what we last loaded
+    if (s.ts <= dcLastSyncStamp) return;
+    dcLastSyncStamp = s.ts;
+    const prevPick = dcCurrentPick;
+    dcPool        = s.pool        || [];
+    dcOrder       = s.order       || [];
+    dcCurrentPick = s.currentPick || 0;
+    dcResults     = s.results     || [];
+    _dcMigrateTrades();
+    try { localStorage.setItem(DC_LS_KEY, JSON.stringify(s)); } catch(e) {}
+    dcRenderPool();
+    dcRenderOrder();
+    dcRenderLog();
+  } catch(e) {}
 }
 </script>
 </body>
