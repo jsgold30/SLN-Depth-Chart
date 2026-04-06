@@ -883,12 +883,47 @@
     .dc-grade-C { color: #fbbf24; }
     .dc-grade-D { color: #f97316; }
     .dc-grade-F { color: #f87171; }
-    .dc-draft-btn {
-      padding: 3px 11px; border-radius: 5px; border: none;
-      background: #0ea5e9; color: #fff; font-size: 0.72rem; font-weight: 700;
-      cursor: pointer; transition: background 0.15s;
+    .dc-select-btn {
+      padding: 3px 10px; border-radius: 5px; border: 1px solid #334155;
+      background: #1e293b; color: #94a3b8; font-size: 0.72rem; font-weight: 700;
+      cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s;
+      white-space: nowrap;
     }
-    .dc-draft-btn:hover { background: #38bdf8; }
+    .dc-select-btn:hover, .dc-select-btn.selected {
+      background: #0ea5e9; border-color: #0ea5e9; color: #fff;
+    }
+    /* Selected player panel */
+    .dc-selected-panel {
+      display: none; background: #0c1a2e;
+      border: 1px solid #0ea5e9; border-radius: 8px;
+      padding: 14px 16px; margin-bottom: 16px;
+      align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    .dc-selected-panel.visible { display: flex; }
+    .dc-selected-name {
+      font-size: 1rem; font-weight: 700; color: #f1f5f9; flex: 1; min-width: 120px;
+    }
+    .dc-selected-meta {
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    }
+    .dc-selected-meta span {
+      font-size: 0.72rem; color: #94a3b8; background: #1e293b;
+      border-radius: 4px; padding: 2px 7px; white-space: nowrap;
+    }
+    .dc-selected-meta span b { color: #e2e8f0; }
+    .dc-confirm-draft-btn {
+      padding: 7px 20px; border-radius: 6px; border: none;
+      background: #16a34a; color: #fff; font-size: 0.82rem; font-weight: 800;
+      cursor: pointer; transition: background 0.15s; white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .dc-confirm-draft-btn:hover { background: #15803d; }
+    .dc-selected-clear {
+      background: none; border: none; color: #475569; font-size: 1rem;
+      cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0;
+    }
+    .dc-selected-clear:hover { color: #f87171; }
+    .dc-draft-btn { display: none; } /* legacy — replaced by select flow */
     .dc-pool-empty { color: #64748b; font-size: 0.82rem; padding: 20px 0; text-align: center; }
     /* Draft order */
     .dc-order-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
@@ -1420,6 +1455,16 @@
           </tbody>
         </table>
       </div>
+    </div>
+
+    <!-- Selected Player Panel -->
+    <div class="dc-selected-panel" id="dcSelectedPanel">
+      <div>
+        <div class="dc-selected-name" id="dcSelectedName">—</div>
+        <div class="dc-selected-meta" id="dcSelectedMeta"></div>
+      </div>
+      <button class="dc-confirm-draft-btn" onclick="dcConfirmDraft()">Draft</button>
+      <button class="dc-selected-clear" onclick="dcClearSelection()" title="Clear selection">✕</button>
     </div>
 
     <!-- Draft Order + Log side by side on wide screens -->
@@ -3514,6 +3559,7 @@ let dcOrder        = [];   // [{ name, abbr, c1, c2, url }, ...]  current draft 
 let dcCurrentPick  = 0;    // index into dcOrder
 let dcResults      = [];   // [{ pick, teamName, playerName, pos }, ...]
 let dcPosFilter    = 'ALL';
+let dcSelectedId   = null; // id of player currently selected for drafting
 const DC_LS_KEY    = 'draftCenter_v3';
 
 // ── Grade colour helper ──────────────────────────────────────────────────
@@ -3652,7 +3698,7 @@ function dcRenderPool() {
       <td class="${dcGradeClass(p.hn)}">${p.hn}</td>
       <td class="${dcGradeClass(p.reb)}">${p.reb}</td>
       <td class="${dcGradeClass(p.pot)}">${p.pot}</td>
-      <td><button class="dc-draft-btn" onclick="dcDraftPlayer('${p.id}')">Draft</button></td>
+      <td><button class="dc-select-btn" id="dcSelBtn_${p.id}" onclick="dcSelectPlayer('${p.id}')">Select</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -3671,6 +3717,54 @@ function dcFilterPos(btn) {
   btn.classList.add('active');
   dcPosFilter = btn.dataset.pos;
   dcRenderPool();
+}
+
+// ── Select / deselect a player ───────────────────────────────────────────
+function dcSelectPlayer(playerId) {
+  // Deselect if clicking the already-selected player
+  if (dcSelectedId === playerId) { dcClearSelection(); return; }
+
+  const player = dcPool.find(p => p.id === playerId);
+  if (!player) return;
+
+  // Clear previous highlight
+  document.querySelectorAll('.dc-select-btn.selected').forEach(b => {
+    b.classList.remove('selected'); b.textContent = 'Select';
+  });
+
+  dcSelectedId = playerId;
+  const btn = document.getElementById('dcSelBtn_' + playerId);
+  if (btn) { btn.classList.add('selected'); btn.textContent = 'Selected'; }
+
+  // Populate the panel
+  document.getElementById('dcSelectedName').textContent = player.name;
+  document.getElementById('dcSelectedMeta').innerHTML = `
+    <span><b>${player.pos}</b></span>
+    <span>Ht <b>${player.ht}</b></span>
+    <span>Wt <b>${player.wt}</b></span>
+    <span>Age <b>${player.age}</b></span>
+    <span class="${dcGradeClass(player.in_rat)}">IN <b>${player.in_rat}</b></span>
+    <span class="${dcGradeClass(player.df)}">DF <b>${player.df}</b></span>
+    <span class="${dcGradeClass(player.hn)}">HN <b>${player.hn}</b></span>
+    <span class="${dcGradeClass(player.reb)}">REB <b>${player.reb}</b></span>
+    <span class="${dcGradeClass(player.pot)}">POT <b>${player.pot}</b></span>
+  `;
+  document.getElementById('dcSelectedPanel').classList.add('visible');
+  // Scroll panel into view
+  document.getElementById('dcSelectedPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function dcClearSelection() {
+  dcSelectedId = null;
+  document.querySelectorAll('.dc-select-btn.selected').forEach(b => {
+    b.classList.remove('selected'); b.textContent = 'Select';
+  });
+  document.getElementById('dcSelectedPanel').classList.remove('visible');
+}
+
+function dcConfirmDraft() {
+  if (!dcSelectedId) return;
+  dcDraftPlayer(dcSelectedId);
 }
 
 // ── Draft a player ───────────────────────────────────────────────────────
@@ -3704,6 +3798,7 @@ function dcDraftPlayer(playerId) {
   // Advance pick
   dcCurrentPick++;
 
+  dcClearSelection();
   dcSave();
   dcRenderPool();
   dcRenderOrder();
