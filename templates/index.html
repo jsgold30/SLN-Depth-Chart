@@ -1407,7 +1407,7 @@
               <input type="file" id="dcCsvInput" accept=".csv,.txt" style="display:none" onchange="dcLoadCsv(this)">
             </label>
             <button class="dc-add-round-btn" id="dcUndoBtn" onclick="dcUndoPick()" style="display:none;">⎌ Undo</button>
-            <button class="dc-reset-btn" onclick="dcResetDraft()">↺ Reset</button>
+            <button class="dc-reset-btn" onclick="dcClearAll()">✕ Clear All</button>
             <button class="dc-add-round-btn" onclick="dcLockMod()" style="margin-left:auto;color:#f87171;border-color:#7f1d1d;">🔒 Lock</button>
           </div>
         </div>
@@ -4117,17 +4117,17 @@ function dcRenderLog() {
 }
 
 // ── Reset draft ───────────────────────────────────────────────────────────
-function dcResetDraft() {
-  if (!confirm('Reset the entire draft? This will clear all picks and restore the full player pool.')) return;
+function dcClearAll() {
+  if (!confirm('Clear everything? This will remove all picks, results, and the draft order so you can start fresh.')) return;
   dcPool        = [...dcAllPlayers];
   dcCurrentPick = 0;
   dcResults     = [];
-  // Keep draft order
+  dcOrder       = [];
   dcSave();
   dcRenderPool();
   dcRenderOrder();
   dcRenderLog();
-  document.getElementById('dcPoolStatus').textContent = 'Draft reset.';
+  document.getElementById('dcPoolStatus').textContent = '';
 }
 </script>
 </body>
