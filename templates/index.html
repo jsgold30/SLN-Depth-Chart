@@ -1378,6 +1378,7 @@
         </div>
         <!-- ON THE CLOCK banner -->
         <div class="dc-on-clock-banner" id="dcClockBanner">
+          <div id="dcClockLogo" style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.5rem;font-weight:800;color:#fff;"></div>
           <span class="dc-on-clock-label">On the Clock</span>
           <span class="dc-on-clock-team" id="dcClockTeam">—</span>
           <span class="dc-on-clock-pick" id="dcClockPickNum"></span>
@@ -3629,11 +3630,20 @@ function dcRenderOrder() {
     return;
   }
 
+  const clockLogoEl = document.getElementById('dcClockLogo');
   if (dcCurrentPick < dcOrder.length) {
-    clockTeamEl.textContent = dcOrder[dcCurrentPick].name;
+    const cur     = dcOrder[dcCurrentPick];
+    const imgFile = cur.url ? cur.url.replace('.htm', '.png') : '';
+    clockLogoEl.style.background = `linear-gradient(135deg,${cur.c1||'#1e293b'},${cur.c2||'#334155'})`;
+    clockLogoEl.innerHTML = imgFile
+      ? `<img src="/static/logos/${imgFile}" alt="" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;">`
+      : `<span>${cur.abbr||'?'}</span>`;
+    clockTeamEl.textContent = cur.name;
     clockPickEl.textContent = `Pick ${dcCurrentPick + 1}`;
     banner.classList.add('visible');
   } else {
+    clockLogoEl.innerHTML = '';
+    clockLogoEl.style.background = 'transparent';
     clockTeamEl.textContent = 'Draft Complete';
     clockPickEl.textContent = '';
     banner.classList.add('visible');
@@ -3655,10 +3665,6 @@ function dcRenderOrder() {
     const onClock = idx === dcCurrentPick;
     const drafted = idx < dcCurrentPick;
 
-    const imgFile = team.url ? team.url.replace('.htm', '.png') : '';
-    const logoHtml = `<div class="dc-order-logo" style="background:linear-gradient(135deg,${team.c1||'#1e293b'},${team.c2||'#334155'});display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;overflow:hidden;vertical-align:middle;margin-right:6px;flex-shrink:0;">
-      ${imgFile ? `<img src="/static/logos/${imgFile}" alt="" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:0.42rem;font-weight:800;color:#fff;">${team.abbr||'?'}</span>`}
-    </div>`;
 
     // Trade: show as "FROM → TO" with subtle styling
     const [fromAbbr, toAbbr] = team.trade ? team.trade.split(' to ').map(s => s.trim()) : [];
@@ -3683,7 +3689,7 @@ function dcRenderOrder() {
     if (drafted) tr.classList.add('dc-drafted');
     tr.innerHTML = `
       <td><span class="dc-pick-badge">${idx + 1}</span></td>
-      <td style="display:flex;align-items:center;">${logoHtml}<span class="dc-order-name">${team.name}</span></td>
+      <td><span class="dc-order-name">${team.name}</span></td>
       <td>${tradeCell}</td>
       <td>${playerCell}</td>
       <td>${controls}</td>`;
