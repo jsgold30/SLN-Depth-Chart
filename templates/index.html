@@ -3882,7 +3882,6 @@ function dcRenderOrder() {
     <th style="width:36px;">#</th>
     <th>Team</th>
     <th>Trade</th>
-    <th>Player</th>
     <th style="width:80px;"></th>
   </tr></thead>`;
   const tbody = document.createElement('tbody');
@@ -3898,7 +3897,7 @@ function dcRenderOrder() {
     if (teamRound !== lastRound) {
       lastRound = teamRound;
       const sep = document.createElement('tr');
-      sep.innerHTML = `<td colspan="5" style="
+      sep.innerHTML = `<td colspan="4" style="
         background:#0f172a; color:#475569; font-size:0.65rem; font-weight:800;
         text-transform:uppercase; letter-spacing:0.12em; padding:6px 8px 4px;
         border-bottom:2px solid #1e3a52; border-top:${teamRound > 1 ? '2px solid #1e3a52' : 'none'};
@@ -3911,10 +3910,6 @@ function dcRenderOrder() {
     const tradeParts = team.trade ? team.trade.split(' to ').map(s => s.trim()).filter(Boolean) : [];
     const tradeCell = tradeParts.length >= 2
       ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;white-space:nowrap;">${tradeParts.join('<span style="color:#64748b;"> → </span>')}</span>`
-      : `<span style="color:#334155;">—</span>`;
-
-    const playerCell = team.draftedPlayer
-      ? `<span style="font-size:0.75rem;font-weight:600;color:#4ade80;">${team.draftedPlayer}</span>${team.draftedPos ? ` <span style="font-size:0.68rem;color:#64748b;">${team.draftedPos}</span>` : ''}`
       : `<span style="color:#334155;">—</span>`;
 
     const controls = dcModUnlocked ? `
@@ -3931,7 +3926,6 @@ function dcRenderOrder() {
       <td><span class="dc-pick-badge">${idx + 1}</span></td>
       <td><span class="dc-order-name">${team.name}</span></td>
       <td>${tradeCell}</td>
-      <td>${playerCell}</td>
       <td>${controls}</td>`;
 
     // Drag-and-drop handlers — only active when mod is unlocked
