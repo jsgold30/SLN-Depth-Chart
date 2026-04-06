@@ -3859,9 +3859,8 @@ function dcEditPick(idx) {
   document.getElementById('dcPickConfirmBtn').textContent = 'Save Changes';
 
   // Pre-select receiving team
-  const baseName = team.name.replace(/\s*\(via[\s\w,+]+\)\s*$/i, '').trim();
   const sel = document.getElementById('dcPickTeamSel');
-  const opt = [...sel.options].find(o => o.value === baseName || o.value === team.name);
+  const opt = [...sel.options].find(o => o.value === team.name);
   if (opt) sel.value = opt.value;
 
   // Pre-fill trade chain
@@ -3910,8 +3909,7 @@ function dcConfirmAddPick() {
       // chain: HOP1.abbr to HOP2.abbr to ... to RECEIVING.abbr
       const chain = [...hops.map(t => t.abbr), receiving.abbr];
       tradeBadge  = chain.join(' to ');
-      const viaList = hops.map(t => t.abbr).join(', ');
-      displayName = `${receivingName} (via ${viaList})`;
+      displayName = receivingName;
     }
   }
 
