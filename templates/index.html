@@ -1401,8 +1401,7 @@
           <!-- Unlocked controls (hidden until correct PIN) -->
           <div id="dcModControls" style="display:none;display:none;flex-wrap:wrap;gap:8px;align-items:center;">
             <button class="dc-add-round-btn" style="background:#0ea5e9;border-color:#0ea5e9;color:#fff;font-weight:700;" onclick="dcShowAddPick()">+ Add Pick</button>
-            <button class="dc-add-round-btn" onclick="dcAddRound()">+ Add Round</button>
-            <label class="dc-add-round-btn" style="cursor:pointer;" title="Import draft order from CSV">
+<label class="dc-add-round-btn" style="cursor:pointer;" title="Import draft order from CSV">
               ⬆ Import CSV
               <input type="file" id="dcCsvInput" accept=".csv,.txt" style="display:none" onchange="dcLoadCsv(this)">
             </label>
@@ -3692,7 +3691,7 @@ function dcRenderOrder() {
   if (undoBtn) undoBtn.style.display = dcCurrentPick > 0 ? 'inline-block' : 'none';
 
   if (dcOrder.length === 0) {
-    list.innerHTML = '<div style="color:#64748b;font-size:0.78rem;text-align:center;padding:16px 0;">Use + Add Pick or Import CSV to build the draft order</div>';
+    list.innerHTML = '<div style="color:#64748b;font-size:0.78rem;text-align:center;padding:16px 0;">Use <strong style="color:#94a3b8;">+ Add Pick</strong> or <strong style="color:#94a3b8;">Import CSV</strong> to build the draft order</div>';
     banner.classList.remove('visible');
     return;
   }
@@ -3727,11 +3726,25 @@ function dcRenderOrder() {
     <th style="width:80px;"></th>
   </tr></thead>`;
   const tbody = document.createElement('tbody');
+  let lastRound = null;
 
   dcOrder.forEach((team, idx) => {
     const onClock = idx === dcCurrentPick;
     const drafted = idx < dcCurrentPick;
     if (drafted) return; // already in Draft Results — hide from order list
+
+    // Round separator
+    const teamRound = team.round || 1;
+    if (teamRound !== lastRound) {
+      lastRound = teamRound;
+      const sep = document.createElement('tr');
+      sep.innerHTML = `<td colspan="5" style="
+        background:#0f172a; color:#475569; font-size:0.65rem; font-weight:800;
+        text-transform:uppercase; letter-spacing:0.12em; padding:6px 8px 4px;
+        border-bottom:2px solid #1e3a52; border-top:${teamRound > 1 ? '2px solid #1e3a52' : 'none'};
+        user-select:none;">Round ${teamRound}</td>`;
+      tbody.appendChild(sep);
+    }
 
 
     // Trade: show full chain e.g. SAS → SAC → DEN
@@ -3870,18 +3883,6 @@ function dcLoadCsv(input) {
   reader.readAsText(file);
 }
 
-function dcAddRound() {
-  if (dcOrder.length === 0) {
-    alert('Add at least one pick first, then use Add Round to repeat the order.');
-    return;
-  }
-  // Determine round 1 (first N picks before any repeated pattern)
-  // Just duplicate the full current order as another round
-  const round1 = dcOrder.slice(0, Math.min(29, dcOrder.length));
-  round1.forEach(t => dcOrder.push({ ...t }));
-  dcSave();
-  dcRenderOrder();
-}
 
 // ── Draft Mod PIN ────────────────────────────────────────────────────────
 const DC_MOD_PIN = '3256';
