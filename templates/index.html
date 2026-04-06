@@ -866,12 +866,26 @@
     .dc-order-row.on-clock {
       border-color: #0ea5e9; background: #0c2033;
     }
-    .dc-order-row.dc-drafted { opacity: 0.4; }
+    .dc-order-row.dc-drafted { opacity: 0.55; }
     .dc-clock-badge {
       font-size: 0.65rem; font-weight: 700; color: #0ea5e9;
       background: rgba(14,165,233,0.12); border-radius: 4px; padding: 1px 6px;
       white-space: nowrap;
     }
+    /* ON THE CLOCK banner */
+    .dc-on-clock-banner {
+      display: none; align-items: center; gap: 10px;
+      background: linear-gradient(90deg, #0c2033, #0e3a52);
+      border: 1px solid #0ea5e9; border-radius: 8px;
+      padding: 10px 14px; margin-bottom: 10px;
+    }
+    .dc-on-clock-banner.visible { display: flex; }
+    .dc-on-clock-label {
+      font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.1em; color: #0ea5e9; white-space: nowrap;
+    }
+    .dc-on-clock-team { font-size: 0.9rem; font-weight: 700; color: #f1f5f9; }
+    .dc-on-clock-pick { font-size: 0.7rem; color: #64748b; margin-left: auto; white-space: nowrap; }
     .dc-pick-badge {
       min-width: 28px; text-align: center; font-size: 0.7rem;
       font-weight: 700; color: #64748b;
@@ -882,7 +896,17 @@
       font-size: 0.45rem; font-weight: 800; overflow: hidden;
     }
     .dc-order-logo img { width: 100%; height: 100%; object-fit: cover; }
-    .dc-order-name { flex: 1; font-size: 0.78rem; color: #e2e8f0; }
+    .dc-order-name { font-size: 0.78rem; color: #e2e8f0; white-space: nowrap; }
+    .dc-trade-badge {
+      font-size: 0.63rem; font-weight: 600; color: #fbbf24;
+      background: rgba(251,191,36,0.1); border-radius: 4px;
+      padding: 1px 5px; white-space: nowrap; flex-shrink: 0;
+    }
+    .dc-drafted-player {
+      font-size: 0.75rem; font-weight: 600; color: #4ade80;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;
+    }
+    .dc-order-spacer { flex: 1; }
     .dc-order-move { display: flex; flex-direction: column; gap: 1px; }
     .dc-move-btn {
       background: none; border: none; color: #475569; cursor: pointer;
@@ -1311,6 +1335,12 @@
           <button class="dc-add-round-btn" onclick="dcAddRound()">+ Add Round</button>
           <button class="dc-reset-btn" onclick="dcResetDraft()">↺ Reset</button>
         </div>
+        <!-- ON THE CLOCK banner -->
+        <div class="dc-on-clock-banner" id="dcClockBanner">
+          <span class="dc-on-clock-label">On the Clock</span>
+          <span class="dc-on-clock-team" id="dcClockTeam">—</span>
+          <span class="dc-on-clock-pick" id="dcClockPickNum"></span>
+        </div>
         <div class="dc-order-list" id="dcOrderList">
           <div style="color:#64748b;font-size:0.78rem;text-align:center;padding:16px 0;">
             Upload a CSV or add teams below
@@ -1327,12 +1357,13 @@
               <tr>
                 <th>Pick</th>
                 <th>Team</th>
+                <th>Trade</th>
                 <th>Player</th>
                 <th>Pos</th>
               </tr>
             </thead>
             <tbody id="dcLogBody">
-              <tr><td colspan="4" class="dc-log-empty">No picks yet</td></tr>
+              <tr><td colspan="5" class="dc-log-empty">No picks yet</td></tr>
             </tbody>
           </table>
         </div>
@@ -3318,7 +3349,7 @@ let dcOrder        = [];   // [{ name, abbr, c1, c2, url }, ...]  current draft 
 let dcCurrentPick  = 0;    // index into dcOrder
 let dcResults      = [];   // [{ pick, teamName, playerName, pos }, ...]
 let dcPosFilter    = 'ALL';
-const DC_LS_KEY    = 'draftCenter_v2';
+const DC_LS_KEY    = 'draftCenter_v3';
 
 // ── Grade colour helper ──────────────────────────────────────────────────
 function dcGradeClass(g) {
@@ -3459,8 +3490,12 @@ function dcDraftPlayer(playerId) {
   const team    = dcOrder[dcCurrentPick];
   const pickNum = dcResults.length + 1;
 
+  // Store drafted player on the order entry so it shows inline
+  team.draftedPlayer = player.name;
+  team.draftedPos    = player.pos;
+
   // Record result
-  dcResults.push({ pick: pickNum, teamName: team.name, playerName: player.name, pos: player.pos });
+  dcResults.push({ pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: player.name, pos: player.pos });
 
   // Remove from pool
   dcPool.splice(playerIdx, 1);
@@ -3473,23 +3508,40 @@ function dcDraftPlayer(playerId) {
   dcRenderOrder();
   dcRenderLog();
 
-  // Scroll log into view
-  document.getElementById('dcLogTable').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  // Scroll to new on-clock team in the order list
+  const onClockEl = document.querySelector('.dc-order-row.on-clock');
+  if (onClockEl) onClockEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ── Render draft order ───────────────────────────────────────────────────
 function dcRenderOrder() {
-  const list = document.getElementById('dcOrderList');
+  const list    = document.getElementById('dcOrderList');
+  const banner  = document.getElementById('dcClockBanner');
+  const clockTeamEl = document.getElementById('dcClockTeam');
+  const clockPickEl = document.getElementById('dcClockPickNum');
   list.innerHTML = '';
 
   if (dcOrder.length === 0) {
     list.innerHTML = '<div style="color:#64748b;font-size:0.78rem;text-align:center;padding:16px 0;">Upload a CSV or add teams below</div>';
+    banner.classList.remove('visible');
     return;
   }
 
+  // Update ON THE CLOCK banner
+  if (dcCurrentPick < dcOrder.length) {
+    const cur = dcOrder[dcCurrentPick];
+    clockTeamEl.textContent = cur.name;
+    clockPickEl.textContent = `Pick ${dcCurrentPick + 1}`;
+    banner.classList.add('visible');
+  } else {
+    clockTeamEl.textContent = 'Draft Complete';
+    clockPickEl.textContent = '';
+    banner.classList.add('visible');
+  }
+
   dcOrder.forEach((team, idx) => {
-    const onClock  = (idx === dcCurrentPick);
-    const drafted  = (idx < dcCurrentPick);
+    const onClock = (idx === dcCurrentPick);
+    const drafted = (idx < dcCurrentPick);
 
     const row = document.createElement('div');
     row.className = 'dc-order-row' + (onClock ? ' on-clock' : '') + (drafted ? ' dc-drafted' : '');
@@ -3497,18 +3549,24 @@ function dcRenderOrder() {
     const imgFile = team.url ? team.url.replace('.htm', '.png') : '';
     const logoHtml = imgFile
       ? `<div class="dc-order-logo" style="background:linear-gradient(135deg,${team.c1||'#1e293b'},${team.c2||'#334155'});">
-           <img src="/static/logos/${imgFile}" alt="${team.abbr||''}"
-             onerror="this.style.display='none';">
+           <img src="/static/logos/${imgFile}" alt="${team.abbr||''}" onerror="this.style.display='none';">
          </div>`
       : `<div class="dc-order-logo" style="background:linear-gradient(135deg,${team.c1||'#1e293b'},${team.c2||'#334155'});">
            <span>${team.abbr||'?'}</span>
          </div>`;
 
+    const tradeBadge  = team.trade        ? `<span class="dc-trade-badge">⇄ ${team.trade}</span>` : '';
+    const playerSpan  = team.draftedPlayer
+      ? `<span class="dc-drafted-player">→ ${team.draftedPlayer}${team.draftedPos ? ' <span style="color:#64748b;font-weight:400;">('+team.draftedPos+')</span>' : ''}</span>`
+      : '<span class="dc-order-spacer"></span>';
+
     row.innerHTML = `
       <span class="dc-pick-badge">${idx + 1}</span>
       ${logoHtml}
       <span class="dc-order-name">${team.name}</span>
-      ${onClock ? '<span class="dc-clock-badge">ON THE CLOCK</span>' : ''}
+      ${tradeBadge}
+      ${playerSpan}
+      ${onClock ? '<span class="dc-clock-badge">🕐 ON THE CLOCK</span>' : ''}
       ${!drafted ? `
         <div class="dc-order-move">
           <button class="dc-move-btn" onclick="dcMoveOrder(${idx},-1)" title="Move up">▲</button>
@@ -3560,35 +3618,60 @@ function dcLoadCsv(input) {
   const reader = new FileReader();
   reader.onload = function(e) {
     const lines = e.target.result.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    // Strip header if present (e.g. "Team Name" or "Team")
-    const firstLower = lines[0] ? lines[0].toLowerCase() : '';
-    const start = (firstLower === 'team' || firstLower === 'team name') ? 1 : 0;
 
     const newOrder = [];
-    for (let i = start; i < lines.length; i++) {
-      const name = lines[i];
-      // Match against TM_TEAMS
-      const found = TM_TEAMS.find(t => t.name.toLowerCase() === name.toLowerCase());
-      if (found) {
-        newOrder.push({ name: found.name, abbr: found.abbr, c1: found.c1, c2: found.c2, url: found.url });
-      } else {
-        // Unknown team — add as plain entry
-        newOrder.push({ name, abbr: name.slice(0,3).toUpperCase(), c1: '#1e293b', c2: '#334155', url: '' });
+    let preDrafted = 0;
+
+    for (const line of lines) {
+      // Skip round headers like "Round 1:", "Round 2:", etc.
+      if (/^round\s*\d+/i.test(line)) continue;
+
+      // Split CSV fields (handle quoted fields simply)
+      const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+
+      // Skip header row — first cell is "#" or "Pick" or numeric-ish
+      if (/^#|^pick$/i.test(cols[0])) continue;
+
+      // Data row: cols[0]=pick#, cols[1]=team, cols[2]=trade, cols[3]=player
+      const teamName     = cols[1] || '';
+      const trade        = cols[2] || '';
+      const playerPreFil = cols[3] || '';
+
+      if (!teamName) continue;
+
+      // Try to match base team name (ignore "via X", "from X" suffixes for logo lookup)
+      const baseName = teamName.replace(/\s*[\(\(].*/,'').replace(/\s*(via|from)\s+\w+/gi,'').trim();
+      const found = TM_TEAMS.find(t =>
+        t.name.toLowerCase() === baseName.toLowerCase() ||
+        t.name.toLowerCase() === teamName.toLowerCase()
+      );
+
+      const entry = found
+        ? { name: teamName, abbr: found.abbr, c1: found.c1, c2: found.c2, url: found.url, trade, draftedPlayer: playerPreFil, draftedPos: '' }
+        : { name: teamName, abbr: teamName.slice(0,3).toUpperCase(), c1: '#1e293b', c2: '#334155', url: '', trade, draftedPlayer: playerPreFil, draftedPos: '' };
+
+      newOrder.push(entry);
+
+      // If CSV already has a player, count as pre-drafted
+      if (playerPreFil) {
+        preDrafted++;
+        dcResults.push({ pick: newOrder.length, teamName: entry.name, trade, playerName: playerPreFil, pos: '' });
       }
     }
 
-    dcOrder = newOrder;
-    dcCurrentPick = 0;
-    dcResults = [];
+    dcOrder       = newOrder;
+    dcCurrentPick = preDrafted;   // start clock after pre-filled picks
+    if (preDrafted === 0) dcResults = [];
     dcPool = [...dcAllPlayers];
     dcSave();
     dcRenderPool();
     dcRenderOrder();
     dcRenderLog();
-    document.getElementById('dcPoolStatus').textContent = `Draft order loaded: ${newOrder.length} picks.`;
+    document.getElementById('dcPoolStatus').textContent =
+      `Draft order loaded: ${newOrder.length} picks${preDrafted ? `, ${preDrafted} pre-filled` : ''}.`;
   };
   reader.readAsText(file);
-  input.value = ''; // reset so same file can be re-uploaded
+  input.value = '';
 }
 
 // ── Render draft log ──────────────────────────────────────────────────────
@@ -3597,18 +3680,25 @@ function dcRenderLog() {
   tbody.innerHTML = '';
 
   if (dcResults.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="dc-log-empty">No picks yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="dc-log-empty">No picks yet</td></tr>';
     return;
   }
 
   // Show in reverse order (most recent on top)
   [...dcResults].reverse().forEach(r => {
     const tr = document.createElement('tr');
+    const tradeTd = r.trade
+      ? `<td><span class="dc-trade-badge">⇄ ${r.trade}</span></td>`
+      : `<td style="color:#475569;">—</td>`;
+    const posTd = r.pos
+      ? `<td><span class="dc-pos-badge">${r.pos}</span></td>`
+      : `<td></td>`;
     tr.innerHTML = `
       <td style="color:#64748b;">${r.pick}</td>
       <td>${r.teamName}</td>
+      ${tradeTd}
       <td style="font-weight:600;">${r.playerName}</td>
-      <td><span class="dc-pos-badge">${r.pos}</span></td>
+      ${posTd}
     `;
     tbody.appendChild(tr);
   });
