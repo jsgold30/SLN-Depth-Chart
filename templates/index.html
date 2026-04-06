@@ -857,18 +857,26 @@
     .dc-pool-empty { color: #64748b; font-size: 0.82rem; padding: 20px 0; text-align: center; }
     /* Draft order */
     .dc-order-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-    .dc-order-list { display: flex; flex-direction: column; gap: 4px; max-height: 680px; overflow-y: auto; }
-    .dc-order-row {
-      display: flex; align-items: center; gap: 8px;
-      background: #1e293b; border-radius: 6px; padding: 6px 10px;
-      border: 1px solid #2d3f55; user-select: none;
+    .dc-order-list { max-height: 680px; overflow-y: auto; overflow-x: auto; }
+    /* Draft order — table layout so columns align */
+    .dc-order-table {
+      width: 100%; border-collapse: collapse;
     }
-    .dc-order-row.on-clock {
-      border-color: #0ea5e9; background: #0c2033;
+    .dc-order-table th {
+      background: #151f2e; color: #475569; font-size: 0.63rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 5px 8px; text-align: left; border-bottom: 1px solid #1e293b;
+      white-space: nowrap;
     }
-    .dc-order-row.dc-drafted { opacity: 0.55; }
+    .dc-order-table td {
+      padding: 5px 8px; border-bottom: 1px solid #1a2535;
+      vertical-align: middle; white-space: nowrap;
+    }
+    .dc-order-table tr.on-clock td { background: #0c2033; }
+    .dc-order-table tr.dc-drafted td { opacity: 0.55; }
+    .dc-order-table tr:last-child td { border-bottom: none; }
     .dc-clock-badge {
-      font-size: 0.65rem; font-weight: 700; color: #0ea5e9;
+      font-size: 0.63rem; font-weight: 700; color: #0ea5e9;
       background: rgba(14,165,233,0.12); border-radius: 4px; padding: 1px 6px;
       white-space: nowrap;
     }
@@ -924,14 +932,45 @@
     .dc-log-table td { padding: 6px 8px; border-bottom: 1px solid #1a2535; color: #e2e8f0; }
     .dc-log-table tr:last-child td { border-bottom: none; }
     .dc-log-empty { color: #64748b; font-size: 0.82rem; padding: 16px 0; text-align: center; }
-    /* CSV upload zone */
-    .dc-upload-label {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 5px 12px; border-radius: 6px; border: 1px dashed #334155;
-      color: #94a3b8; font-size: 0.75rem; cursor: pointer; background: #111827;
+    /* Add Pick modal */
+    .dc-add-pick-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      z-index: 9000; align-items: center; justify-content: center;
     }
-    .dc-upload-label:hover { border-color: #0ea5e9; color: #e2e8f0; }
-    #dcCsvInput { display: none; }
+    .dc-add-pick-overlay.open { display: flex; }
+    .dc-add-pick-modal {
+      background: #1a2535; border: 1px solid #2d3f55; border-radius: 10px;
+      padding: 22px 24px; width: 360px; max-width: 94vw;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .dc-add-pick-modal h3 {
+      margin: 0; font-size: 0.88rem; font-weight: 700; color: #e2e8f0;
+    }
+    .dc-add-pick-field { display: flex; flex-direction: column; gap: 5px; }
+    .dc-add-pick-field label { font-size: 0.72rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .dc-add-pick-field select {
+      background: #111827; border: 1px solid #2d3f55; color: #e2e8f0;
+      border-radius: 6px; padding: 7px 10px; font-size: 0.82rem;
+    }
+    .dc-add-pick-field select:focus { outline: none; border-color: #0ea5e9; }
+    .dc-trade-toggle-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.8rem; color: #94a3b8; cursor: pointer;
+    }
+    .dc-trade-toggle-row input[type=checkbox] { accent-color: #0ea5e9; width: 14px; height: 14px; cursor: pointer; }
+    .dc-trade-from-field { display: none; flex-direction: column; gap: 5px; }
+    .dc-trade-from-field.visible { display: flex; }
+    .dc-add-pick-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .dc-btn-cancel {
+      padding: 7px 16px; border-radius: 6px; border: 1px solid #334155;
+      background: transparent; color: #94a3b8; font-size: 0.8rem; cursor: pointer;
+    }
+    .dc-btn-cancel:hover { border-color: #475569; color: #e2e8f0; }
+    .dc-btn-confirm {
+      padding: 7px 16px; border-radius: 6px; border: none;
+      background: #0ea5e9; color: #fff; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+    }
+    .dc-btn-confirm:hover { background: #0284c7; }
     .dc-add-round-btn {
       padding: 5px 12px; border-radius: 6px; border: 1px solid #334155;
       background: #1e293b; color: #94a3b8; font-size: 0.75rem; cursor: pointer;
@@ -1328,10 +1367,7 @@
       <div class="card">
         <div class="card-title">Draft Order</div>
         <div class="dc-order-controls">
-          <label class="dc-upload-label" title="Upload CSV with team names (one per line)">
-            ⬆ Upload CSV
-            <input type="file" id="dcCsvInput" accept=".csv,.txt" onchange="dcLoadCsv(this)">
-          </label>
+          <button class="dc-add-round-btn" style="background:#0ea5e9;border-color:#0ea5e9;color:#fff;font-weight:700;" onclick="dcShowAddPick()">+ Add Pick</button>
           <button class="dc-add-round-btn" onclick="dcAddRound()">+ Add Round</button>
           <button class="dc-reset-btn" onclick="dcResetDraft()">↺ Reset</button>
         </div>
@@ -1343,7 +1379,7 @@
         </div>
         <div class="dc-order-list" id="dcOrderList">
           <div style="color:#64748b;font-size:0.78rem;text-align:center;padding:16px 0;">
-            Upload a CSV or add teams below
+            Use <strong style="color:#94a3b8;">+ Add Pick</strong> to build the draft order
           </div>
         </div>
       </div>
@@ -1374,6 +1410,33 @@
   </div><!-- /tabDraft -->
 
 </div><!-- /container -->
+
+<!-- Add Pick Modal -->
+<div class="dc-add-pick-overlay" id="dcAddPickOverlay" onclick="if(event.target===this)dcHideAddPick()">
+  <div class="dc-add-pick-modal">
+    <h3>Add Pick to Draft Order</h3>
+
+    <div class="dc-add-pick-field">
+      <label>Team</label>
+      <select id="dcPickTeamSel"></select>
+    </div>
+
+    <label class="dc-trade-toggle-row">
+      <input type="checkbox" id="dcTradeToggle" onchange="dcToggleTrade(this)">
+      Pick received via trade
+    </label>
+
+    <div class="dc-trade-from-field dc-add-pick-field" id="dcTradeFromField">
+      <label>Original Team (traded from)</label>
+      <select id="dcPickFromSel"></select>
+    </div>
+
+    <div class="dc-add-pick-actions">
+      <button class="dc-btn-cancel" onclick="dcHideAddPick()">Cancel</button>
+      <button class="dc-btn-confirm" onclick="dcConfirmAddPick()">Add Pick</button>
+    </div>
+  </div>
+</div>
 <div style="text-align:right;padding:8px 16px;font-size:0.68rem;color:#334155;">v{{ version }}</div>
 
 <script>
@@ -3611,67 +3674,55 @@ function dcAddRound() {
   dcRenderOrder();
 }
 
-// ── CSV upload ────────────────────────────────────────────────────────────
-function dcLoadCsv(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const lines = e.target.result.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+// ── Add Pick modal ────────────────────────────────────────────────────────
+function dcPopulateTeamSelects() {
+  const opts = TM_TEAMS.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+  document.getElementById('dcPickTeamSel').innerHTML = opts;
+  document.getElementById('dcPickFromSel').innerHTML = opts;
+}
 
-    const newOrder = [];
-    let preDrafted = 0;
+function dcShowAddPick() {
+  dcPopulateTeamSelects();
+  document.getElementById('dcTradeToggle').checked = false;
+  document.getElementById('dcTradeFromField').classList.remove('visible');
+  document.getElementById('dcAddPickOverlay').classList.add('open');
+}
 
-    for (const line of lines) {
-      // Skip round headers like "Round 1:", "Round 2:", etc.
-      if (/^round\s*\d+/i.test(line)) continue;
+function dcHideAddPick() {
+  document.getElementById('dcAddPickOverlay').classList.remove('open');
+}
 
-      // Split CSV fields (handle quoted fields simply)
-      const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+function dcToggleTrade(cb) {
+  document.getElementById('dcTradeFromField').classList.toggle('visible', cb.checked);
+}
 
-      // Skip header row — first cell is "#" or "Pick" or numeric-ish
-      if (/^#|^pick$/i.test(cols[0])) continue;
+function dcConfirmAddPick() {
+  const receivingName = document.getElementById('dcPickTeamSel').value;
+  const isViatrade    = document.getElementById('dcTradeToggle').checked;
+  const fromName      = isViatrade ? document.getElementById('dcPickFromSel').value : '';
 
-      // Data row: cols[0]=pick#, cols[1]=team, cols[2]=trade, cols[3]=player
-      const teamName     = cols[1] || '';
-      const trade        = cols[2] || '';
-      const playerPreFil = cols[3] || '';
+  const receiving = TM_TEAMS.find(t => t.name === receivingName) || { name: receivingName, abbr: receivingName.slice(0,3).toUpperCase(), c1: '#1e293b', c2: '#334155', url: '' };
+  const fromTeam  = fromName ? (TM_TEAMS.find(t => t.name === fromName) || null) : null;
 
-      if (!teamName) continue;
+  const displayName = fromTeam ? `${receivingName} (via ${fromTeam.abbr})` : receivingName;
+  const tradeBadge  = fromTeam ? `${fromTeam.abbr} to ${receiving.abbr}` : '';
 
-      // Try to match base team name (ignore "via X", "from X" suffixes for logo lookup)
-      const baseName = teamName.replace(/\s*[\(\(].*/,'').replace(/\s*(via|from)\s+\w+/gi,'').trim();
-      const found = TM_TEAMS.find(t =>
-        t.name.toLowerCase() === baseName.toLowerCase() ||
-        t.name.toLowerCase() === teamName.toLowerCase()
-      );
+  dcOrder.push({
+    name: displayName,
+    abbr: receiving.abbr,
+    c1:   receiving.c1,
+    c2:   receiving.c2,
+    url:  receiving.url,
+    trade: tradeBadge,
+    draftedPlayer: '',
+    draftedPos: ''
+  });
 
-      const entry = found
-        ? { name: teamName, abbr: found.abbr, c1: found.c1, c2: found.c2, url: found.url, trade, draftedPlayer: playerPreFil, draftedPos: '' }
-        : { name: teamName, abbr: teamName.slice(0,3).toUpperCase(), c1: '#1e293b', c2: '#334155', url: '', trade, draftedPlayer: playerPreFil, draftedPos: '' };
-
-      newOrder.push(entry);
-
-      // If CSV already has a player, count as pre-drafted
-      if (playerPreFil) {
-        preDrafted++;
-        dcResults.push({ pick: newOrder.length, teamName: entry.name, trade, playerName: playerPreFil, pos: '' });
-      }
-    }
-
-    dcOrder       = newOrder;
-    dcCurrentPick = preDrafted;   // start clock after pre-filled picks
-    if (preDrafted === 0) dcResults = [];
-    dcPool = [...dcAllPlayers];
-    dcSave();
-    dcRenderPool();
-    dcRenderOrder();
-    dcRenderLog();
-    document.getElementById('dcPoolStatus').textContent =
-      `Draft order loaded: ${newOrder.length} picks${preDrafted ? `, ${preDrafted} pre-filled` : ''}.`;
-  };
-  reader.readAsText(file);
-  input.value = '';
+  dcHideAddPick();
+  dcSave();
+  dcRenderOrder();
+  document.getElementById('dcPoolStatus').textContent =
+    `Pick added: ${displayName}${tradeBadge ? ' · ' + tradeBadge : ''}`;
 }
 
 // ── Render draft log ──────────────────────────────────────────────────────
