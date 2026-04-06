@@ -574,7 +574,7 @@ def fetch_draft_players():
         soup = BeautifulSoup(r.text, 'html.parser')
         players = []
         for row in soup.find_all('tr'):
-            cells = row.find_all('td')
+            cells = row.find_all('td', recursive=False)
             if len(cells) < 11:
                 continue
             name_cell = cells[0]
