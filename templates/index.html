@@ -857,7 +857,7 @@
     .dc-pool-empty { color: #64748b; font-size: 0.82rem; padding: 20px 0; text-align: center; }
     /* Draft order */
     .dc-order-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-    .dc-order-list { max-height: 680px; overflow-y: auto; overflow-x: auto; }
+    .dc-order-list { max-height: calc(100vh - 260px); overflow-y: auto; overflow-x: auto; }
     /* Draft order — table layout so columns align */
     .dc-order-table {
       width: 100%; border-collapse: collapse;
@@ -1392,7 +1392,7 @@
       <!-- Draft Log -->
       <div class="card">
         <div class="card-title">Draft Results</div>
-        <div style="overflow-x:auto;max-height:680px;overflow-y:auto;">
+        <div style="overflow-x:auto;max-height:calc(100vh - 260px);overflow-y:auto;">
           <table class="dc-log-table" id="dcLogTable">
             <thead>
               <tr>
