@@ -3833,14 +3833,19 @@ function dcLoadCsv(input) {
     const lines = e.target.result.split('\n');
     const newOrder = [];
     let currentRound = 1;
+    let blankSeen    = false; // blank row acts as round break if followed by data
     for (let raw of lines) {
       const line = raw.trim();
-      if (!line) continue;
+      // Blank row: flag as potential round separator
+      if (!line) { blankSeen = true; continue; }
       // Round header: "Round 1:", "Round 2:", etc.
       const roundMatch = line.match(/^Round\s*(\d+)\s*:?$/i);
-      if (roundMatch) { currentRound = parseInt(roundMatch[1]); continue; }
-      // Column header row
-      if (/^#\s*,/i.test(line) || /^pick\s*,/i.test(line)) continue;
+      if (roundMatch) { currentRound = parseInt(roundMatch[1]); blankSeen = false; continue; }
+      // Column header row (# or Pick in first column)
+      if (/^#\s*,/i.test(line) || /^pick\s*,/i.test(line)) { blankSeen = false; continue; }
+      // If a blank was seen since last data row and no explicit Round header, increment round
+      if (blankSeen && newOrder.length > 0) { currentRound++; }
+      blankSeen = false;
       const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
       // Expect at least: #, Team
       if (parts.length < 2) continue;
