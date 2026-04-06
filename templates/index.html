@@ -824,7 +824,7 @@
     .dc-filter-btn.active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
     .dc-filter-btn:hover:not(.active) { background: #273549; color: #e2e8f0; }
     /* Player pool table */
-    .dc-pool-wrap { overflow-x: auto; }
+    .dc-pool-wrap { overflow-x: auto; max-height: 220px; overflow-y: auto; }
     .dc-pool-table {
       width: 100%; border-collapse: collapse; font-size: 0.78rem;
     }
@@ -857,7 +857,7 @@
     .dc-pool-empty { color: #64748b; font-size: 0.82rem; padding: 20px 0; text-align: center; }
     /* Draft order */
     .dc-order-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-    .dc-order-list { display: flex; flex-direction: column; gap: 4px; max-height: 340px; overflow-y: auto; }
+    .dc-order-list { display: flex; flex-direction: column; gap: 4px; max-height: 680px; overflow-y: auto; }
     .dc-order-row {
       display: flex; align-items: center; gap: 8px;
       background: #1e293b; border-radius: 6px; padding: 6px 10px;
@@ -1321,7 +1321,7 @@
       <!-- Draft Log -->
       <div class="card">
         <div class="card-title">Draft Results</div>
-        <div style="overflow-x:auto;">
+        <div style="overflow-x:auto;max-height:680px;overflow-y:auto;">
           <table class="dc-log-table" id="dcLogTable">
             <thead>
               <tr>
