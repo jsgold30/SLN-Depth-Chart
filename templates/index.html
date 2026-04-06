@@ -3527,12 +3527,32 @@ function dcGradeClass(g) {
 
 // ── Persist / restore state ──────────────────────────────────────────────
 function dcSave() {
+  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, results: dcResults };
+  // Save to server (shared across all devices)
+  fetch('/save_draft', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(() => {});
+  // Also mirror to localStorage as a fast cache
+  try { localStorage.setItem(DC_LS_KEY, JSON.stringify(payload)); } catch(e) {}
+}
+
+async function dcLoadFromServer() {
   try {
-    localStorage.setItem(DC_LS_KEY, JSON.stringify({
-      pool: dcPool, order: dcOrder,
-      currentPick: dcCurrentPick, results: dcResults
-    }));
-  } catch(e) {}
+    const res = await fetch('/load_draft');
+    if (!res.ok) return false;
+    const s = await res.json();
+    if (!s || (!s.pool && !s.order)) return false;
+    dcPool        = s.pool        || [];
+    dcOrder       = s.order       || [];
+    dcCurrentPick = s.currentPick || 0;
+    dcResults     = s.results     || [];
+    _dcMigrateTrades();
+    // Cache locally
+    try { localStorage.setItem(DC_LS_KEY, JSON.stringify(s)); } catch(e) {}
+    return dcPool.length > 0 || dcOrder.length > 0;
+  } catch(e) { return false; }
 }
 
 function dcLoad() {
@@ -3544,17 +3564,20 @@ function dcLoad() {
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
-    // Migrate: drop any trade values that aren't "AAA to BBB" abbr format
-    dcOrder.forEach(entry => {
-      if (entry.trade) {
-        const parts = entry.trade.split(' to ').map(p => p.trim());
-        if (parts.length !== 2 || parts[0].length > 5 || parts[1].length > 5) {
-          entry.trade = null;
-        }
-      }
-    });
+    _dcMigrateTrades();
     return dcPool.length > 0 || dcOrder.length > 0;
   } catch(e) { return false; }
+}
+
+function _dcMigrateTrades() {
+  dcOrder.forEach(entry => {
+    if (entry.trade) {
+      const parts = entry.trade.split(' to ').map(p => p.trim());
+      if (parts.length !== 2 || parts[0].length > 5 || parts[1].length > 5) {
+        entry.trade = null;
+      }
+    }
+  });
 }
 
 // ── Fetch players from server ────────────────────────────────────────────
@@ -3562,8 +3585,9 @@ async function dcFetchPlayers() {
   const statusEl = document.getElementById('dcPoolStatus');
   statusEl.textContent = 'Loading player pool…';
 
-  // Try restoring saved state first
-  const restored = dcLoad();
+  // Try server first (shared across all devices), fall back to localStorage
+  let restored = await dcLoadFromServer();
+  if (!restored) restored = dcLoad();
 
   try {
     const resp = await fetch('/fetch_draft_players', {
@@ -4132,8 +4156,8 @@ function dcRenderLog() {
     return;
   }
 
-  // Show in reverse order (most recent on top)
-  [...dcResults].reverse().forEach(r => {
+  // Show in ascending order (pick 1 on top)
+  dcResults.forEach(r => {
     const tr = document.createElement('tr');
     const tradeTd = r.trade
       ? `<td><span class="dc-trade-badge">⇄ ${r.trade}</span></td>`

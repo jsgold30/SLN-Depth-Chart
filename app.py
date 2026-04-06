@@ -18,6 +18,10 @@ def get_db():
     conn.execute('''CREATE TABLE IF NOT EXISTS team_charts
                     (team_url TEXT PRIMARY KEY, data TEXT,
                      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS draft_state
+                    (id INTEGER PRIMARY KEY CHECK (id = 1),
+                     data TEXT,
+                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     conn.commit()
     return conn
 
@@ -606,6 +610,31 @@ def fetch_draft_players():
         return jsonify({'error': 'Request timed out.'}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/save_draft', methods=['POST'])
+def save_draft():
+    data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'No data'}), 400
+    db = get_db()
+    db.execute('''INSERT INTO draft_state (id, data, updated_at)
+                  VALUES (1, ?, CURRENT_TIMESTAMP)
+                  ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at''',
+               (json.dumps(data),))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+
+@app.route('/load_draft', methods=['GET'])
+def load_draft():
+    db = get_db()
+    row = db.execute('SELECT data FROM draft_state WHERE id = 1').fetchone()
+    db.close()
+    if row:
+        return jsonify(json.loads(row[0]))
+    return jsonify({})
 
 
 if __name__ == '__main__':
