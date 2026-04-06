@@ -808,6 +808,41 @@
       .tm-fa-sal-input { width: 90px; }
     }
 
+    /* ── Draft Center mobile ───────────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      /* Tab nav: shrink text so three tabs fit */
+      .tab-nav { gap: 2px; padding: 3px; }
+      .tab-btn { font-size: 0.62rem; padding: 8px 6px; letter-spacing: 0.5px; }
+
+      /* Draft Order + Results: stack vertically */
+      .dc-bottom-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+      }
+
+      /* Order list and results: use fixed heights that work on phone */
+      .dc-order-list { max-height: 340px; }
+      #tabDraft .dc-log-table-wrap { max-height: 300px !important; }
+
+      /* Controls: allow wrapping */
+      .dc-order-controls { flex-wrap: wrap; gap: 6px; }
+      .dc-add-round-btn { font-size: 0.7rem; padding: 5px 9px; }
+
+      /* Player pool: shorter on mobile so order/results are visible without too much scroll */
+      .dc-pool-wrap { max-height: 180px; }
+
+      /* On-the-clock banner: tighter */
+      .dc-on-clock-banner { padding: 8px 10px; }
+      .dc-on-clock-team { font-size: 0.8rem; }
+
+      /* Draft order table: let name column flex */
+      .dc-order-table { min-width: 320px; }
+
+      /* Filter bar wraps */
+      .dc-filter-bar { flex-wrap: wrap; gap: 4px; }
+    }
+
     /* ── Draft Center ──────────────────────────────────────────────────────── */
     #tabDraft .card { margin-bottom: 16px; }
     .dc-section-title {
@@ -1388,7 +1423,7 @@
     </div>
 
     <!-- Draft Order + Log side by side on wide screens -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="dc-bottom-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
 
       <!-- Draft Order -->
       <div class="card">
@@ -1431,7 +1466,7 @@
           <button id="dcExportBtn" onclick="dcExportCsv()" style="display:none;"
             class="dc-add-round-btn" title="Export draft results as CSV">⬇ Export CSV</button>
         </div>
-        <div style="overflow-x:auto;max-height:calc(100vh - 260px);overflow-y:auto;">
+        <div class="dc-log-table-wrap" style="overflow-x:auto;max-height:calc(100vh - 260px);overflow-y:auto;">
           <table class="dc-log-table" id="dcLogTable">
             <thead>
               <tr>
