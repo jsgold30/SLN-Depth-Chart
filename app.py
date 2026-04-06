@@ -556,6 +556,58 @@ def fetch_salary_roster():
         return jsonify({'error': f'Error parsing salary data: {str(e)}'}), 500
 
 
+@app.route('/fetch_draft_players', methods=['POST'])
+def fetch_draft_players():
+    try:
+        headers = {
+            'User-Agent': (
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/120.0.0.0 Safari/537.36'
+            )
+        }
+        r = requests.get(
+            'https://www.simleaguenirvana.com/draft/draftplayers-pot.htm',
+            headers=headers,
+            timeout=15
+        )
+        soup = BeautifulSoup(r.text, 'html.parser')
+        players = []
+        for row in soup.find_all('tr'):
+            cells = row.find_all('td')
+            if len(cells) < 11:
+                continue
+            name_cell = cells[0]
+            name = name_cell.get_text(strip=True)
+            if name == 'Name' or not name:
+                continue
+            link = name_cell.find('a')
+            pid = ''
+            if link and link.get('href'):
+                m = re.search(r'player(\d+)\.htm', link['href'])
+                if m:
+                    pid = m.group(1)
+            players.append({
+                'id': pid,
+                'name': name,
+                'pos': cells[1].get_text(strip=True),
+                'ht': cells[2].get_text(strip=True),
+                'wt': cells[3].get_text(strip=True),
+                'age': cells[4].get_text(strip=True),
+                'in_rat': cells[5].get_text(strip=True),
+                'out_rat': cells[6].get_text(strip=True),
+                'hn': cells[7].get_text(strip=True),
+                'df': cells[8].get_text(strip=True),
+                'reb': cells[9].get_text(strip=True),
+                'pot': cells[10].get_text(strip=True),
+            })
+        return jsonify({'players': players})
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Request timed out.'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)

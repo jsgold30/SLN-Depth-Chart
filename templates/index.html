@@ -807,6 +807,117 @@
     @media (max-width: 600px) {
       .tm-fa-sal-input { width: 90px; }
     }
+
+    /* ── Draft Center ──────────────────────────────────────────────────────── */
+    #tabDraft .card { margin-bottom: 16px; }
+    .dc-section-title {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: #94a3b8; margin-bottom: 10px;
+    }
+    /* Filter bar */
+    .dc-filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .dc-filter-btn {
+      padding: 4px 12px; border-radius: 20px; border: 1px solid #334155;
+      background: #1e293b; color: #94a3b8; font-size: 0.75rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .dc-filter-btn.active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+    .dc-filter-btn:hover:not(.active) { background: #273549; color: #e2e8f0; }
+    /* Player pool table */
+    .dc-pool-wrap { overflow-x: auto; }
+    .dc-pool-table {
+      width: 100%; border-collapse: collapse; font-size: 0.78rem;
+    }
+    .dc-pool-table th {
+      background: #1e293b; color: #64748b; font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 6px 8px; text-align: left; white-space: nowrap;
+      position: sticky; top: 0; z-index: 1;
+    }
+    .dc-pool-table td { padding: 6px 8px; border-bottom: 1px solid #1e293b; color: #e2e8f0; white-space: nowrap; }
+    .dc-pool-table tr:hover td { background: #1a2535; }
+    .dc-pool-table tr.dc-hidden { display: none; }
+    .dc-pick-num { color: #64748b; font-size: 0.7rem; }
+    .dc-pos-badge {
+      display: inline-block; padding: 1px 6px; border-radius: 4px;
+      font-size: 0.68rem; font-weight: 700; background: #1e3a5f; color: #7dd3fc;
+    }
+    .dc-grade { font-weight: 600; }
+    .dc-grade-A { color: #4ade80; }
+    .dc-grade-B { color: #a3e635; }
+    .dc-grade-C { color: #fbbf24; }
+    .dc-grade-D { color: #f97316; }
+    .dc-grade-F { color: #f87171; }
+    .dc-draft-btn {
+      padding: 3px 11px; border-radius: 5px; border: none;
+      background: #0ea5e9; color: #fff; font-size: 0.72rem; font-weight: 700;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .dc-draft-btn:hover { background: #38bdf8; }
+    .dc-pool-empty { color: #64748b; font-size: 0.82rem; padding: 20px 0; text-align: center; }
+    /* Draft order */
+    .dc-order-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    .dc-order-list { display: flex; flex-direction: column; gap: 4px; max-height: 340px; overflow-y: auto; }
+    .dc-order-row {
+      display: flex; align-items: center; gap: 8px;
+      background: #1e293b; border-radius: 6px; padding: 6px 10px;
+      border: 1px solid #2d3f55; user-select: none;
+    }
+    .dc-order-row.on-clock {
+      border-color: #0ea5e9; background: #0c2033;
+    }
+    .dc-order-row.dc-drafted { opacity: 0.4; }
+    .dc-clock-badge {
+      font-size: 0.65rem; font-weight: 700; color: #0ea5e9;
+      background: rgba(14,165,233,0.12); border-radius: 4px; padding: 1px 6px;
+      white-space: nowrap;
+    }
+    .dc-pick-badge {
+      min-width: 28px; text-align: center; font-size: 0.7rem;
+      font-weight: 700; color: #64748b;
+    }
+    .dc-order-logo {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.45rem; font-weight: 800; overflow: hidden;
+    }
+    .dc-order-logo img { width: 100%; height: 100%; object-fit: cover; }
+    .dc-order-name { flex: 1; font-size: 0.78rem; color: #e2e8f0; }
+    .dc-order-move { display: flex; flex-direction: column; gap: 1px; }
+    .dc-move-btn {
+      background: none; border: none; color: #475569; cursor: pointer;
+      padding: 1px 4px; font-size: 0.65rem; line-height: 1;
+    }
+    .dc-move-btn:hover { color: #94a3b8; }
+    .dc-order-del { background: none; border: none; color: #475569; cursor: pointer; font-size: 0.8rem; padding: 0 2px; }
+    .dc-order-del:hover { color: #ef4444; }
+    /* Draft log */
+    .dc-log-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .dc-log-table th {
+      background: #1e293b; color: #64748b; font-size: 0.67rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 8px; text-align: left;
+    }
+    .dc-log-table td { padding: 6px 8px; border-bottom: 1px solid #1a2535; color: #e2e8f0; }
+    .dc-log-table tr:last-child td { border-bottom: none; }
+    .dc-log-empty { color: #64748b; font-size: 0.82rem; padding: 16px 0; text-align: center; }
+    /* CSV upload zone */
+    .dc-upload-label {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 6px; border: 1px dashed #334155;
+      color: #94a3b8; font-size: 0.75rem; cursor: pointer; background: #111827;
+    }
+    .dc-upload-label:hover { border-color: #0ea5e9; color: #e2e8f0; }
+    #dcCsvInput { display: none; }
+    .dc-add-round-btn {
+      padding: 5px 12px; border-radius: 6px; border: 1px solid #334155;
+      background: #1e293b; color: #94a3b8; font-size: 0.75rem; cursor: pointer;
+    }
+    .dc-add-round-btn:hover { background: #273549; color: #e2e8f0; }
+    .dc-reset-btn {
+      padding: 5px 12px; border-radius: 6px; border: 1px solid #7f1d1d;
+      background: #1c0808; color: #f87171; font-size: 0.75rem; cursor: pointer; margin-left: auto;
+    }
+    .dc-reset-btn:hover { background: #2d1010; }
   </style>
 </head>
 <body>
@@ -820,6 +931,7 @@
   <div class="tab-nav">
     <button class="tab-btn active" id="tabBtnDepth" onclick="switchTab('depth')">⛹ Depth Chart</button>
     <button class="tab-btn" id="tabBtnTrade" onclick="switchTab('trade')">⇄ Trade Machine</button>
+    <button class="tab-btn" id="tabBtnDraft" onclick="switchTab('draft')">🏀 Draft Center</button>
   </div>
 
   <!-- ── TAB 1: Depth Chart Builder ── -->
@@ -1144,6 +1256,92 @@
 
   </div><!-- /tabTrade -->
 
+  <!-- ── TAB 3: Draft Center ── -->
+  <div class="tab-panel" id="tabDraft">
+
+    <!-- Player Pool -->
+    <div class="card">
+      <div class="card-title">Player Pool</div>
+      <div class="dc-filter-bar">
+        <button class="dc-filter-btn active" data-pos="ALL" onclick="dcFilterPos(this)">All</button>
+        <button class="dc-filter-btn" data-pos="PG" onclick="dcFilterPos(this)">PG</button>
+        <button class="dc-filter-btn" data-pos="SG" onclick="dcFilterPos(this)">SG</button>
+        <button class="dc-filter-btn" data-pos="SF" onclick="dcFilterPos(this)">SF</button>
+        <button class="dc-filter-btn" data-pos="PF" onclick="dcFilterPos(this)">PF</button>
+        <button class="dc-filter-btn" data-pos="C"  onclick="dcFilterPos(this)">C</button>
+        <span id="dcPoolCount" style="margin-left:auto;font-size:0.72rem;color:#64748b;align-self:center;"></span>
+      </div>
+      <div id="dcPoolStatus" style="font-size:0.78rem;color:#94a3b8;margin-bottom:8px;min-height:18px;"></div>
+      <div class="dc-pool-wrap">
+        <table class="dc-pool-table" id="dcPoolTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Pos</th>
+              <th>Ht</th>
+              <th>Wt</th>
+              <th>Age</th>
+              <th>In</th>
+              <th>Df</th>
+              <th>Hn</th>
+              <th>Reb</th>
+              <th>Pot</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="dcPoolBody">
+            <tr><td colspan="12" class="dc-pool-empty">Load players to begin draft</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Draft Order + Log side by side on wide screens -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+      <!-- Draft Order -->
+      <div class="card">
+        <div class="card-title">Draft Order</div>
+        <div class="dc-order-controls">
+          <label class="dc-upload-label" title="Upload CSV with team names (one per line)">
+            ⬆ Upload CSV
+            <input type="file" id="dcCsvInput" accept=".csv,.txt" onchange="dcLoadCsv(this)">
+          </label>
+          <button class="dc-add-round-btn" onclick="dcAddRound()">+ Add Round</button>
+          <button class="dc-reset-btn" onclick="dcResetDraft()">↺ Reset</button>
+        </div>
+        <div class="dc-order-list" id="dcOrderList">
+          <div style="color:#64748b;font-size:0.78rem;text-align:center;padding:16px 0;">
+            Upload a CSV or add teams below
+          </div>
+        </div>
+      </div>
+
+      <!-- Draft Log -->
+      <div class="card">
+        <div class="card-title">Draft Results</div>
+        <div style="overflow-x:auto;">
+          <table class="dc-log-table" id="dcLogTable">
+            <thead>
+              <tr>
+                <th>Pick</th>
+                <th>Team</th>
+                <th>Player</th>
+                <th>Pos</th>
+              </tr>
+            </thead>
+            <tbody id="dcLogBody">
+              <tr><td colspan="4" class="dc-log-empty">No picks yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /grid -->
+
+  </div><!-- /tabDraft -->
+
 </div><!-- /container -->
 <div style="text-align:right;padding:8px 16px;font-size:0.68rem;color:#334155;">v{{ version }}</div>
 
@@ -1152,12 +1350,18 @@
 function switchTab(tab) {
   document.getElementById('tabDepth').classList.toggle('active', tab === 'depth');
   document.getElementById('tabTrade').classList.toggle('active', tab === 'trade');
+  document.getElementById('tabDraft').classList.toggle('active', tab === 'draft');
   document.getElementById('tabBtnDepth').classList.toggle('active', tab === 'depth');
   document.getElementById('tabBtnTrade').classList.toggle('active', tab === 'trade');
+  document.getElementById('tabBtnDraft').classList.toggle('active', tab === 'draft');
   // Build Trade Machine logo grids lazily on first visit
   if (tab === 'trade' && !tmLogoGridsBuilt) {
     buildTMLogoGrids();
     tmLogoGridsBuilt = true;
+  }
+  // Load draft players lazily on first visit
+  if (tab === 'draft' && !dcPlayersLoaded) {
+    dcFetchPlayers();
   }
 }
 
@@ -3103,6 +3307,326 @@ window.addEventListener('DOMContentLoaded', () => {
     loadRoster();
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DRAFT CENTER
+// ═══════════════════════════════════════════════════════════════════════════
+let dcPlayersLoaded = false;
+let dcAllPlayers   = [];   // full pool fetched from server
+let dcPool         = [];   // remaining (un-drafted) players
+let dcOrder        = [];   // [{ name, abbr, c1, c2, url }, ...]  current draft order
+let dcCurrentPick  = 0;    // index into dcOrder
+let dcResults      = [];   // [{ pick, teamName, playerName, pos }, ...]
+let dcPosFilter    = 'ALL';
+const DC_LS_KEY    = 'draftCenter_v1';
+
+// ── Grade colour helper ──────────────────────────────────────────────────
+function dcGradeClass(g) {
+  if (!g) return '';
+  const first = g[0].toUpperCase();
+  if (first === 'A') return 'dc-grade dc-grade-A';
+  if (first === 'B') return 'dc-grade dc-grade-B';
+  if (first === 'C') return 'dc-grade dc-grade-C';
+  if (first === 'D') return 'dc-grade dc-grade-D';
+  if (first === 'F') return 'dc-grade dc-grade-F';
+  return 'dc-grade';
+}
+
+// ── Persist / restore state ──────────────────────────────────────────────
+function dcSave() {
+  try {
+    localStorage.setItem(DC_LS_KEY, JSON.stringify({
+      pool: dcPool, order: dcOrder,
+      currentPick: dcCurrentPick, results: dcResults
+    }));
+  } catch(e) {}
+}
+
+function dcLoad() {
+  try {
+    const raw = localStorage.getItem(DC_LS_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    dcPool        = s.pool        || [];
+    dcOrder       = s.order       || [];
+    dcCurrentPick = s.currentPick || 0;
+    dcResults     = s.results     || [];
+    return dcPool.length > 0 || dcOrder.length > 0;
+  } catch(e) { return false; }
+}
+
+// ── Fetch players from server ────────────────────────────────────────────
+async function dcFetchPlayers() {
+  const statusEl = document.getElementById('dcPoolStatus');
+  statusEl.textContent = 'Loading player pool…';
+
+  // Try restoring saved state first
+  const restored = dcLoad();
+
+  try {
+    const resp = await fetch('/fetch_draft_players', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const data = await resp.json();
+    if (data.error) { statusEl.textContent = 'Error: ' + data.error; return; }
+
+    dcAllPlayers = data.players;
+    dcPlayersLoaded = true;
+
+    if (restored && dcPool.length > 0) {
+      // Keep saved pool (drafted players already removed)
+      statusEl.textContent = 'Draft resumed from saved state.';
+    } else {
+      // Fresh start — pool = all players
+      dcPool = [...dcAllPlayers];
+      dcSave();
+      statusEl.textContent = '';
+    }
+
+    dcRenderPool();
+    if (restored) {
+      dcRenderOrder();
+      dcRenderLog();
+    }
+  } catch(e) {
+    statusEl.textContent = 'Failed to load players.';
+  }
+}
+
+// ── Render player pool table ─────────────────────────────────────────────
+function dcRenderPool() {
+  const tbody = document.getElementById('dcPoolBody');
+  tbody.innerHTML = '';
+  let visible = 0;
+
+  dcPool.forEach((p, idx) => {
+    const show = (dcPosFilter === 'ALL' || p.pos === dcPosFilter);
+    if (show) visible++;
+
+    const tr = document.createElement('tr');
+    if (!show) tr.classList.add('dc-hidden');
+
+    tr.innerHTML = `
+      <td class="dc-pick-num">${idx + 1}</td>
+      <td style="white-space:nowrap;">${p.name}</td>
+      <td><span class="dc-pos-badge">${p.pos}</span></td>
+      <td>${p.ht}</td>
+      <td>${p.wt}</td>
+      <td>${p.age}</td>
+      <td class="${dcGradeClass(p.in_rat)}">${p.in_rat}</td>
+      <td class="${dcGradeClass(p.df)}">${p.df}</td>
+      <td class="${dcGradeClass(p.hn)}">${p.hn}</td>
+      <td class="${dcGradeClass(p.reb)}">${p.reb}</td>
+      <td class="${dcGradeClass(p.pot)}">${p.pot}</td>
+      <td><button class="dc-draft-btn" onclick="dcDraftPlayer('${p.id}')">Draft</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  if (dcPool.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="12" class="dc-pool-empty">All players have been drafted</td></tr>';
+  }
+
+  const countEl = document.getElementById('dcPoolCount');
+  countEl.textContent = `${visible} player${visible !== 1 ? 's' : ''}`;
+}
+
+// ── Position filter ──────────────────────────────────────────────────────
+function dcFilterPos(btn) {
+  document.querySelectorAll('.dc-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  dcPosFilter = btn.dataset.pos;
+  dcRenderPool();
+}
+
+// ── Draft a player ───────────────────────────────────────────────────────
+function dcDraftPlayer(playerId) {
+  if (dcOrder.length === 0) {
+    alert('Set up a draft order first.');
+    return;
+  }
+  if (dcCurrentPick >= dcOrder.length) {
+    alert('Draft is complete — all picks have been made.');
+    return;
+  }
+
+  const playerIdx = dcPool.findIndex(p => p.id === playerId);
+  if (playerIdx === -1) return;
+
+  const player  = dcPool[playerIdx];
+  const team    = dcOrder[dcCurrentPick];
+  const pickNum = dcResults.length + 1;
+
+  // Record result
+  dcResults.push({ pick: pickNum, teamName: team.name, playerName: player.name, pos: player.pos });
+
+  // Remove from pool
+  dcPool.splice(playerIdx, 1);
+
+  // Advance pick
+  dcCurrentPick++;
+
+  dcSave();
+  dcRenderPool();
+  dcRenderOrder();
+  dcRenderLog();
+
+  // Scroll log into view
+  document.getElementById('dcLogTable').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Render draft order ───────────────────────────────────────────────────
+function dcRenderOrder() {
+  const list = document.getElementById('dcOrderList');
+  list.innerHTML = '';
+
+  if (dcOrder.length === 0) {
+    list.innerHTML = '<div style="color:#64748b;font-size:0.78rem;text-align:center;padding:16px 0;">Upload a CSV or add teams below</div>';
+    return;
+  }
+
+  dcOrder.forEach((team, idx) => {
+    const onClock  = (idx === dcCurrentPick);
+    const drafted  = (idx < dcCurrentPick);
+
+    const row = document.createElement('div');
+    row.className = 'dc-order-row' + (onClock ? ' on-clock' : '') + (drafted ? ' dc-drafted' : '');
+
+    const imgFile = team.url ? team.url.replace('.htm', '.png') : '';
+    const logoHtml = imgFile
+      ? `<div class="dc-order-logo" style="background:linear-gradient(135deg,${team.c1||'#1e293b'},${team.c2||'#334155'});">
+           <img src="/static/logos/${imgFile}" alt="${team.abbr||''}"
+             onerror="this.style.display='none';">
+         </div>`
+      : `<div class="dc-order-logo" style="background:linear-gradient(135deg,${team.c1||'#1e293b'},${team.c2||'#334155'});">
+           <span>${team.abbr||'?'}</span>
+         </div>`;
+
+    row.innerHTML = `
+      <span class="dc-pick-badge">${idx + 1}</span>
+      ${logoHtml}
+      <span class="dc-order-name">${team.name}</span>
+      ${onClock ? '<span class="dc-clock-badge">ON THE CLOCK</span>' : ''}
+      ${!drafted ? `
+        <div class="dc-order-move">
+          <button class="dc-move-btn" onclick="dcMoveOrder(${idx},-1)" title="Move up">▲</button>
+          <button class="dc-move-btn" onclick="dcMoveOrder(${idx},1)"  title="Move down">▼</button>
+        </div>
+        <button class="dc-order-del" onclick="dcRemoveOrder(${idx})" title="Remove">✕</button>
+      ` : ''}
+    `;
+    list.appendChild(row);
+  });
+}
+
+// ── Move/remove order rows ────────────────────────────────────────────────
+function dcMoveOrder(idx, dir) {
+  const newIdx = idx + dir;
+  if (newIdx < dcCurrentPick || newIdx >= dcOrder.length) return;
+  const tmp = dcOrder[idx];
+  dcOrder[idx] = dcOrder[newIdx];
+  dcOrder[newIdx] = tmp;
+  dcSave();
+  dcRenderOrder();
+}
+
+function dcRemoveOrder(idx) {
+  if (idx < dcCurrentPick) return;
+  dcOrder.splice(idx, 1);
+  dcSave();
+  dcRenderOrder();
+}
+
+// ── Add another round ────────────────────────────────────────────────────
+function dcAddRound() {
+  if (dcOrder.length === 0) {
+    alert('Set up at least one round via CSV first, then use Add Round to repeat it.');
+    return;
+  }
+  // Determine round 1 (first N picks before any repeated pattern)
+  // Just duplicate the full current order as another round
+  const round1 = dcOrder.slice(0, Math.min(29, dcOrder.length));
+  round1.forEach(t => dcOrder.push({ ...t }));
+  dcSave();
+  dcRenderOrder();
+}
+
+// ── CSV upload ────────────────────────────────────────────────────────────
+function dcLoadCsv(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const lines = e.target.result.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    // Strip header if present (e.g. "Team Name" or "Team")
+    const firstLower = lines[0] ? lines[0].toLowerCase() : '';
+    const start = (firstLower === 'team' || firstLower === 'team name') ? 1 : 0;
+
+    const newOrder = [];
+    for (let i = start; i < lines.length; i++) {
+      const name = lines[i];
+      // Match against TM_TEAMS
+      const found = TM_TEAMS.find(t => t.name.toLowerCase() === name.toLowerCase());
+      if (found) {
+        newOrder.push({ name: found.name, abbr: found.abbr, c1: found.c1, c2: found.c2, url: found.url });
+      } else {
+        // Unknown team — add as plain entry
+        newOrder.push({ name, abbr: name.slice(0,3).toUpperCase(), c1: '#1e293b', c2: '#334155', url: '' });
+      }
+    }
+
+    dcOrder = newOrder;
+    dcCurrentPick = 0;
+    dcResults = [];
+    dcPool = [...dcAllPlayers];
+    dcSave();
+    dcRenderPool();
+    dcRenderOrder();
+    dcRenderLog();
+    document.getElementById('dcPoolStatus').textContent = `Draft order loaded: ${newOrder.length} picks.`;
+  };
+  reader.readAsText(file);
+  input.value = ''; // reset so same file can be re-uploaded
+}
+
+// ── Render draft log ──────────────────────────────────────────────────────
+function dcRenderLog() {
+  const tbody = document.getElementById('dcLogBody');
+  tbody.innerHTML = '';
+
+  if (dcResults.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="dc-log-empty">No picks yet</td></tr>';
+    return;
+  }
+
+  // Show in reverse order (most recent on top)
+  [...dcResults].reverse().forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:#64748b;">${r.pick}</td>
+      <td>${r.teamName}</td>
+      <td style="font-weight:600;">${r.playerName}</td>
+      <td><span class="dc-pos-badge">${r.pos}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Reset draft ───────────────────────────────────────────────────────────
+function dcResetDraft() {
+  if (!confirm('Reset the entire draft? This will clear all picks and restore the full player pool.')) return;
+  dcPool        = [...dcAllPlayers];
+  dcCurrentPick = 0;
+  dcResults     = [];
+  // Keep draft order
+  dcSave();
+  dcRenderPool();
+  dcRenderOrder();
+  dcRenderLog();
+  document.getElementById('dcPoolStatus').textContent = 'Draft reset.';
+}
 </script>
 </body>
 </html>
