@@ -3837,7 +3837,7 @@ function dcLoadCsv(input) {
       const line = raw.trim();
       if (!line) continue;
       // Round header: "Round 1:", "Round 2:", etc.
-      const roundMatch = line.match(/^Round\s*(\d+)\s*:?$/i);
+      const roundMatch = line.match(/^Round\s*(\d+)\s*:?\s*(?:,.*)?$/i);
       if (roundMatch) { currentRound = parseInt(roundMatch[1]); continue; }
       // Column header row (# or Pick in first column)
       if (/^#\s*,/i.test(line) || /^pick\s*,/i.test(line)) continue;
