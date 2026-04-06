@@ -875,6 +875,8 @@
     .dc-order-table tr.on-clock td { background: #0c2033; }
     .dc-order-table tr.dc-drafted td { opacity: 0.55; }
     .dc-order-table tr:last-child td { border-bottom: none; }
+    .dc-order-table tr.dc-drag-source td { opacity: 0.35; }
+    .dc-order-table tr.dc-drag-over td { background: #1e3a52; border-top: 2px solid #0ea5e9; }
     .dc-clock-badge {
       font-size: 0.63rem; font-weight: 700; color: #0ea5e9;
       background: rgba(14,165,233,0.12); border-radius: 4px; padding: 1px 6px;
@@ -3689,23 +3691,45 @@ function dcRenderOrder() {
       ? `<span style="font-size:0.75rem;font-weight:600;color:#4ade80;">${team.draftedPlayer}</span>${team.draftedPos ? ` <span style="font-size:0.68rem;color:#64748b;">${team.draftedPos}</span>` : ''}`
       : `<span style="color:#334155;">—</span>`;
 
-    const controls = !drafted ? `
+    const controls = `
       <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
         <button class="dc-move-btn" onclick="dcEditPick(${idx})" title="Edit" style="font-size:0.75rem;padding:1px 5px;">✎</button>
-        <button class="dc-move-btn" onclick="dcMoveOrder(${idx},-1)" title="Move up">▲</button>
-        <button class="dc-move-btn" onclick="dcMoveOrder(${idx},1)"  title="Move down">▼</button>
         <button class="dc-order-del" onclick="dcRemoveOrder(${idx})" title="Remove">✕</button>
-      </div>` : '';
+      </div>`;
 
     const tr = document.createElement('tr');
+    tr.dataset.idx = idx;
+    tr.draggable = true;
+    tr.style.cursor = 'grab';
     if (onClock) tr.classList.add('on-clock');
-    if (drafted) tr.classList.add('dc-drafted');
     tr.innerHTML = `
       <td><span class="dc-pick-badge">${idx + 1}</span></td>
       <td><span class="dc-order-name">${team.name}</span></td>
       <td>${tradeCell}</td>
       <td>${playerCell}</td>
       <td>${controls}</td>`;
+
+    // Drag-and-drop handlers
+    tr.addEventListener('dragstart', e => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', idx);
+      tr.classList.add('dc-drag-source');
+    });
+    tr.addEventListener('dragend', () => tr.classList.remove('dc-drag-source'));
+    tr.addEventListener('dragover', e => { e.preventDefault(); tr.classList.add('dc-drag-over'); });
+    tr.addEventListener('dragleave', () => tr.classList.remove('dc-drag-over'));
+    tr.addEventListener('drop', e => {
+      e.preventDefault();
+      tr.classList.remove('dc-drag-over');
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      const toIdx   = parseInt(tr.dataset.idx);
+      if (fromIdx === toIdx || fromIdx < dcCurrentPick || toIdx < dcCurrentPick) return;
+      const moved = dcOrder.splice(fromIdx, 1)[0];
+      dcOrder.splice(toIdx, 0, moved);
+      dcSave();
+      dcRenderOrder();
+    });
+
     tbody.appendChild(tr);
   });
 
