@@ -3717,16 +3717,15 @@ function dcRenderOrder() {
       ? `<span style="font-size:0.75rem;font-weight:600;color:#4ade80;">${team.draftedPlayer}</span>${team.draftedPos ? ` <span style="font-size:0.68rem;color:#64748b;">${team.draftedPos}</span>` : ''}`
       : `<span style="color:#334155;">—</span>`;
 
-    const controls = `
+    const controls = dcModUnlocked ? `
       <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
         <button class="dc-move-btn" onclick="dcEditPick(${idx})" title="Edit" style="font-size:0.75rem;padding:1px 5px;">✎</button>
         <button class="dc-order-del" onclick="dcRemoveOrder(${idx})" title="Remove">✕</button>
-      </div>`;
+      </div>` : '';
 
     const tr = document.createElement('tr');
     tr.dataset.idx = idx;
-    tr.draggable = true;
-    tr.style.cursor = 'grab';
+    if (dcModUnlocked) { tr.draggable = true; tr.style.cursor = 'grab'; }
     if (onClock) tr.classList.add('on-clock');
     tr.innerHTML = `
       <td><span class="dc-pick-badge">${idx + 1}</span></td>
@@ -3735,7 +3734,8 @@ function dcRenderOrder() {
       <td>${playerCell}</td>
       <td>${controls}</td>`;
 
-    // Drag-and-drop handlers
+    // Drag-and-drop handlers — only active when mod is unlocked
+    if (dcModUnlocked) {
     tr.addEventListener('dragstart', e => {
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', idx);
@@ -3755,6 +3755,7 @@ function dcRenderOrder() {
       dcSave();
       dcRenderOrder();
     });
+    } // end dcModUnlocked drag block
 
     tbody.appendChild(tr);
   });
@@ -3877,6 +3878,7 @@ function dcConfirmModPin() {
     dcHideModPin();
     document.getElementById('dcModLockBtn').style.display  = 'none';
     document.getElementById('dcModControls').style.display = 'flex';
+    dcRenderOrder();
   } else {
     document.getElementById('dcModPinError').textContent = 'Incorrect PIN. Try again.';
     document.getElementById('dcModPinInput').value = '';
@@ -3888,6 +3890,7 @@ function dcLockMod() {
   dcModUnlocked = false;
   document.getElementById('dcModControls').style.display = 'none';
   document.getElementById('dcModLockBtn').style.display  = '';
+  dcRenderOrder();
 }
 
 // ── Add Pick modal ────────────────────────────────────────────────────────
