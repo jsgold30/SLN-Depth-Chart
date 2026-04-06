@@ -871,6 +871,8 @@
     }
     .dc-pool-table td { padding: 6px 8px; border-bottom: 1px solid #1e293b; color: #e2e8f0; white-space: nowrap; }
     .dc-pool-table tr:hover td { background: #1a2535; }
+    .dc-pool-table td[onclick] { text-decoration: underline; text-decoration-color: #334155; text-underline-offset: 2px; }
+    .dc-pool-table td[onclick]:hover { color: #38bdf8; text-decoration-color: #38bdf8; }
     .dc-pool-table tr.dc-hidden { display: none; }
     .dc-pick-num { color: #64748b; font-size: 0.7rem; }
     .dc-pos-badge {
@@ -3688,7 +3690,7 @@ function dcRenderPool() {
 
     tr.innerHTML = `
       <td class="dc-pick-num">${idx + 1}</td>
-      <td style="white-space:nowrap;">${p.name}</td>
+      <td style="white-space:nowrap;cursor:pointer;color:#e2e8f0;" onclick="dcSelectPlayer('${p.id}')" title="Select ${p.name}">${p.name}</td>
       <td><span class="dc-pos-badge">${p.pos}</span></td>
       <td>${p.ht}</td>
       <td>${p.wt}</td>
