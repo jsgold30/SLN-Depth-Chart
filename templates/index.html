@@ -1427,7 +1427,11 @@
 
       <!-- Draft Log -->
       <div class="card">
-        <div class="card-title">Draft Results</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div class="card-title" style="margin-bottom:0;">Draft Results</div>
+          <button id="dcExportBtn" onclick="dcExportCsv()" style="display:none;"
+            class="dc-add-round-btn" title="Export draft results as CSV">⬇ Export CSV</button>
+        </div>
         <div style="overflow-x:auto;max-height:calc(100vh - 260px);overflow-y:auto;">
           <table class="dc-log-table" id="dcLogTable">
             <thead>
@@ -3901,6 +3905,7 @@ function dcConfirmModPin() {
     dcHideModPin();
     document.getElementById('dcModLockBtn').style.display  = 'none';
     document.getElementById('dcModControls').style.display = 'flex';
+    document.getElementById('dcExportBtn').style.display   = '';
     dcRenderOrder();
   } else {
     document.getElementById('dcModPinError').textContent = 'Incorrect PIN. Try again.';
@@ -3913,7 +3918,25 @@ function dcLockMod() {
   dcModUnlocked = false;
   document.getElementById('dcModControls').style.display = 'none';
   document.getElementById('dcModLockBtn').style.display  = '';
+  document.getElementById('dcExportBtn').style.display   = 'none';
   dcRenderOrder();
+}
+
+function dcExportCsv() {
+  if (!dcResults.length) { alert('No picks to export yet.'); return; }
+  // Group by round (every 29 picks = 1 round, or just sequential)
+  let csv = '#,Team,Trade,Player,Position\n';
+  dcResults.forEach(r => {
+    const trade = r.trade || '';
+    csv += `${r.pick},"${r.teamName}","${trade}","${r.playerName}","${r.pos}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'draft_results.csv';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── Add Pick modal ────────────────────────────────────────────────────────
