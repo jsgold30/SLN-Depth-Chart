@@ -1369,6 +1369,10 @@
         <div class="dc-order-controls">
           <button class="dc-add-round-btn" style="background:#0ea5e9;border-color:#0ea5e9;color:#fff;font-weight:700;" onclick="dcShowAddPick()">+ Add Pick</button>
           <button class="dc-add-round-btn" onclick="dcAddRound()">+ Add Round</button>
+          <label class="dc-add-round-btn" style="cursor:pointer;" title="Import draft order from CSV">
+            ⬆ Import CSV
+            <input type="file" id="dcCsvInput" accept=".csv,.txt" style="display:none" onchange="dcLoadCsv(this)">
+          </label>
           <button class="dc-reset-btn" onclick="dcResetDraft()">↺ Reset</button>
         </div>
         <!-- ON THE CLOCK banner -->
@@ -3661,9 +3665,68 @@ function dcRemoveOrder(idx) {
 }
 
 // ── Add another round ────────────────────────────────────────────────────
+// ── CSV import ────────────────────────────────────────────────────────────
+function dcLoadCsv(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split('\n');
+    const newOrder = [];
+    let currentRound = 1;
+    for (let raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      // Round header: "Round 1:", "Round 2:", etc.
+      const roundMatch = line.match(/^Round\s*(\d+)\s*:?$/i);
+      if (roundMatch) { currentRound = parseInt(roundMatch[1]); continue; }
+      // Column header row
+      if (/^#\s*,/i.test(line) || /^pick\s*,/i.test(line)) continue;
+      const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+      // Expect at least: #, Team
+      if (parts.length < 2) continue;
+      let pickNum, teamRaw, tradeNote, prePlayer;
+      if (/^\d+$/.test(parts[0])) {
+        [pickNum, teamRaw, tradeNote, prePlayer] = parts;
+      } else {
+        // No pick number column — just Team, Trade, Player
+        [teamRaw, tradeNote, prePlayer] = parts;
+      }
+      if (!teamRaw) continue;
+      // Resolve team styling (strip "via X" / "from X" suffixes for lookup)
+      const baseName = teamRaw.replace(/\s+(via|from)\s+.+$/i, '').trim();
+      const team = TM_TEAMS.find(t => t.name.toLowerCase() === baseName.toLowerCase())
+                || TM_TEAMS.find(t => baseName.toLowerCase().includes(t.abbr.toLowerCase()))
+                || null;
+      const entry = {
+        name:          teamRaw,
+        abbr:          team ? team.abbr  : teamRaw.substring(0, 3).toUpperCase(),
+        c1:            team ? team.c1    : '#1e293b',
+        c2:            team ? team.c2    : '#334155',
+        url:           team ? team.url   : null,
+        trade:         (tradeNote && tradeNote !== '') ? tradeNote : null,
+        round:         currentRound,
+        draftedPlayer: (prePlayer && prePlayer !== '') ? prePlayer : null,
+        draftedPos:    null,
+      };
+      newOrder.push(entry);
+    }
+    if (newOrder.length === 0) { alert('No valid picks found in CSV.'); input.value = ''; return; }
+    // Advance current pick past any pre-filled players
+    dcOrder = newOrder;
+    dcCurrentPick = dcOrder.findIndex(p => !p.draftedPlayer);
+    if (dcCurrentPick === -1) dcCurrentPick = dcOrder.length;
+    dcSave();
+    dcRenderOrder();
+    dcRenderLog();
+    input.value = ''; // reset so same file can be re-imported
+  };
+  reader.readAsText(file);
+}
+
 function dcAddRound() {
   if (dcOrder.length === 0) {
-    alert('Set up at least one round via CSV first, then use Add Round to repeat it.');
+    alert('Add at least one pick first, then use Add Round to repeat the order.');
     return;
   }
   // Determine round 1 (first N picks before any repeated pattern)
