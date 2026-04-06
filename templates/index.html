@@ -1423,7 +1423,7 @@
     <h3 id="dcPickModalTitle">Add Pick to Draft Order</h3>
 
     <div class="dc-add-pick-field">
-      <label>Team</label>
+      <label>Receiving Team</label>
       <select id="dcPickTeamSel"></select>
     </div>
 
@@ -1432,9 +1432,12 @@
       Pick received via trade
     </label>
 
-    <div class="dc-trade-from-field dc-add-pick-field" id="dcTradeFromField">
-      <label>Original Team (traded from)</label>
-      <select id="dcPickFromSel"></select>
+    <div class="dc-trade-from-field" id="dcTradeFromField">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <label style="font-size:0.72rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Trade Chain <span style="color:#475569;font-weight:400;text-transform:none;">(original → ... → receiving)</span></label>
+        <button type="button" onclick="dcAddTradeHop()" style="font-size:0.7rem;padding:2px 8px;background:#1e293b;border:1px solid #334155;border-radius:4px;color:#94a3b8;cursor:pointer;">+ Add Hop</button>
+      </div>
+      <div id="dcTradeHopList" style="display:flex;flex-direction:column;gap:6px;"></div>
     </div>
 
     <div class="dc-add-pick-actions">
@@ -3675,12 +3678,10 @@ function dcRenderOrder() {
     const drafted = idx < dcCurrentPick;
 
 
-    // Trade: show as "FROM → TO" — both parts must be valid abbreviations
-    const tradeParts = team.trade ? team.trade.split(' to ').map(s => s.trim()) : [];
-    const fromAbbr = tradeParts[0] || '';
-    const toAbbr   = tradeParts[1] || '';
-    const tradeCell = (fromAbbr && toAbbr)
-      ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;white-space:nowrap;">${fromAbbr} <span style="color:#64748b;">→</span> ${toAbbr}</span>`
+    // Trade: show full chain e.g. SAS → SAC → DEN
+    const tradeParts = team.trade ? team.trade.split(' to ').map(s => s.trim()).filter(Boolean) : [];
+    const tradeCell = tradeParts.length >= 2
+      ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;white-space:nowrap;">${tradeParts.join('<span style="color:#64748b;"> → </span>')}</span>`
       : `<span style="color:#334155;">—</span>`;
 
     const playerCell = team.draftedPlayer
@@ -3804,13 +3805,40 @@ function dcAddRound() {
 }
 
 // ── Add Pick modal ────────────────────────────────────────────────────────
-function dcPopulateTeamSelects() {
-  const opts = TM_TEAMS.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
-  document.getElementById('dcPickTeamSel').innerHTML = opts;
-  document.getElementById('dcPickFromSel').innerHTML = opts;
+let dcEditingIdx = -1; // -1 = adding new, >=0 = editing existing
+
+function dcTeamOptsHtml() {
+  return TM_TEAMS.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
 }
 
-let dcEditingIdx = -1; // -1 = adding new, >=0 = editing existing
+function dcPopulateTeamSelects() {
+  document.getElementById('dcPickTeamSel').innerHTML = dcTeamOptsHtml();
+}
+
+function dcAddTradeHop(preselect) {
+  const list = document.getElementById('dcTradeHopList');
+  const row  = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:6px;';
+  const sel = document.createElement('select');
+  sel.className = 'dc-hop-sel';
+  sel.innerHTML = dcTeamOptsHtml();
+  sel.style.cssText = 'flex:1;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;padding:6px 8px;font-size:0.78rem;';
+  if (preselect) {
+    const opt = [...sel.options].find(o => {
+      const t = TM_TEAMS.find(t => t.name === o.value);
+      return t && (t.abbr === preselect || t.name === preselect);
+    });
+    if (opt) sel.value = opt.value;
+  }
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.textContent = '✕';
+  del.style.cssText = 'background:none;border:none;color:#64748b;cursor:pointer;font-size:0.85rem;padding:2px 4px;';
+  del.onclick = () => list.removeChild(row);
+  row.appendChild(sel);
+  row.appendChild(del);
+  list.appendChild(row);
+}
 
 function dcShowAddPick() {
   dcEditingIdx = -1;
@@ -3819,6 +3847,7 @@ function dcShowAddPick() {
   document.getElementById('dcPickConfirmBtn').textContent = 'Add Pick';
   document.getElementById('dcTradeToggle').checked = false;
   document.getElementById('dcTradeFromField').classList.remove('visible');
+  document.getElementById('dcTradeHopList').innerHTML = '';
   document.getElementById('dcAddPickOverlay').classList.add('open');
 }
 
@@ -3829,25 +3858,22 @@ function dcEditPick(idx) {
   document.getElementById('dcPickModalTitle').textContent = `Edit Pick ${idx + 1}`;
   document.getElementById('dcPickConfirmBtn').textContent = 'Save Changes';
 
-  // Pre-select receiving team (strip "(via XXX)" suffix)
-  const baseName = team.name.replace(/\s*\(via\s+\w+\)\s*$/i, '').trim();
+  // Pre-select receiving team
+  const baseName = team.name.replace(/\s*\(via[\s\w,+]+\)\s*$/i, '').trim();
   const sel = document.getElementById('dcPickTeamSel');
   const opt = [...sel.options].find(o => o.value === baseName || o.value === team.name);
   if (opt) sel.value = opt.value;
 
-  // Pre-fill trade toggle
+  // Pre-fill trade chain
   const hasTrade = !!(team.trade);
   document.getElementById('dcTradeToggle').checked = hasTrade;
+  document.getElementById('dcTradeHopList').innerHTML = '';
   document.getElementById('dcTradeFromField').classList.toggle('visible', hasTrade);
   if (hasTrade && team.trade) {
-    // trade stored as "FROM to TO" — FROM is the original team abbr
-    const fromAbbr = team.trade.split(' to ')[0].trim();
-    const fromSel  = document.getElementById('dcPickFromSel');
-    const fromOpt  = [...fromSel.options].find(o => {
-      const t = TM_TEAMS.find(t => t.name === o.value);
-      return t && t.abbr === fromAbbr;
-    });
-    if (fromOpt) fromSel.value = fromOpt.value;
+    // trade = "SAS to SAC to DEN" — all parts except the last are "from" hops
+    const parts = team.trade.split(' to ').map(s => s.trim());
+    // all but last (last = receiving abbr)
+    parts.slice(0, -1).forEach(abbr => dcAddTradeHop(abbr));
   }
 
   document.getElementById('dcAddPickOverlay').classList.add('open');
@@ -3859,18 +3885,35 @@ function dcHideAddPick() {
 }
 
 function dcToggleTrade(cb) {
-  document.getElementById('dcTradeFromField').classList.toggle('visible', cb.checked);
+  const field = document.getElementById('dcTradeFromField');
+  field.classList.toggle('visible', cb.checked);
+  if (cb.checked && document.getElementById('dcTradeHopList').children.length === 0) {
+    dcAddTradeHop(); // seed with one hop
+  }
 }
 
 function dcConfirmAddPick() {
   const receivingName = document.getElementById('dcPickTeamSel').value;
   const isViatrade    = document.getElementById('dcTradeToggle').checked;
-  const fromName      = isViatrade ? document.getElementById('dcPickFromSel').value : '';
 
-  const receiving   = TM_TEAMS.find(t => t.name === receivingName) || { name: receivingName, abbr: receivingName.slice(0,3).toUpperCase(), c1: '#1e293b', c2: '#334155', url: '' };
-  const fromTeam    = fromName ? (TM_TEAMS.find(t => t.name === fromName) || null) : null;
-  const displayName = fromTeam ? `${receivingName} (via ${fromTeam.abbr})` : receivingName;
-  const tradeBadge  = fromTeam ? `${fromTeam.abbr} to ${receiving.abbr}` : '';
+  const receiving = TM_TEAMS.find(t => t.name === receivingName)
+    || { name: receivingName, abbr: receivingName.slice(0,3).toUpperCase(), c1: '#1e293b', c2: '#334155', url: '' };
+
+  let tradeBadge  = '';
+  let displayName = receivingName;
+
+  if (isViatrade) {
+    const hops = [...document.querySelectorAll('#dcTradeHopList .dc-hop-sel')]
+      .map(s => TM_TEAMS.find(t => t.name === s.value))
+      .filter(Boolean);
+    if (hops.length > 0) {
+      // chain: HOP1.abbr to HOP2.abbr to ... to RECEIVING.abbr
+      const chain = [...hops.map(t => t.abbr), receiving.abbr];
+      tradeBadge  = chain.join(' to ');
+      const viaList = hops.map(t => t.abbr).join(', ');
+      displayName = `${receivingName} (via ${viaList})`;
+    }
+  }
 
   const entry = {
     name:          displayName,
@@ -3878,13 +3921,12 @@ function dcConfirmAddPick() {
     c1:            receiving.c1,
     c2:            receiving.c2,
     url:           receiving.url,
-    trade:         tradeBadge,
+    trade:         tradeBadge || null,
     draftedPlayer: '',
     draftedPos:    ''
   };
 
   if (dcEditingIdx >= 0) {
-    // Preserve already-drafted info when editing
     entry.draftedPlayer = dcOrder[dcEditingIdx].draftedPlayer || '';
     entry.draftedPos    = dcOrder[dcEditingIdx].draftedPos    || '';
     dcOrder[dcEditingIdx] = entry;
