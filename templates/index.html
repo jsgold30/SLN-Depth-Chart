@@ -3601,7 +3601,6 @@ async function dcLoadFromServer() {
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
     dcLastSyncStamp = s.ts || 0;
-    _dcMigrateTrades();
     // Cache locally
     try { localStorage.setItem(DC_LS_KEY, JSON.stringify(s)); } catch(e) {}
     return dcPool.length > 0 || dcOrder.length > 0;
@@ -3618,22 +3617,8 @@ function dcLoad() {
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
     dcLastSyncStamp = s.ts || 0;
-    _dcMigrateTrades();
     return dcPool.length > 0 || dcOrder.length > 0;
   } catch(e) { return false; }
-}
-
-function _dcMigrateTrades() {
-  dcOrder.forEach(entry => {
-    if (entry.trade) {
-      const parts = entry.trade.split(' to ').map(p => p.trim());
-      // Valid trade: 2+ parts, every part is a short abbreviation (≤5 chars)
-      // Invalid: any part is a full team name (old format like "From Sacramento...")
-      if (parts.length < 2 || parts.some(p => p.length > 5)) {
-        entry.trade = null;
-      }
-    }
-  });
 }
 
 // ── Fetch players from server ────────────────────────────────────────────
@@ -4316,7 +4301,6 @@ async function dcPollServer() {
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
-    _dcMigrateTrades();
     try { localStorage.setItem(DC_LS_KEY, JSON.stringify(s)); } catch(e) {}
     dcRenderPool();
     dcRenderOrder();
