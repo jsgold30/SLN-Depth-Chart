@@ -1373,6 +1373,7 @@
             ⬆ Import CSV
             <input type="file" id="dcCsvInput" accept=".csv,.txt" style="display:none" onchange="dcLoadCsv(this)">
           </label>
+          <button class="dc-add-round-btn" id="dcUndoBtn" onclick="dcUndoPick()" style="display:none;">⎌ Undo</button>
           <button class="dc-reset-btn" onclick="dcResetDraft()">↺ Reset</button>
         </div>
         <!-- ON THE CLOCK banner -->
@@ -3580,16 +3581,52 @@ function dcDraftPlayer(playerId) {
   if (onClockEl) onClockEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+function dcUndoPick() {
+  if (dcCurrentPick <= 0) return;
+
+  // Step back
+  dcCurrentPick--;
+  const team   = dcOrder[dcCurrentPick];
+  const result = dcResults[dcResults.length - 1];
+
+  // Restore player to pool (insert back at original position by name sort or just push)
+  if (result) {
+    const restored = dcAllPlayers.find(p => p.name === result.playerName);
+    if (restored && !dcPool.find(p => p.id === restored.id)) {
+      dcPool.push(restored);
+      // Re-sort pool to original order
+      const origOrder = dcAllPlayers.map(p => p.id);
+      dcPool.sort((a, b) => origOrder.indexOf(a.id) - origOrder.indexOf(b.id));
+    }
+  }
+
+  // Clear order entry
+  team.draftedPlayer = null;
+  team.draftedPos    = null;
+
+  // Remove last result
+  dcResults.pop();
+
+  dcSave();
+  dcRenderPool();
+  dcRenderOrder();
+  dcRenderLog();
+}
+
 // ── Render draft order ───────────────────────────────────────────────────
 function dcRenderOrder() {
   const list    = document.getElementById('dcOrderList');
   const banner  = document.getElementById('dcClockBanner');
   const clockTeamEl = document.getElementById('dcClockTeam');
   const clockPickEl = document.getElementById('dcClockPickNum');
+  const undoBtn = document.getElementById('dcUndoBtn');
   list.innerHTML = '';
 
+  // Show undo only when at least one pick has been made
+  if (undoBtn) undoBtn.style.display = dcCurrentPick > 0 ? '' : 'none';
+
   if (dcOrder.length === 0) {
-    list.innerHTML = '<div style="color:#64748b;font-size:0.78rem;text-align:center;padding:16px 0;">Upload a CSV or add teams below</div>';
+    list.innerHTML = '<div style="color:#64748b;font-size:0.78rem;text-align:center;padding:16px 0;">Use + Add Pick or Import CSV to build the draft order</div>';
     banner.classList.remove('visible');
     return;
   }
