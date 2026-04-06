@@ -1416,10 +1416,10 @@
 
 </div><!-- /container -->
 
-<!-- Add Pick Modal -->
+<!-- Add / Edit Pick Modal -->
 <div class="dc-add-pick-overlay" id="dcAddPickOverlay" onclick="if(event.target===this)dcHideAddPick()">
   <div class="dc-add-pick-modal">
-    <h3>Add Pick to Draft Order</h3>
+    <h3 id="dcPickModalTitle">Add Pick to Draft Order</h3>
 
     <div class="dc-add-pick-field">
       <label>Team</label>
@@ -1438,7 +1438,7 @@
 
     <div class="dc-add-pick-actions">
       <button class="dc-btn-cancel" onclick="dcHideAddPick()">Cancel</button>
-      <button class="dc-btn-confirm" onclick="dcConfirmAddPick()">Add Pick</button>
+      <button class="dc-btn-confirm" id="dcPickConfirmBtn" onclick="dcConfirmAddPick()">Add Pick</button>
     </div>
   </div>
 </div>
@@ -3615,14 +3615,12 @@ function dcUndoPick() {
 
 // ── Render draft order ───────────────────────────────────────────────────
 function dcRenderOrder() {
-  const list    = document.getElementById('dcOrderList');
-  const banner  = document.getElementById('dcClockBanner');
+  const list        = document.getElementById('dcOrderList');
+  const banner      = document.getElementById('dcClockBanner');
   const clockTeamEl = document.getElementById('dcClockTeam');
   const clockPickEl = document.getElementById('dcClockPickNum');
-  const undoBtn = document.getElementById('dcUndoBtn');
-  list.innerHTML = '';
+  const undoBtn     = document.getElementById('dcUndoBtn');
 
-  // Show undo only when at least one pick has been made
   if (undoBtn) undoBtn.style.display = dcCurrentPick > 0 ? '' : 'none';
 
   if (dcOrder.length === 0) {
@@ -3631,10 +3629,8 @@ function dcRenderOrder() {
     return;
   }
 
-  // Update ON THE CLOCK banner
   if (dcCurrentPick < dcOrder.length) {
-    const cur = dcOrder[dcCurrentPick];
-    clockTeamEl.textContent = cur.name;
+    clockTeamEl.textContent = dcOrder[dcCurrentPick].name;
     clockPickEl.textContent = `Pick ${dcCurrentPick + 1}`;
     banner.classList.add('visible');
   } else {
@@ -3643,44 +3639,60 @@ function dcRenderOrder() {
     banner.classList.add('visible');
   }
 
-  dcOrder.forEach((team, idx) => {
-    const onClock = (idx === dcCurrentPick);
-    const drafted = (idx < dcCurrentPick);
+  // Build table
+  const table = document.createElement('table');
+  table.className = 'dc-order-table';
+  table.innerHTML = `<thead><tr>
+    <th style="width:36px;">#</th>
+    <th>Team</th>
+    <th>Trade</th>
+    <th>Player</th>
+    <th style="width:80px;"></th>
+  </tr></thead>`;
+  const tbody = document.createElement('tbody');
 
-    const row = document.createElement('div');
-    row.className = 'dc-order-row' + (onClock ? ' on-clock' : '') + (drafted ? ' dc-drafted' : '');
+  dcOrder.forEach((team, idx) => {
+    const onClock = idx === dcCurrentPick;
+    const drafted = idx < dcCurrentPick;
 
     const imgFile = team.url ? team.url.replace('.htm', '.png') : '';
-    const logoHtml = imgFile
-      ? `<div class="dc-order-logo" style="background:linear-gradient(135deg,${team.c1||'#1e293b'},${team.c2||'#334155'});">
-           <img src="/static/logos/${imgFile}" alt="${team.abbr||''}" onerror="this.style.display='none';">
-         </div>`
-      : `<div class="dc-order-logo" style="background:linear-gradient(135deg,${team.c1||'#1e293b'},${team.c2||'#334155'});">
-           <span>${team.abbr||'?'}</span>
-         </div>`;
+    const logoHtml = `<div class="dc-order-logo" style="background:linear-gradient(135deg,${team.c1||'#1e293b'},${team.c2||'#334155'});display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;overflow:hidden;vertical-align:middle;margin-right:6px;flex-shrink:0;">
+      ${imgFile ? `<img src="/static/logos/${imgFile}" alt="" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;">` : `<span style="font-size:0.42rem;font-weight:800;color:#fff;">${team.abbr||'?'}</span>`}
+    </div>`;
 
-    const tradeBadge  = team.trade        ? `<span class="dc-trade-badge">⇄ ${team.trade}</span>` : '';
-    const playerSpan  = team.draftedPlayer
-      ? `<span class="dc-drafted-player">→ ${team.draftedPlayer}${team.draftedPos ? ' <span style="color:#64748b;font-weight:400;">('+team.draftedPos+')</span>' : ''}</span>`
-      : '<span class="dc-order-spacer"></span>';
+    // Trade: show as "FROM → TO" with subtle styling
+    const [fromAbbr, toAbbr] = team.trade ? team.trade.split(' to ').map(s => s.trim()) : [];
+    const tradeCell = team.trade
+      ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;white-space:nowrap;">${fromAbbr} <span style="color:#64748b;">→</span> ${toAbbr}</span>`
+      : `<span style="color:#334155;">—</span>`;
 
-    row.innerHTML = `
-      <span class="dc-pick-badge">${idx + 1}</span>
-      ${logoHtml}
-      <span class="dc-order-name">${team.name}</span>
-      ${tradeBadge}
-      ${playerSpan}
-      ${onClock ? '<span class="dc-clock-badge">🕐 ON THE CLOCK</span>' : ''}
-      ${!drafted ? `
-        <div class="dc-order-move">
-          <button class="dc-move-btn" onclick="dcMoveOrder(${idx},-1)" title="Move up">▲</button>
-          <button class="dc-move-btn" onclick="dcMoveOrder(${idx},1)"  title="Move down">▼</button>
-        </div>
+    const playerCell = team.draftedPlayer
+      ? `<span style="font-size:0.75rem;font-weight:600;color:#4ade80;">${team.draftedPlayer}</span>${team.draftedPos ? ` <span style="font-size:0.68rem;color:#64748b;">${team.draftedPos}</span>` : ''}`
+      : `<span style="color:#334155;">—</span>`;
+
+    const controls = !drafted ? `
+      <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+        <button class="dc-move-btn" onclick="dcEditPick(${idx})" title="Edit" style="font-size:0.75rem;padding:1px 5px;">✎</button>
+        <button class="dc-move-btn" onclick="dcMoveOrder(${idx},-1)" title="Move up">▲</button>
+        <button class="dc-move-btn" onclick="dcMoveOrder(${idx},1)"  title="Move down">▼</button>
         <button class="dc-order-del" onclick="dcRemoveOrder(${idx})" title="Remove">✕</button>
-      ` : ''}
-    `;
-    list.appendChild(row);
+      </div>` : '';
+
+    const tr = document.createElement('tr');
+    if (onClock) tr.classList.add('on-clock');
+    if (drafted) tr.classList.add('dc-drafted');
+    tr.innerHTML = `
+      <td><span class="dc-pick-badge">${idx + 1}</span></td>
+      <td style="display:flex;align-items:center;">${logoHtml}<span class="dc-order-name">${team.name}</span></td>
+      <td>${tradeCell}</td>
+      <td>${playerCell}</td>
+      <td>${controls}</td>`;
+    tbody.appendChild(tr);
   });
+
+  table.appendChild(tbody);
+  list.innerHTML = '';
+  list.appendChild(table);
 }
 
 // ── Move/remove order rows ────────────────────────────────────────────────
@@ -3781,15 +3793,52 @@ function dcPopulateTeamSelects() {
   document.getElementById('dcPickFromSel').innerHTML = opts;
 }
 
+let dcEditingIdx = -1; // -1 = adding new, >=0 = editing existing
+
 function dcShowAddPick() {
+  dcEditingIdx = -1;
   dcPopulateTeamSelects();
+  document.getElementById('dcPickModalTitle').textContent = 'Add Pick to Draft Order';
+  document.getElementById('dcPickConfirmBtn').textContent = 'Add Pick';
   document.getElementById('dcTradeToggle').checked = false;
   document.getElementById('dcTradeFromField').classList.remove('visible');
   document.getElementById('dcAddPickOverlay').classList.add('open');
 }
 
+function dcEditPick(idx) {
+  dcEditingIdx = idx;
+  const team = dcOrder[idx];
+  dcPopulateTeamSelects();
+  document.getElementById('dcPickModalTitle').textContent = `Edit Pick ${idx + 1}`;
+  document.getElementById('dcPickConfirmBtn').textContent = 'Save Changes';
+
+  // Pre-select receiving team (strip "(via XXX)" suffix)
+  const baseName = team.name.replace(/\s*\(via\s+\w+\)\s*$/i, '').trim();
+  const sel = document.getElementById('dcPickTeamSel');
+  const opt = [...sel.options].find(o => o.value === baseName || o.value === team.name);
+  if (opt) sel.value = opt.value;
+
+  // Pre-fill trade toggle
+  const hasTrade = !!(team.trade);
+  document.getElementById('dcTradeToggle').checked = hasTrade;
+  document.getElementById('dcTradeFromField').classList.toggle('visible', hasTrade);
+  if (hasTrade && team.trade) {
+    // trade stored as "FROM to TO" — FROM is the original team abbr
+    const fromAbbr = team.trade.split(' to ')[0].trim();
+    const fromSel  = document.getElementById('dcPickFromSel');
+    const fromOpt  = [...fromSel.options].find(o => {
+      const t = TM_TEAMS.find(t => t.name === o.value);
+      return t && t.abbr === fromAbbr;
+    });
+    if (fromOpt) fromSel.value = fromOpt.value;
+  }
+
+  document.getElementById('dcAddPickOverlay').classList.add('open');
+}
+
 function dcHideAddPick() {
   document.getElementById('dcAddPickOverlay').classList.remove('open');
+  dcEditingIdx = -1;
 }
 
 function dcToggleTrade(cb) {
@@ -3801,28 +3850,34 @@ function dcConfirmAddPick() {
   const isViatrade    = document.getElementById('dcTradeToggle').checked;
   const fromName      = isViatrade ? document.getElementById('dcPickFromSel').value : '';
 
-  const receiving = TM_TEAMS.find(t => t.name === receivingName) || { name: receivingName, abbr: receivingName.slice(0,3).toUpperCase(), c1: '#1e293b', c2: '#334155', url: '' };
-  const fromTeam  = fromName ? (TM_TEAMS.find(t => t.name === fromName) || null) : null;
-
+  const receiving   = TM_TEAMS.find(t => t.name === receivingName) || { name: receivingName, abbr: receivingName.slice(0,3).toUpperCase(), c1: '#1e293b', c2: '#334155', url: '' };
+  const fromTeam    = fromName ? (TM_TEAMS.find(t => t.name === fromName) || null) : null;
   const displayName = fromTeam ? `${receivingName} (via ${fromTeam.abbr})` : receivingName;
   const tradeBadge  = fromTeam ? `${fromTeam.abbr} to ${receiving.abbr}` : '';
 
-  dcOrder.push({
-    name: displayName,
-    abbr: receiving.abbr,
-    c1:   receiving.c1,
-    c2:   receiving.c2,
-    url:  receiving.url,
-    trade: tradeBadge,
+  const entry = {
+    name:          displayName,
+    abbr:          receiving.abbr,
+    c1:            receiving.c1,
+    c2:            receiving.c2,
+    url:           receiving.url,
+    trade:         tradeBadge,
     draftedPlayer: '',
-    draftedPos: ''
-  });
+    draftedPos:    ''
+  };
+
+  if (dcEditingIdx >= 0) {
+    // Preserve already-drafted info when editing
+    entry.draftedPlayer = dcOrder[dcEditingIdx].draftedPlayer || '';
+    entry.draftedPos    = dcOrder[dcEditingIdx].draftedPos    || '';
+    dcOrder[dcEditingIdx] = entry;
+  } else {
+    dcOrder.push(entry);
+  }
 
   dcHideAddPick();
   dcSave();
   dcRenderOrder();
-  document.getElementById('dcPoolStatus').textContent =
-    `Pick added: ${displayName}${tradeBadge ? ' · ' + tradeBadge : ''}`;
 }
 
 // ── Render draft log ──────────────────────────────────────────────────────
