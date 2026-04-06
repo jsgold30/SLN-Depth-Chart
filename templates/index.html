@@ -3451,6 +3451,15 @@ function dcLoad() {
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
+    // Migrate: drop any trade values that aren't "AAA to BBB" abbr format
+    dcOrder.forEach(entry => {
+      if (entry.trade) {
+        const parts = entry.trade.split(' to ').map(p => p.trim());
+        if (parts.length !== 2 || parts[0].length > 5 || parts[1].length > 5) {
+          entry.trade = null;
+        }
+      }
+    });
     return dcPool.length > 0 || dcOrder.length > 0;
   } catch(e) { return false; }
 }
@@ -3666,9 +3675,11 @@ function dcRenderOrder() {
     const drafted = idx < dcCurrentPick;
 
 
-    // Trade: show as "FROM → TO" with subtle styling
-    const [fromAbbr, toAbbr] = team.trade ? team.trade.split(' to ').map(s => s.trim()) : [];
-    const tradeCell = team.trade
+    // Trade: show as "FROM → TO" — both parts must be valid abbreviations
+    const tradeParts = team.trade ? team.trade.split(' to ').map(s => s.trim()) : [];
+    const fromAbbr = tradeParts[0] || '';
+    const toAbbr   = tradeParts[1] || '';
+    const tradeCell = (fromAbbr && toAbbr)
       ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;white-space:nowrap;">${fromAbbr} <span style="color:#64748b;">→</span> ${toAbbr}</span>`
       : `<span style="color:#334155;">—</span>`;
 
