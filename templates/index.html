@@ -3585,9 +3585,11 @@ function dcSave() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
-  }).catch(() => {});
+  }).then(r => {
+    if (!r.ok) r.text().then(t => console.error('save_draft failed:', r.status, t));
+  }).catch(e => console.error('save_draft network error:', e));
   // Also mirror to localStorage as a fast cache
-  try { localStorage.setItem(DC_LS_KEY, JSON.stringify(payload)); } catch(e) {}
+  try { localStorage.setItem(DC_LS_KEY, JSON.stringify(payload)); } catch(e) { console.error('localStorage save failed:', e); }
 }
 
 async function dcLoadFromServer() {
@@ -4198,13 +4200,16 @@ function dcConfirmAddPick() {
   const receiving = TM_TEAMS.find(t => t.name === receivingName)
     || { name: receivingName, abbr: receivingName.slice(0,3).toUpperCase(), c1: '#1e293b', c2: '#334155', url: '' };
 
-  const hops = [...document.querySelectorAll('#dcTradeHopList .dc-hop-sel')]
+  const hopEls = [...document.querySelectorAll('#dcTradeHopList .dc-hop-sel')];
+  const hops = hopEls
     .map(s => TM_TEAMS.find(t => t.name === s.value))
     .filter(Boolean);
+  console.log('[dcConfirmAddPick] hopEls:', hopEls.length, '→ matched hops:', hops.map(t=>t.abbr), 'receiving:', receiving.abbr);
 
   const tradeBadge = hops.length > 0
     ? [...hops.map(t => t.abbr), receiving.abbr].join(' to ')
     : null;
+  console.log('[dcConfirmAddPick] tradeBadge:', tradeBadge);
 
   const entry = {
     name:          receivingName,
