@@ -3627,7 +3627,9 @@ function _dcMigrateTrades() {
   dcOrder.forEach(entry => {
     if (entry.trade) {
       const parts = entry.trade.split(' to ').map(p => p.trim());
-      if (parts.length !== 2 || parts[0].length > 5 || parts[1].length > 5) {
+      // Valid trade: 2+ parts, every part is a short abbreviation (≤5 chars)
+      // Invalid: any part is a full team name (old format like "From Sacramento...")
+      if (parts.length < 2 || parts.some(p => p.length > 5)) {
         entry.trade = null;
       }
     }
