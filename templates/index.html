@@ -980,7 +980,7 @@
     .dc-trade-badge {
       font-size: 0.63rem; font-weight: 600; color: #fbbf24;
       background: rgba(251,191,36,0.1); border-radius: 4px;
-      padding: 1px 5px; white-space: nowrap; flex-shrink: 0;
+      padding: 1px 5px; white-space: normal; word-break: break-word; flex-shrink: 0;
     }
     .dc-drafted-player {
       font-size: 0.75rem; font-weight: 600; color: #4ade80;
@@ -3909,7 +3909,7 @@ function dcRenderOrder() {
     // Trade: show full chain e.g. SAS → SAC → DEN
     const tradeParts = team.trade ? team.trade.split(' to ').map(s => s.trim()).filter(Boolean) : [];
     const tradeCell = tradeParts.length >= 2
-      ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;white-space:nowrap;">${tradeParts.join('<span style="color:#64748b;"> → </span>')}</span>`
+      ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;word-break:break-word;">${tradeParts.join('<span style="color:#64748b;"> → </span>')}</span>`
       : `<span style="color:#334155;">—</span>`;
 
     const controls = dcModUnlocked ? `
