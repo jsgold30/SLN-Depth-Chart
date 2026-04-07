@@ -871,6 +871,8 @@
     }
     .dc-pool-table td { padding: 6px 8px; border-bottom: 1px solid #1e293b; color: #e2e8f0; white-space: nowrap; }
     .dc-pool-table tr:hover td { background: #1a2535; }
+    .dc-pool-table tr.dc-row-selected td { background: #0c3a52; }
+    .dc-pool-table tr.dc-row-selected:hover td { background: #0d4460; }
     .dc-pool-table td[onclick] { text-decoration: underline; text-decoration-color: #334155; text-underline-offset: 2px; }
     .dc-pool-table td[onclick]:hover { color: #38bdf8; text-decoration-color: #38bdf8; }
     .dc-pool-table tr.dc-hidden { display: none; }
@@ -3673,6 +3675,8 @@ function dcRenderPool() {
     if (show) visible++;
 
     const tr = document.createElement('tr');
+    tr.id = 'dcRow_' + p.id;
+    if (dcSelectedId === p.id) tr.classList.add('dc-row-selected');
     if (!show) tr.classList.add('dc-hidden');
 
     tr.innerHTML = `
@@ -3715,13 +3719,11 @@ function dcSelectPlayer(playerId) {
   if (!player) return;
 
   // Clear previous highlight
-  document.querySelectorAll('.dc-select-btn.selected').forEach(b => {
-    b.classList.remove('selected'); b.textContent = 'Select';
-  });
+  document.querySelectorAll('.dc-pool-table tr.dc-row-selected').forEach(r => r.classList.remove('dc-row-selected'));
 
   dcSelectedId = playerId;
-  const btn = document.getElementById('dcSelBtn_' + playerId);
-  if (btn) { btn.classList.add('selected'); btn.textContent = 'Selected'; }
+  const row = document.getElementById('dcRow_' + playerId);
+  if (row) row.classList.add('dc-row-selected');
 
   // Populate the panel
   document.getElementById('dcSelectedName').textContent = player.name;
@@ -3743,9 +3745,7 @@ function dcSelectPlayer(playerId) {
 
 function dcClearSelection() {
   dcSelectedId = null;
-  document.querySelectorAll('.dc-select-btn.selected').forEach(b => {
-    b.classList.remove('selected'); b.textContent = 'Select';
-  });
+  document.querySelectorAll('.dc-pool-table tr.dc-row-selected').forEach(r => r.classList.remove('dc-row-selected'));
   document.getElementById('dcSelectedPanel').classList.remove('visible');
 }
 
