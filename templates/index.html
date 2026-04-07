@@ -930,6 +930,12 @@
       font-size: 0.78rem; font-weight: 600; cursor: pointer;
     }
     .dc-notes-save-btn:hover { background: #0284c7; }
+    .dc-notes-readonly {
+      color: #cbd5e1; font-size: 0.82rem; line-height: 1.55;
+      white-space: pre-wrap; word-break: break-word;
+      background: #0f2239; border: 1px solid #1e3a5f; border-radius: 6px;
+      padding: 8px 10px; min-height: 40px;
+    }
     .dc-selected-name {
       font-size: 1rem; font-weight: 700; color: #f1f5f9; flex: 1; min-width: 120px;
     }
@@ -1494,11 +1500,16 @@
       <button class="dc-confirm-draft-btn" onclick="dcConfirmDraft()">Draft</button>
       <button class="dc-selected-clear" onclick="dcClearSelection()" title="Clear selection">✕</button>
     </div>
-    <!-- Scout Notes Panel (Draft Mod only) -->
+    <!-- Scout Notes Panel -->
     <div class="dc-notes-panel" id="dcNotesPanel">
       <div class="dc-notes-label">Scout Notes</div>
-      <textarea class="dc-notes-ta" id="dcNotesTa" placeholder="Add scouting notes for this player…" rows="3"></textarea>
-      <div><button class="dc-notes-save-btn" onclick="dcSaveNote()">Save Note</button></div>
+      <!-- Read-only view (mod locked, note exists) -->
+      <div class="dc-notes-readonly" id="dcNotesReadonly"></div>
+      <!-- Edit view (mod unlocked) -->
+      <div id="dcNotesEditWrap" style="display:none;">
+        <textarea class="dc-notes-ta" id="dcNotesTa" placeholder="Add scouting notes for this player…" rows="3"></textarea>
+        <div><button class="dc-notes-save-btn" onclick="dcSaveNote()">Save Note</button></div>
+      </div>
     </div>
 
     <!-- Draft Order + Log side by side on wide screens -->
@@ -3773,15 +3784,7 @@ function dcSelectPlayer(playerId) {
     <span class="${dcGradeClass(player.pot)}">POT <b>${player.pot}</b></span>
   `;
   document.getElementById('dcSelectedPanel').classList.add('visible');
-
-  // Show scout notes panel only when Draft Mod is unlocked
-  const notesPanel = document.getElementById('dcNotesPanel');
-  if (dcModUnlocked) {
-    document.getElementById('dcNotesTa').value = dcPlayerNotes[playerId] || '';
-    notesPanel.classList.add('visible');
-  } else {
-    notesPanel.classList.remove('visible');
-  }
+  dcRefreshNotesPanel();
 
   // Scroll panel into view
   document.getElementById('dcSelectedPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -3814,15 +3817,34 @@ function dcSaveNote() {
   if (btn) { btn.textContent = 'Saved ✓'; setTimeout(() => { btn.textContent = 'Save Note'; }, 1500); }
 }
 
-// Re-show notes panel when mod is unlocked (if a player is already selected)
+// Show/refresh notes panel based on current player + mod state
 function dcRefreshNotesPanel() {
-  const notesPanel = document.getElementById('dcNotesPanel');
+  const notesPanel   = document.getElementById('dcNotesPanel');
+  const readonlyDiv  = document.getElementById('dcNotesReadonly');
+  const editWrap     = document.getElementById('dcNotesEditWrap');
   if (!notesPanel) return;
-  if (dcModUnlocked && dcSelectedId) {
-    document.getElementById('dcNotesTa').value = dcPlayerNotes[dcSelectedId] || '';
-    notesPanel.classList.add('visible');
-  } else {
+
+  const note = dcSelectedId ? (dcPlayerNotes[dcSelectedId] || '') : '';
+  const hasNote = note.length > 0;
+
+  if (!dcSelectedId || (!hasNote && !dcModUnlocked)) {
+    // Nothing to show
     notesPanel.classList.remove('visible');
+    return;
+  }
+
+  notesPanel.classList.add('visible');
+
+  if (dcModUnlocked) {
+    // Show editable textarea
+    readonlyDiv.style.display = 'none';
+    editWrap.style.display    = 'block';
+    document.getElementById('dcNotesTa').value = note;
+  } else if (hasNote) {
+    // Show read-only note
+    editWrap.style.display   = 'none';
+    readonlyDiv.style.display = 'block';
+    readonlyDiv.textContent   = note;
   }
 }
 
