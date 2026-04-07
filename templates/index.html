@@ -899,11 +899,37 @@
     /* Selected player panel */
     .dc-selected-panel {
       display: none; background: #0c1a2e;
-      border: 1px solid #0ea5e9; border-radius: 8px;
-      padding: 14px 16px; margin-bottom: 16px;
+      border: 1px solid #0ea5e9; border-radius: 8px 8px 0 0;
+      padding: 14px 16px; margin-bottom: 0;
       align-items: center; gap: 14px; flex-wrap: wrap;
     }
     .dc-selected-panel.visible { display: flex; }
+    /* Scout notes panel – sits directly below selected panel */
+    .dc-notes-panel {
+      display: none; background: #0c1a2e;
+      border: 1px solid #0ea5e9; border-top: 1px solid #1e3a5f; border-radius: 0 0 8px 8px;
+      padding: 10px 16px 14px; margin-bottom: 16px;
+    }
+    .dc-notes-panel.visible { display: block; }
+    .dc-notes-label {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em;
+      color: #64748b; text-transform: uppercase; margin-bottom: 6px;
+    }
+    .dc-notes-ta {
+      width: 100%; box-sizing: border-box;
+      background: #0f2239; border: 1px solid #1e3a5f; border-radius: 6px;
+      color: #e2e8f0; font-size: 0.82rem; line-height: 1.5;
+      padding: 8px 10px; resize: vertical; min-height: 64px;
+      font-family: inherit; outline: none;
+    }
+    .dc-notes-ta:focus { border-color: #0ea5e9; }
+    .dc-notes-ta::placeholder { color: #475569; }
+    .dc-notes-save-btn {
+      margin-top: 7px; padding: 4px 14px;
+      background: #0ea5e9; color: #fff; border: none; border-radius: 5px;
+      font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    }
+    .dc-notes-save-btn:hover { background: #0284c7; }
     .dc-selected-name {
       font-size: 1rem; font-weight: 700; color: #f1f5f9; flex: 1; min-width: 120px;
     }
@@ -1467,6 +1493,12 @@
       </div>
       <button class="dc-confirm-draft-btn" onclick="dcConfirmDraft()">Draft</button>
       <button class="dc-selected-clear" onclick="dcClearSelection()" title="Clear selection">✕</button>
+    </div>
+    <!-- Scout Notes Panel (Draft Mod only) -->
+    <div class="dc-notes-panel" id="dcNotesPanel">
+      <div class="dc-notes-label">Scout Notes</div>
+      <textarea class="dc-notes-ta" id="dcNotesTa" placeholder="Add scouting notes for this player…" rows="3"></textarea>
+      <div><button class="dc-notes-save-btn" onclick="dcSaveNote()">Save Note</button></div>
     </div>
 
     <!-- Draft Order + Log side by side on wide screens -->
@@ -3560,6 +3592,7 @@ let dcPool         = [];   // remaining (un-drafted) players
 let dcOrder        = [];   // [{ name, abbr, c1, c2, url }, ...]  current draft order
 let dcCurrentPick  = 0;    // index into dcOrder
 let dcResults      = [];   // [{ pick, teamName, playerName, pos }, ...]
+let dcPlayerNotes  = {};   // { [playerId]: "note text" } – scout notes per player
 let dcPosFilter    = 'ALL';
 let dcSelectedId   = null; // id of player currently selected for drafting
 const DC_LS_KEY    = 'draftCenter_v3';
@@ -3578,7 +3611,7 @@ function dcGradeClass(g) {
 
 // ── Persist / restore state ──────────────────────────────────────────────
 function dcSave() {
-  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, results: dcResults, ts: Date.now() };
+  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, results: dcResults, playerNotes: dcPlayerNotes, ts: Date.now() };
   dcLastSyncStamp = payload.ts;
   // Save to server (shared across all devices)
   fetch('/save_draft', {
@@ -3602,6 +3635,7 @@ async function dcLoadFromServer() {
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
+    dcPlayerNotes = s.playerNotes || {};
     dcLastSyncStamp = s.ts || 0;
     // Cache locally
     try { localStorage.setItem(DC_LS_KEY, JSON.stringify(s)); } catch(e) {}
@@ -3739,6 +3773,16 @@ function dcSelectPlayer(playerId) {
     <span class="${dcGradeClass(player.pot)}">POT <b>${player.pot}</b></span>
   `;
   document.getElementById('dcSelectedPanel').classList.add('visible');
+
+  // Show scout notes panel only when Draft Mod is unlocked
+  const notesPanel = document.getElementById('dcNotesPanel');
+  if (dcModUnlocked) {
+    document.getElementById('dcNotesTa').value = dcPlayerNotes[playerId] || '';
+    notesPanel.classList.add('visible');
+  } else {
+    notesPanel.classList.remove('visible');
+  }
+
   // Scroll panel into view
   document.getElementById('dcSelectedPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -3747,11 +3791,39 @@ function dcClearSelection() {
   dcSelectedId = null;
   document.querySelectorAll('.dc-pool-table tr.dc-row-selected').forEach(r => r.classList.remove('dc-row-selected'));
   document.getElementById('dcSelectedPanel').classList.remove('visible');
+  document.getElementById('dcNotesPanel').classList.remove('visible');
 }
 
 function dcConfirmDraft() {
   if (!dcSelectedId) return;
   dcDraftPlayer(dcSelectedId);
+}
+
+// ── Scout notes (Draft Mod only) ─────────────────────────────────────────
+function dcSaveNote() {
+  if (!dcSelectedId) return;
+  const text = document.getElementById('dcNotesTa').value.trim();
+  if (text) {
+    dcPlayerNotes[dcSelectedId] = text;
+  } else {
+    delete dcPlayerNotes[dcSelectedId];
+  }
+  dcSave();
+  // Visual feedback
+  const btn = document.querySelector('.dc-notes-save-btn');
+  if (btn) { btn.textContent = 'Saved ✓'; setTimeout(() => { btn.textContent = 'Save Note'; }, 1500); }
+}
+
+// Re-show notes panel when mod is unlocked (if a player is already selected)
+function dcRefreshNotesPanel() {
+  const notesPanel = document.getElementById('dcNotesPanel');
+  if (!notesPanel) return;
+  if (dcModUnlocked && dcSelectedId) {
+    document.getElementById('dcNotesTa').value = dcPlayerNotes[dcSelectedId] || '';
+    notesPanel.classList.add('visible');
+  } else {
+    notesPanel.classList.remove('visible');
+  }
 }
 
 // ── Draft a player ───────────────────────────────────────────────────────
@@ -4049,6 +4121,7 @@ function dcConfirmModPin() {
     document.getElementById('dcModControls').style.display = 'flex';
     document.getElementById('dcExportBtn').style.display   = '';
     dcRenderOrder();
+    dcRefreshNotesPanel();
   } else {
     document.getElementById('dcModPinError').textContent = 'Incorrect PIN. Try again.';
     document.getElementById('dcModPinInput').value = '';
@@ -4062,6 +4135,7 @@ function dcLockMod() {
   document.getElementById('dcModLockBtn').style.display  = '';
   document.getElementById('dcExportBtn').style.display   = 'none';
   dcRenderOrder();
+  dcRefreshNotesPanel();
 }
 
 function dcExportCsv() {
@@ -4302,6 +4376,7 @@ async function dcPollServer() {
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
+    dcPlayerNotes = s.playerNotes || {};
     try { localStorage.setItem(DC_LS_KEY, JSON.stringify(s)); } catch(e) {}
     dcRenderPool();
     dcRenderOrder();
