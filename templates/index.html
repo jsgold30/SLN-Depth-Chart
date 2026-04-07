@@ -1438,7 +1438,6 @@
         <table class="dc-pool-table" id="dcPoolTable">
           <thead>
             <tr>
-              <th>#</th>
               <th>Name</th>
               <th>Pos</th>
               <th>Ht</th>
@@ -1449,11 +1448,10 @@
               <th>Hn</th>
               <th>Reb</th>
               <th>Pot</th>
-              <th></th>
             </tr>
           </thead>
           <tbody id="dcPoolBody">
-            <tr><td colspan="12" class="dc-pool-empty">Load players to begin draft</td></tr>
+            <tr><td colspan="10" class="dc-pool-empty">Load players to begin draft</td></tr>
           </tbody>
         </table>
       </div>
@@ -3678,7 +3676,6 @@ function dcRenderPool() {
     if (!show) tr.classList.add('dc-hidden');
 
     tr.innerHTML = `
-      <td class="dc-pick-num">${idx + 1}</td>
       <td style="white-space:nowrap;cursor:pointer;color:#e2e8f0;" onclick="dcSelectPlayer('${p.id}')" title="Select ${p.name}">${p.name}</td>
       <td><span class="dc-pos-badge">${p.pos}</span></td>
       <td>${p.ht}</td>
@@ -3689,13 +3686,12 @@ function dcRenderPool() {
       <td class="${dcGradeClass(p.hn)}">${p.hn}</td>
       <td class="${dcGradeClass(p.reb)}">${p.reb}</td>
       <td class="${dcGradeClass(p.pot)}">${p.pot}</td>
-      <td><button class="dc-select-btn" id="dcSelBtn_${p.id}" onclick="dcSelectPlayer('${p.id}')">Select</button></td>
     `;
     tbody.appendChild(tr);
   });
 
   if (dcPool.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="12" class="dc-pool-empty">All players have been drafted</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="dc-pool-empty">All players have been drafted</td></tr>';
   }
 
   const countEl = document.getElementById('dcPoolCount');
