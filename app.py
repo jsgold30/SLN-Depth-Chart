@@ -73,6 +73,7 @@ PG_STARTER_EXCEPTIONS = {
     'cade cunningham',
     'jeremiah fears',
     'dyson daniels',
+    'egor demin',
 }
 
 # Grade scale: index 0 = worst, 12 = best
