@@ -16,6 +16,12 @@
     }
 
     .container { max-width: 100%; margin: 0 auto; padding-left: 230px; padding-right: 230px; box-sizing: border-box; }
+    @media (max-width: 1100px) {
+      .container { padding-left: 48px; padding-right: 48px; }
+    }
+    @media (max-width: 860px) {
+      .container { padding-left: 16px; padding-right: 16px; }
+    }
     @media (max-width: 700px) {
       .container { padding-left: 12px; padding-right: 12px; }
     }
@@ -820,8 +826,8 @@
       .tm-fa-sal-input { width: 90px; }
     }
 
-    /* ── Draft Center mobile ───────────────────────────────────────────────── */
-    @media (max-width: 700px) {
+    /* ── Draft Center mobile + landscape ──────────────────────────────────── */
+    @media (max-width: 860px) {
       /* Tab nav: shrink text so three tabs fit */
       .tab-nav { gap: 2px; padding: 3px; }
       .tab-btn { font-size: 0.62rem; padding: 8px 6px; letter-spacing: 0.5px; }
