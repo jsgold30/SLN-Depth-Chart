@@ -15,7 +15,7 @@
       padding: 24px 16px;
     }
 
-    .container { max-width: 100%; margin: 0 auto; padding-left: 196px; padding-right: 196px; box-sizing: border-box; }
+    .container { max-width: 100%; margin: 0 auto; padding-left: 230px; padding-right: 230px; box-sizing: border-box; }
     @media (max-width: 700px) {
       .container { padding-left: 12px; padding-right: 12px; }
     }
@@ -397,31 +397,32 @@
     }
     .tm-logo-grid {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 5px;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 6px;
       margin-bottom: 8px;
     }
     .tm-logo-cell {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 3px;
+      gap: 4px;
       cursor: pointer;
-      padding: 5px 2px;
-      border-radius: 7px;
+      padding: 8px 4px 6px;
+      border-radius: 9px;
       border: 2px solid transparent;
-      transition: all 0.12s;
+      transition: all 0.13s;
+      background: #0f172a;
     }
-    .tm-logo-cell:hover { background: #1e293b; border-color: #475569; }
+    .tm-logo-cell:hover { background: #1a2e47; border-color: #475569; }
     .tm-logo-cell.selected { border-color: #38bdf8; background: #0c1a2e; }
     .tm-logo-circle {
-      width: 36px;
-      height: 36px;
+      width: 52px;
+      height: 52px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.52rem;
+      font-size: 0.58rem;
       font-weight: 800;
       color: #fff;
       text-align: center;
@@ -429,21 +430,28 @@
       flex-shrink: 0;
     }
     .tm-logo-abbr {
-      font-size: 0.5rem;
-      color: #64748b;
+      font-size: 0.6rem;
+      color: #94a3b8;
       text-align: center;
       line-height: 1.1;
+      font-weight: 600;
+      letter-spacing: 0.03em;
     }
     .tm-logo-img {
-      width: 62px;
-      height: 62px;
+      width: 72px;
+      height: 72px;
       object-fit: contain;
       display: block;
     }
     #tmLogoGridA .tm-logo-img,
     #tmLogoGridB .tm-logo-img {
-      width: 48px;
-      height: 48px;
+      width: 52px;
+      height: 52px;
+    }
+    #tmLogoGridA .tm-logo-circle,
+    #tmLogoGridB .tm-logo-circle {
+      width: 44px;
+      height: 44px;
     }
     .tm-side {
       background: #0f172a;
@@ -568,14 +576,15 @@
 
       .card { padding: 14px 12px; }
 
-      .tm-logo-grid { grid-template-columns: repeat(5, 1fr); gap: 3px; }
-      .tm-logo-img { width: 40px; height: 40px; }
-      .tm-logo-circle { width: 32px; height: 32px; }
-      .tm-logo-cell { padding: 3px 1px; }
+      .tm-logo-grid { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 4px; }
+      .tm-logo-img { width: 46px; height: 46px; }
+      .tm-logo-circle { width: 38px; height: 38px; }
+      .tm-logo-cell { padding: 5px 2px 4px; }
+      .tm-logo-abbr { font-size: 0.55rem; }
       #tmLogoGridA .tm-logo-img,
-      #tmLogoGridB .tm-logo-img { width: 34px; height: 34px; }
+      #tmLogoGridB .tm-logo-img { width: 36px; height: 36px; }
       #tmLogoGridA .tm-logo-circle,
-      #tmLogoGridB .tm-logo-circle { width: 26px; height: 26px; }
+      #tmLogoGridB .tm-logo-circle { width: 28px; height: 28px; }
 
       /* Team select stacks vertically */
       .url-row { flex-direction: column; }
@@ -1140,7 +1149,7 @@
   <div class="card">
     <div class="card-title">Select Team</div>
     <input type="hidden" id="teamSelect">
-    <div id="dcLogoGrid" class="tm-logo-grid" style="grid-template-columns:repeat(6,1fr);margin-bottom:10px;"></div>
+    <div id="dcLogoGrid" class="tm-logo-grid" style="margin-bottom:10px;"></div>
     <div class="status-row">
       <div class="status-row-top">
         <div class="spinner" id="spinner"></div>
@@ -3134,6 +3143,7 @@ function buildLogoGrid(containerId, onSelect) {
       <div class="tm-logo-circle" style="background:linear-gradient(135deg,${t.c1},${t.c2});display:none;">
         <span style="font-size:0.52rem;font-weight:800;">${t.abbr}</span>
       </div>
+      <div class="tm-logo-abbr">${t.abbr}</div>
       `;
     cell.addEventListener('click', () => {
       container.querySelectorAll('.tm-logo-cell').forEach(c => c.classList.remove('selected'));
