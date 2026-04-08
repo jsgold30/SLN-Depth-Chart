@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, make_response
 import os
 import requests
 from bs4 import BeautifulSoup
@@ -17,6 +17,10 @@ def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.execute('''CREATE TABLE IF NOT EXISTS team_charts
                     (team_url TEXT PRIMARY KEY, data TEXT,
+                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS draft_state
+                    (id INTEGER PRIMARY KEY CHECK (id = 1),
+                     data TEXT,
                      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     conn.commit()
     return conn
@@ -69,6 +73,7 @@ PG_STARTER_EXCEPTIONS = {
     'cade cunningham',
     'jeremiah fears',
     'dyson daniels',
+    'egor demin',
 }
 
 # Grade scale: index 0 = worst, 12 = best
@@ -180,7 +185,10 @@ def get_version():
 
 @app.route('/')
 def index():
-    return render_template('index.html', version=get_version())
+    resp = make_response(render_template('index.html', version=get_version()))
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    return resp
 
 @app.route('/mockups')
 def mockups():
@@ -554,6 +562,83 @@ def fetch_salary_roster():
         return jsonify({'error': f'Failed to fetch page: {str(e)}'}), 400
     except Exception as e:
         return jsonify({'error': f'Error parsing salary data: {str(e)}'}), 500
+
+
+@app.route('/fetch_draft_players', methods=['POST'])
+def fetch_draft_players():
+    try:
+        headers = {
+            'User-Agent': (
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/120.0.0.0 Safari/537.36'
+            )
+        }
+        r = requests.get(
+            'https://www.simleaguenirvana.com/draft/draftplayers-pot.htm',
+            headers=headers,
+            timeout=15
+        )
+        soup = BeautifulSoup(r.text, 'html.parser')
+        players = []
+        for row in soup.find_all('tr'):
+            cells = row.find_all('td', recursive=False)
+            if len(cells) < 11:
+                continue
+            name_cell = cells[0]
+            name = name_cell.get_text(strip=True)
+            if name == 'Name' or not name:
+                continue
+            link = name_cell.find('a')
+            pid = ''
+            if link and link.get('href'):
+                m = re.search(r'player(\d+)\.htm', link['href'])
+                if m:
+                    pid = m.group(1)
+            players.append({
+                'id': pid,
+                'name': name,
+                'pos': cells[1].get_text(strip=True),
+                'ht': cells[2].get_text(strip=True),
+                'wt': cells[3].get_text(strip=True),
+                'age': cells[4].get_text(strip=True),
+                'in_rat': cells[5].get_text(strip=True),
+                'out_rat': cells[6].get_text(strip=True),
+                'hn': cells[7].get_text(strip=True),
+                'df': cells[8].get_text(strip=True),
+                'reb': cells[9].get_text(strip=True),
+                'pot': cells[10].get_text(strip=True),
+            })
+        return jsonify({'players': players})
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Request timed out.'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/save_draft', methods=['POST'])
+def save_draft():
+    data = request.get_json()
+    if data is None:
+        return jsonify({'error': 'No data'}), 400
+    db = get_db()
+    db.execute('''INSERT INTO draft_state (id, data, updated_at)
+                  VALUES (1, ?, CURRENT_TIMESTAMP)
+                  ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at''',
+               (json.dumps(data),))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
+
+
+@app.route('/load_draft', methods=['GET'])
+def load_draft():
+    db = get_db()
+    row = db.execute('SELECT data FROM draft_state WHERE id = 1').fetchone()
+    db.close()
+    if row:
+        return jsonify(json.loads(row[0]))
+    return jsonify({})
 
 
 if __name__ == '__main__':
