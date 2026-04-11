@@ -525,6 +525,39 @@
       color: #475569;
       margin-bottom: 5px;
     }
+    .tm-picks-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid #334155; }
+    .tm-picks-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
+    .tm-pick-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #0c2540; border: 1px solid #1e4a7a; border-radius: 20px;
+      padding: 3px 10px 3px 10px; font-size: 0.72rem; color: #7dd3fc; font-weight: 600;
+    }
+    .tm-pick-pill .tm-pick-via { color: #64748b; font-size: 0.65rem; font-weight: 400; }
+    .tm-pick-pill .tm-pick-owed-warn { color: #f87171; font-size: 0.65rem; }
+    .tm-pick-pill-remove {
+      background: none; border: none; color: #475569; cursor: pointer;
+      font-size: 0.8rem; padding: 0 0 0 2px; line-height: 1;
+    }
+    .tm-pick-pill-remove:hover { color: #f87171; }
+    .tm-pick-selector {
+      display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 6px;
+      background: #0f172a; border: 1px solid #334155; border-radius: 7px; padding: 8px;
+    }
+    .tm-pick-sel {
+      background: #1e293b; color: #e2e8f0; border: 1px solid #334155;
+      border-radius: 5px; font-size: 0.72rem; padding: 4px 6px; cursor: pointer;
+    }
+    .tm-pick-origin-sel { max-width: 140px; }
+    /* Commissioner picks panel */
+    .tm-comm-panel {
+      background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+      padding: 14px; margin-top: 12px; font-size: 0.78rem;
+    }
+    .tm-comm-panel textarea {
+      width: 100%; background: #1e293b; color: #e2e8f0; border: 1px solid #334155;
+      border-radius: 5px; padding: 8px; font-size: 0.72rem; font-family: monospace;
+      resize: vertical; min-height: 80px;
+    }
     .tm-vetmin-row {
       display: flex;
       align-items: center;
@@ -1362,7 +1395,40 @@
 
   <!-- ── TRADE MACHINE ── -->
   <div class="card">
-    <div class="card-title">Trade Machine</div>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+      Trade Machine
+      <button onclick="tmToggleAdminPin()" style="font-size:0.68rem;padding:3px 10px;background:#1e293b;color:#64748b;border:1px solid #334155;border-radius:6px;cursor:pointer;letter-spacing:0.04em;">Admin</button>
+    </div>
+    <!-- Admin PIN entry -->
+    <div id="tmAdminPinPanel" style="display:none;padding:10px 0 2px;border-bottom:1px solid #1e293b;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <input type="password" id="tmAdminPinInput" placeholder="PIN" maxlength="4" inputmode="numeric"
+          onkeydown="if(event.key==='Enter')tmCheckAdminPin()"
+          style="width:80px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:4px 8px;font-size:0.8rem;letter-spacing:0.2em;">
+        <button class="btn btn-slate" style="padding:3px 12px;font-size:0.73rem;" onclick="tmCheckAdminPin()">Unlock</button>
+        <span id="tmAdminPinError" style="font-size:0.72rem;color:#f87171;"></span>
+      </div>
+    </div>
+    <!-- Admin sync panel (unlocked) -->
+    <div id="tmAdminPanel" style="display:none;padding:10px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;margin-bottom:12px;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <span style="color:#94a3b8;font-size:0.75rem;font-weight:600;">Sync Owed Picks (years 2038+)</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <a href="https://simleaguenirvana.com/viewtopic.php?t=18" target="_blank"
+            style="font-size:0.72rem;color:#7dd3fc;text-decoration:none;">Open SLN Picks Page ↗</a>
+          <button onclick="tmCloseAdmin()" style="font-size:0.7rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
+        </div>
+      </div>
+      <p style="color:#64748b;font-size:0.72rem;margin:0;">
+        Log into SLN, open the owed picks page, select all text (Ctrl+A), copy (Ctrl+C), then paste below.
+      </p>
+      <textarea id="tmAdminPasteText" rows="6" placeholder="Paste the owed picks post content here…"
+        style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:8px;border-radius:6px;font-size:0.72rem;resize:vertical;width:100%;box-sizing:border-box;"></textarea>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="btn btn-green" style="padding:5px 14px;font-size:0.75rem;" onclick="tmSubmitPicksPaste()">Parse &amp; Save</button>
+        <span id="tmAdminPasteStatus" style="font-size:0.73rem;color:#94a3b8;"></span>
+      </div>
+    </div>
 
     <!-- Two-team columns -->
     <div class="tm-columns">
@@ -1382,8 +1448,25 @@
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
             <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddA" onclick="addVetMin('A')">+ Add Vet Min</button>
             <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('A')">+ Custom Salary</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tmPickBtnA" onclick="tmAddPickUI('A')" style="display:none;">+ Add Pick</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tmRPBtnA" onclick="tmAddRPUI('A')" style="display:none;">+ Add RP</button>
             <button class="btn btn-slate tm-vetmin-add" id="tmFABtnA" onclick="toggleSideFAPanel('A')" style="display:none;">+ Free Agent</button>
           </div>
+          <!-- Pick selector -->
+          <div id="tmPickSelectorA" class="tm-pick-selector" style="display:none;">
+            <select id="tmPickSelA" class="tm-pick-sel" style="min-width:200px;"></select>
+            <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmPick('A')">Add</button>
+            <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelPick('A')">✕</button>
+          </div>
+          <!-- RP input -->
+          <div id="tmRPSelectorA" class="tm-pick-selector" style="display:none;">
+            <input type="text" inputmode="numeric" id="tmRPValueA" placeholder="RP amount"
+              style="width:120px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:3px 8px;font-size:0.8rem;">
+            <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmRP('A')">Add</button>
+            <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelRP('A')">✕</button>
+          </div>
+          <div id="tmPicksPillsA" class="tm-picks-pills" style="margin-top:4px;"></div>
+          <div id="tmRPDisplayA" style="margin-top:4px;font-size:0.75rem;color:#94a3b8;display:none;"></div>
           <!-- Per-side FA panel -->
           <div id="tmFAPanelA" style="display:none;margin-top:10px;">
             <div class="fa-pos-filter" id="tmFAPosFilterA">
@@ -1426,8 +1509,25 @@
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
             <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddB" onclick="addVetMin('B')">+ Add Vet Min</button>
             <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('B')">+ Custom Salary</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tmPickBtnB" onclick="tmAddPickUI('B')" style="display:none;">+ Add Pick</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tmRPBtnB" onclick="tmAddRPUI('B')" style="display:none;">+ Add RP</button>
             <button class="btn btn-slate tm-vetmin-add" id="tmFABtnB" onclick="toggleSideFAPanel('B')" style="display:none;">+ Free Agent</button>
           </div>
+          <!-- Pick selector -->
+          <div id="tmPickSelectorB" class="tm-pick-selector" style="display:none;">
+            <select id="tmPickSelB" class="tm-pick-sel" style="min-width:200px;"></select>
+            <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmPick('B')">Add</button>
+            <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelPick('B')">✕</button>
+          </div>
+          <!-- RP input -->
+          <div id="tmRPSelectorB" class="tm-pick-selector" style="display:none;">
+            <input type="text" inputmode="numeric" id="tmRPValueB" placeholder="RP amount"
+              style="width:120px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:3px 8px;font-size:0.8rem;">
+            <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmRP('B')">Add</button>
+            <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelRP('B')">✕</button>
+          </div>
+          <div id="tmPicksPillsB" class="tm-picks-pills" style="margin-top:4px;"></div>
+          <div id="tmRPDisplayB" style="margin-top:4px;font-size:0.75rem;color:#94a3b8;display:none;"></div>
           <!-- Per-side FA panel -->
           <div id="tmFAPanelB" style="display:none;margin-top:10px;">
             <div class="fa-pos-filter" id="tmFAPosFilterB">
@@ -1458,7 +1558,7 @@
     </div><!-- /tm-columns -->
 
     <!-- Validate / Clear buttons -->
-    <div style="text-align:center;margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
       <button class="btn btn-green" onclick="validateTradeMatch()" style="padding:10px 32px;">Check Trade Validity</button>
       <button class="btn btn-slate" onclick="clearTradeMachine()" style="padding:10px 24px;">✕ Clear</button>
     </div>
@@ -1655,10 +1755,11 @@ function switchTab(tab) {
   document.getElementById('tabBtnDepth').classList.toggle('active', tab === 'depth');
   document.getElementById('tabBtnTrade').classList.toggle('active', tab === 'trade');
   document.getElementById('tabBtnDraft').classList.toggle('active', tab === 'draft');
-  // Build Trade Machine logo grids lazily on first visit
+  // Build Trade Machine logo grids + load owed picks lazily on first visit
   if (tab === 'trade' && !tmLogoGridsBuilt) {
     buildTMLogoGrids();
     tmLogoGridsBuilt = true;
+    tmLoadOwedPicks();
   }
   // Load draft players lazily on first visit; start/stop polling with tab
   if (tab === 'draft') {
@@ -3318,14 +3419,234 @@ function clearTradeMachine() {
     if (faBtnEl) faBtnEl.textContent = '+ Free Agent';
     // Refresh FA panel Add buttons (all back to "+ Add")
     if (faLoaded) renderSideFAPanel(side);
+    // Clear picks
+    if (side === 'A') tmPicksA = []; else tmPicksB = [];
+    tmRenderPickPills(side);
+    document.getElementById(`tmPickSelector${side}`).style.display = 'none';
+    const pickBtn = document.getElementById(`tmPickBtn${side}`);
+    if (pickBtn) pickBtn.style.display = 'none';
+    // Clear RP
+    if (side === 'A') tmRPA = 0; else tmRPB = 0;
+    document.getElementById(`tmRPSelector${side}`).style.display = 'none';
+    const rpBtn = document.getElementById(`tmRPBtn${side}`);
+    if (rpBtn) rpBtn.style.display = 'none';
+    const rpDisp = document.getElementById(`tmRPDisplay${side}`);
+    if (rpDisp) { rpDisp.style.display = 'none'; rpDisp.textContent = ''; }
   });
-  // Clear result panel
   document.getElementById('tmResult').innerHTML = '';
 }
 
 function fmtSal(n) {
   if (!n) return '$0';
   return '$' + Math.round(n).toLocaleString();
+}
+
+// ─── Draft Picks in Trade Machine ─────────────────────────────────────────────
+const TM_LEAGUE_YEAR = 2035;
+const TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + 1 + i); // 2036-2041
+
+let tmPicksA = [];   // [{year, round, ownerAbbr, originalAbbr, label}]
+let tmPicksB = [];
+let tmOwedPicks = []; // [{from_abbr, year, round, to_abbr}] — loaded from server
+let tmRPA = 0;        // Roster Points being traded by side A
+let tmRPB = 0;        // Roster Points being traded by side B
+
+async function tmLoadOwedPicks() {
+  try {
+    const res = await fetch('/api/picks');
+    if (!res.ok) return;
+    const data = await res.json();
+    tmOwedPicks = data.owed || [];
+    ['A','B'].forEach(side => {
+      if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side);
+    });
+
+    // If server is syncing fresh data in background, poll for results
+    if (data.syncing) {
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        try {
+          const r2 = await fetch('/api/picks');
+          if (!r2.ok) { clearInterval(poll); return; }
+          const d2 = await r2.json();
+          if (!d2.syncing || attempts >= 12) {
+            clearInterval(poll);
+            tmOwedPicks = d2.owed || [];
+            ['A','B'].forEach(side => {
+              if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side);
+            });
+          }
+        } catch(e) { clearInterval(poll); }
+      }, 5000); // poll every 5s, up to 60s
+    }
+  } catch(e) {}
+}
+
+// Returns all picks the team currently owns (own picks minus owed away, plus acquired)
+function tmAvailablePicks(abbr) {
+  const picks = [];
+  // Own picks for each year/round, unless owed away
+  for (const year of TM_PICK_YEARS) {
+    for (const round of [1, 2]) {
+      const owedAway = tmOwedPicks.find(p => p.from_abbr === abbr && p.year === year && p.round === round);
+      if (!owedAway) {
+        picks.push({ year, round, ownerAbbr: abbr, originalAbbr: abbr });
+      }
+    }
+  }
+  // Acquired picks from other teams (exclude sentinel 'EXT')
+  for (const p of tmOwedPicks) {
+    if (p.to_abbr === abbr && p.to_abbr !== 'EXT') {
+      picks.push({ year: p.year, round: p.round, ownerAbbr: abbr, originalAbbr: p.from_abbr });
+    }
+  }
+  picks.sort((a, b) => a.year - b.year || a.round - b.round);
+  return picks;
+}
+
+function tmPickLabel(pick) {
+  const r = pick.round === 1 ? '1st' : '2nd';
+  return `${pick.year} ${pick.originalAbbr} ${r} Round Pick`;
+}
+
+function tmPopulatePickSelectors(side) {
+  const sel = document.getElementById(`tmPickSel${side}`);
+  if (!sel) return;
+  const abbr = tmGetSideAbbr(side);
+  const all = abbr
+    ? tmAvailablePicks(abbr)
+    : TM_PICK_YEARS.flatMap(y => [1,2].map(r => ({year:y, round:r, ownerAbbr:'', originalAbbr:''})));
+
+  // Filter out picks already added to this side's trade
+  const alreadyAdded = side === 'A' ? tmPicksA : tmPicksB;
+  const available = all.filter(p =>
+    !alreadyAdded.find(a => a.year === p.year && a.round === p.round && a.originalAbbr === p.originalAbbr)
+  );
+
+  if (available.length === 0) {
+    sel.innerHTML = '<option value="">No picks available</option>';
+    return;
+  }
+  sel.innerHTML = available.map(p =>
+    `<option value="${p.year}:${p.round}:${p.originalAbbr}">${tmPickLabel(p)}</option>`
+  ).join('');
+}
+
+function tmGetSideAbbr(side) {
+  const urlVal = document.getElementById(`tmSelect${side}`).value;
+  if (!urlVal) return null;
+  const urlFile = urlVal.replace(TM_BASE, '');
+  return TM_TEAMS.find(t => t.url === urlFile)?.abbr || null;
+}
+
+function tmAddPickUI(side) {
+  tmPopulatePickSelectors(side);
+  document.getElementById(`tmPickSelector${side}`).style.display = '';
+}
+
+function tmCancelPick(side) {
+  document.getElementById(`tmPickSelector${side}`).style.display = 'none';
+}
+
+function tmAddRPUI(side) {
+  document.getElementById(`tmRPSelector${side}`).style.display = '';
+  document.getElementById(`tmRPValue${side}`).value = side === 'A' ? (tmRPA || '') : (tmRPB || '');
+  document.getElementById(`tmRPValue${side}`).focus();
+}
+
+function tmCancelRP(side) {
+  document.getElementById(`tmRPSelector${side}`).style.display = 'none';
+}
+
+function tmConfirmRP(side) {
+  const val = parseInt(document.getElementById(`tmRPValue${side}`).value) || 0;
+  if (side === 'A') tmRPA = val; else tmRPB = val;
+  document.getElementById(`tmRPSelector${side}`).style.display = 'none';
+  const disp = document.getElementById(`tmRPDisplay${side}`);
+  if (val > 0) {
+    disp.textContent = `🏷 ${val} RP included`;
+    disp.style.display = '';
+  } else {
+    disp.textContent = '';
+    disp.style.display = 'none';
+  }
+}
+
+function tmConfirmPick(side) {
+  const ownerAbbr = tmGetSideAbbr(side);
+  if (!ownerAbbr) return;
+  const selVal = document.getElementById(`tmPickSel${side}`).value;
+  if (!selVal) return;
+  const [yearStr, roundStr, originalAbbr] = selVal.split(':');
+  const year  = parseInt(yearStr);
+  const round = parseInt(roundStr);
+
+  const arr = side === 'A' ? tmPicksA : tmPicksB;
+  if (arr.find(p => p.year === year && p.round === round && p.originalAbbr === originalAbbr)) {
+    alert('That pick is already added.'); return;
+  }
+
+  const pick = { year, round, ownerAbbr, originalAbbr };
+  pick.label = tmPickLabel(pick);
+  arr.push(pick);
+  tmRenderPickPills(side);
+  document.getElementById(`tmPickSelector${side}`).style.display = 'none';
+  tmPopulatePickSelectors(side); // refresh selector to remove the just-added pick
+}
+
+function tmRenderPickPills(side) {
+  const arr = side === 'A' ? tmPicksA : tmPicksB;
+  const container = document.getElementById(`tmPicksPills${side}`);
+  container.innerHTML = arr.map((p, i) => `
+    <span class="tm-pick-pill">
+      ${tmPickLabel(p)}
+      <button class="tm-pick-pill-remove" onclick="tmRemovePick('${side}',${i})">×</button>
+    </span>`).join('');
+}
+
+function tmRemovePick(side, idx) {
+  if (side === 'A') tmPicksA.splice(idx, 1);
+  else              tmPicksB.splice(idx, 1);
+  tmRenderPickPills(side);
+  tmPopulatePickSelectors(side); // restore removed pick to dropdown
+}
+
+async function tmSaveOwedPicks() {
+  const lines = document.getElementById('tmOwedPicksInput').value
+    .split('\n').map(l => l.trim()).filter(Boolean);
+  const owed = [];
+  const errors = [];
+  for (const line of lines) {
+    const parts = line.split(/\s+/);
+    if (parts.length !== 4) { errors.push(`Bad line: "${line}" — expected FROM YEAR ROUND TO`); continue; }
+    const [from_abbr, yearStr, roundStr, to_abbr] = parts;
+    const year  = parseInt(yearStr);
+    const round = parseInt(roundStr);
+    if (isNaN(year) || isNaN(round) || round < 1 || round > 2) { errors.push(`Bad values: "${line}"`); continue; }
+    owed.push({ from_abbr: from_abbr.toUpperCase(), year, round, to_abbr: to_abbr.toUpperCase() });
+  }
+  if (errors.length) { alert('Errors:\n' + errors.join('\n')); return; }
+  const statusEl = document.getElementById('tmOwedPicksStatus');
+  statusEl.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/picks/update', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ owed })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      tmOwedPicks = owed;
+      statusEl.textContent = `✓ Saved ${data.count} owed pick${data.count !== 1 ? 's' : ''}`;
+      const updEl = document.getElementById('tmPicksUpdatedAt');
+      if (updEl) updEl.textContent = 'Last updated: ' + new Date().toLocaleDateString();
+      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+    } else {
+      statusEl.textContent = '✗ Error saving';
+    }
+  } catch(e) {
+    statusEl.textContent = '✗ Network error';
+  }
 }
 
 const TM_HARD_CAP = 85_000_000;
@@ -3354,7 +3675,7 @@ async function loadTMTeam(side) {
     const data = await res.json();
     if (data.error) { statusEl.textContent = '⚠ ' + data.error; return; }
 
-    const teamName = data.team_name || (side === 'A' ? 'Team A' : 'Team B');
+    const teamName = (data.team_name || (side === 'A' ? 'Team A' : 'Team B')).replace(/\s*Roster$/i, '').trim();
     if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; }
     else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; }
 
@@ -3362,10 +3683,17 @@ async function loadTMTeam(side) {
     nameEl.textContent = teamName;
     nameEl.style.display = '';
 
+
     buildTMPlayerList(side);
     // Reveal the + Free Agent button now that a team is loaded for this side
     const faBtnEl = document.getElementById(`tmFABtn${side}`);
     if (faBtnEl) faBtnEl.style.display = '';
+    // Reveal "+ Add Pick" and "+ Add RP" buttons now that a team is loaded
+    const pickBtn = document.getElementById(`tmPickBtn${side}`);
+    if (pickBtn) pickBtn.style.display = '';
+    const rpBtn = document.getElementById(`tmRPBtn${side}`);
+    if (rpBtn) rpBtn.style.display = '';
+    tmPopulatePickSelectors(side);
     // If this side's FA panel is open and data is loaded, refresh it
     if (document.getElementById(`tmFAPanel${side}`).style.display !== 'none' && faLoaded) {
       renderSideFAPanel(side);
@@ -3488,11 +3816,21 @@ function validateTradeMatch() {
   const errors = [];
   const checks = [];
 
+  const picksA = [...tmPicksA];
+  const picksB = [...tmPicksB];
+
+  // ── Picks: 6-year cap check ──────────────────────────────────────────────
+  for (const p of [...picksA, ...picksB]) {
+    if (p.year > TM_LEAGUE_YEAR + 6) {
+      errors.push(`✗ ${p.label} — picks more than 6 seasons out (${TM_LEAGUE_YEAR + 6}) cannot be traded.`);
+    }
+  }
+
   // ── Rule: At least 1 player or salary on each side ───────────────────────
   const customCntA = document.querySelectorAll('#tmVetMinListA .tm-custom-sal-input').length;
   const customCntB = document.querySelectorAll('#tmVetMinListB .tm-custom-sal-input').length;
-  if (!playersA.length && !vetMinCntA && !customCntA) { errors.push(`Select at least one player or add a salary for ${tmNameA}.`); }
-  if (!playersB.length && !vetMinCntB && !customCntB) { errors.push(`Select at least one player or add a salary for ${tmNameB}.`); }
+  if (!playersA.length && !vetMinCntA && !customCntA && !picksA.length) { errors.push(`Select at least one player, salary, or pick for ${tmNameA}.`); }
+  if (!playersB.length && !vetMinCntB && !customCntB && !picksB.length) { errors.push(`Select at least one player, salary, or pick for ${tmNameB}.`); }
 
   // ── Rule: Max 5 players per side ──────────────────────────────────────────
   if (playersA.length > 5) {
@@ -3564,23 +3902,60 @@ function validateTradeMatch() {
   }
 
   // Summary block
-  if (hasA || hasB) {
+  const hasPicksA = picksA.length > 0;
+  const hasPicksB = picksB.length > 0;
+  if (hasA || hasB || hasPicksA || hasPicksB) {
     html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid #334155;font-size:0.78rem;">`;
     html += `<span style="color:#94a3b8;font-weight:700;">Trade Summary</span><br>`;
-    if (hasA) {
+    if (hasA || hasPicksA) {
       const namesA = playersA.map(p => p.name);
       if (vetMinCntA > 0) namesA.push(`${vetMinCntA} vet min${vetMinCntA > 1 ? 's' : ''} (${fmtSal(vetMinA)})`);
-      html += `<span style="color:#7dd3fc;">${tmNameA} gives:</span> <span style="color:#cbd5e1;">${namesA.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salA)} total)</span><br>`;
+      const pickLabelsA = picksA.map(p => `<span style="color:#7dd3fc;font-size:0.7rem;">🏀 ${p.label}</span>`);
+      html += `<span style="color:#7dd3fc;">${tmNameA} gives:</span> `;
+      if (namesA.length) html += `<span style="color:#cbd5e1;">${namesA.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salA)})</span>`;
+      if (namesA.length && pickLabelsA.length) html += `<span style="color:#475569;"> + </span>`;
+      if (pickLabelsA.length) html += pickLabelsA.join(', ');
+      html += `<br>`;
     }
-    if (hasB) {
+    if (hasB || hasPicksB) {
       const namesB = playersB.map(p => p.name);
       if (vetMinCntB > 0) namesB.push(`${vetMinCntB} vet min${vetMinCntB > 1 ? 's' : ''} (${fmtSal(vetMinB)})`);
-      html += `<span style="color:#7dd3fc;">${tmNameB} gives:</span> <span style="color:#cbd5e1;">${namesB.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salB)} total)</span><br>`;
+      const pickLabelsB = picksB.map(p => `<span style="color:#7dd3fc;font-size:0.7rem;">🏀 ${p.label}</span>`);
+      html += `<span style="color:#7dd3fc;">${tmNameB} gives:</span> `;
+      if (namesB.length) html += `<span style="color:#cbd5e1;">${namesB.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salB)})</span>`;
+      if (namesB.length && pickLabelsB.length) html += `<span style="color:#475569;"> + </span>`;
+      if (pickLabelsB.length) html += pickLabelsB.join(', ');
+      html += `<br>`;
     }
     if (hasA && hasB) {
       const diff = Math.abs(salA - salB);
       html += `<span style="color:#64748b;">Salary difference: ${fmtSal(diff)}</span>`;
     }
+    html += `</div>`;
+  }
+
+  // ── Copyable plain-text block ─────────────────────────────────────────────
+  if (hasA || hasB || hasPicksA || hasPicksB) {
+    const rpA = tmRPA || 0;
+    const rpB = tmRPB || 0;
+    const buildSideText = (teamName, players, picks, rp) => {
+      const lines = [];
+      players.forEach(p => lines.push(`  • ${p.name}`));
+      picks.forEach(p => lines.push(`  • ${p.label}`));
+      if (rp > 0) lines.push(`  • ${rp} RP`);
+      return `${teamName} sends:\n${lines.join('\n')}`;
+    };
+    const sideAText = buildSideText(tmNameA, playersA, picksA, rpA);
+    const sideBText = buildSideText(tmNameB, playersB, picksB, rpB);
+    const copyText = `TRADE SUMMARY\n${'─'.repeat(40)}\n${sideAText}\n\n${sideBText}`;
+    window._tmCopyText = copyText;
+
+    html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid #334155;">`;
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">`;
+    html += `<span style="font-size:0.72rem;color:#64748b;font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Copy to Post</span>`;
+    html += `<button onclick="tmCopyTradeSummary()" id="tmCopyBtn" style="background:#1e3a5f;color:#7dd3fc;border:1px solid #1e4a7a;border-radius:6px;padding:3px 12px;font-size:0.72rem;font-weight:600;cursor:pointer;">Copy</button>`;
+    html += `</div>`;
+    html += `<textarea readonly onclick="this.select()" style="width:100%;background:#0f172a;color:#94a3b8;border:1px solid #1e293b;border-radius:6px;padding:8px 10px;font-family:monospace;font-size:0.7rem;line-height:1.6;resize:none;box-sizing:border-box;" rows="8">${copyText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>`;
     html += `</div>`;
   }
 
@@ -3594,6 +3969,23 @@ function validateTradeMatch() {
   html += `</div>`;
 
   result.innerHTML = html;
+}
+
+function tmCopyTradeSummary() {
+  const text = window._tmCopyText || '';
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('tmCopyBtn');
+    if (btn) { btn.textContent = 'Copied ✓'; btn.style.color = '#4ade80'; setTimeout(() => { btn.textContent = 'Copy Summary'; btn.style.color = '#7dd3fc'; }, 2000); }
+  }).catch(() => {
+    // Fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = document.getElementById('tmCopyBtn');
+    if (btn) { btn.textContent = 'Copied ✓'; setTimeout(() => { btn.textContent = 'Copy Summary'; }, 2000); }
+  });
 }
 
 // ─── Auto-load last-used team on page open ───────────────────────────────────
@@ -4177,6 +4569,73 @@ function dcLockMod() {
   document.getElementById('dcExportBtn').style.display   = 'none';
   dcRenderOrder();
   dcRefreshNotesPanel();
+}
+
+const TM_ADMIN_PIN = '3256';
+let tmAdminUnlocked = false;
+
+function tmToggleAdminPin() {
+  if (tmAdminUnlocked) {
+    // Already unlocked — toggle the panel visibility
+    const panel = document.getElementById('tmAdminPanel');
+    panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    return;
+  }
+  const pinPanel = document.getElementById('tmAdminPinPanel');
+  const isHidden = pinPanel.style.display === 'none' || !pinPanel.style.display;
+  pinPanel.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    document.getElementById('tmAdminPinInput').value = '';
+    document.getElementById('tmAdminPinError').textContent = '';
+    setTimeout(() => document.getElementById('tmAdminPinInput').focus(), 50);
+  }
+}
+
+function tmCheckAdminPin() {
+  const val = document.getElementById('tmAdminPinInput').value.trim();
+  if (val === TM_ADMIN_PIN) {
+    tmAdminUnlocked = true;
+    document.getElementById('tmAdminPinPanel').style.display = 'none';
+    document.getElementById('tmAdminPanel').style.display = 'flex';
+    setTimeout(() => document.getElementById('tmAdminPasteText').focus(), 50);
+  } else {
+    document.getElementById('tmAdminPinError').textContent = 'Incorrect PIN.';
+    document.getElementById('tmAdminPinInput').value = '';
+    document.getElementById('tmAdminPinInput').focus();
+  }
+}
+
+function tmCloseAdmin() {
+  document.getElementById('tmAdminPanel').style.display = 'none';
+  tmAdminUnlocked = false;
+}
+
+async function tmSubmitPicksPaste() {
+  const text   = document.getElementById('tmAdminPasteText').value.trim();
+  const status = document.getElementById('tmAdminPasteStatus');
+  if (!text) { status.style.color = '#f87171'; status.textContent = 'Paste the post content first.'; return; }
+  status.style.color = '#94a3b8';
+  status.textContent = 'Parsing…';
+  try {
+    const res = await fetch('/api/picks/from-paste', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text})
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      status.style.color = '#f87171';
+      status.textContent = data.error || 'Parse failed.';
+    } else {
+      status.style.color = '#4ade80';
+      status.textContent = `✓ Saved ${data.added} picks (${data.total} total)`;
+      document.getElementById('tmAdminPasteText').value = '';
+      tmLoadOwedPicks();
+    }
+  } catch(e) {
+    status.style.color = '#f87171';
+    status.textContent = 'Network error.';
+  }
 }
 
 function dcExportCsv() {
