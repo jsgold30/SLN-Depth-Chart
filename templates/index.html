@@ -3474,8 +3474,7 @@ function tmAvailablePicks(abbr) {
 
 function tmPickLabel(pick) {
   const r = pick.round === 1 ? '1st' : '2nd';
-  const base = `${pick.year} ${r} Round Pick`;
-  return pick.originalAbbr !== pick.ownerAbbr ? `${base} (via ${pick.originalAbbr})` : base;
+  return `${pick.year} ${pick.originalAbbr} ${r} Round Pick`;
 }
 
 function tmPopulatePickSelectors(side) {
@@ -3568,8 +3567,7 @@ function tmRenderPickPills(side) {
   const container = document.getElementById(`tmPicksPills${side}`);
   container.innerHTML = arr.map((p, i) => `
     <span class="tm-pick-pill">
-      ${p.year} ${p.round === 1 ? '1st' : '2nd'}
-      ${p.originalAbbr !== p.ownerAbbr ? `<span class="tm-pick-via">via ${p.originalAbbr}</span>` : ''}
+      ${tmPickLabel(p)}
       <button class="tm-pick-pill-remove" onclick="tmRemovePick('${side}',${i})">×</button>
     </span>`).join('');
 }
