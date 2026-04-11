@@ -1415,8 +1415,20 @@
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
             <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddA" onclick="addVetMin('A')">+ Add Vet Min</button>
             <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('A')">+ Custom Salary</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tmPickBtnA" onclick="tmAddPickUI('A')" style="display:none;">+ Add Pick</button>
             <button class="btn btn-slate tm-vetmin-add" id="tmFABtnA" onclick="toggleSideFAPanel('A')" style="display:none;">+ Free Agent</button>
           </div>
+          <!-- Pick selector -->
+          <div id="tmPickSelectorA" class="tm-pick-selector" style="display:none;">
+            <select id="tmPickYearA" class="tm-pick-sel"></select>
+            <select id="tmPickRoundA" class="tm-pick-sel">
+              <option value="1">1st Round</option>
+              <option value="2">2nd Round</option>
+            </select>
+            <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmPick('A')">Add</button>
+            <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelPick('A')">✕</button>
+          </div>
+          <div id="tmPicksPillsA" class="tm-picks-pills" style="margin-top:4px;"></div>
           <!-- Per-side FA panel -->
           <div id="tmFAPanelA" style="display:none;margin-top:10px;">
             <div class="fa-pos-filter" id="tmFAPosFilterA">
@@ -1431,23 +1443,6 @@
             <div class="fa-list" id="tmFAPlayerListA">
               <p class="placeholder-msg" style="padding:10px;">Loading…</p>
             </div>
-          </div>
-        </div>
-
-        <!-- Draft Picks -->
-        <div class="tm-picks-section" id="tmPicksSectionA" style="display:none;">
-          <div class="tm-vetmin-label">Draft Picks</div>
-          <div id="tmPicksPillsA" class="tm-picks-pills"></div>
-          <button class="btn btn-slate tm-vetmin-add" onclick="tmAddPickUI('A')" style="margin-top:4px;">+ Add Pick</button>
-          <div id="tmPickSelectorA" class="tm-pick-selector" style="display:none;">
-            <select id="tmPickYearA" class="tm-pick-sel"></select>
-            <select id="tmPickRoundA" class="tm-pick-sel">
-              <option value="1">1st Round</option>
-              <option value="2">2nd Round</option>
-            </select>
-            <select id="tmPickOriginA" class="tm-pick-sel tm-pick-origin-sel"></select>
-            <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmPick('A')">Add</button>
-            <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelPick('A')">✕</button>
           </div>
         </div>
 
@@ -1476,8 +1471,20 @@
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
             <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddB" onclick="addVetMin('B')">+ Add Vet Min</button>
             <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('B')">+ Custom Salary</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tmPickBtnB" onclick="tmAddPickUI('B')" style="display:none;">+ Add Pick</button>
             <button class="btn btn-slate tm-vetmin-add" id="tmFABtnB" onclick="toggleSideFAPanel('B')" style="display:none;">+ Free Agent</button>
           </div>
+          <!-- Pick selector -->
+          <div id="tmPickSelectorB" class="tm-pick-selector" style="display:none;">
+            <select id="tmPickYearB" class="tm-pick-sel"></select>
+            <select id="tmPickRoundB" class="tm-pick-sel">
+              <option value="1">1st Round</option>
+              <option value="2">2nd Round</option>
+            </select>
+            <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmPick('B')">Add</button>
+            <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelPick('B')">✕</button>
+          </div>
+          <div id="tmPicksPillsB" class="tm-picks-pills" style="margin-top:4px;"></div>
           <!-- Per-side FA panel -->
           <div id="tmFAPanelB" style="display:none;margin-top:10px;">
             <div class="fa-pos-filter" id="tmFAPosFilterB">
@@ -1492,23 +1499,6 @@
             <div class="fa-list" id="tmFAPlayerListB">
               <p class="placeholder-msg" style="padding:10px;">Loading…</p>
             </div>
-          </div>
-        </div>
-
-        <!-- Draft Picks -->
-        <div class="tm-picks-section" id="tmPicksSectionB" style="display:none;">
-          <div class="tm-vetmin-label">Draft Picks</div>
-          <div id="tmPicksPillsB" class="tm-picks-pills"></div>
-          <button class="btn btn-slate tm-vetmin-add" onclick="tmAddPickUI('B')" style="margin-top:4px;">+ Add Pick</button>
-          <div id="tmPickSelectorB" class="tm-pick-selector" style="display:none;">
-            <select id="tmPickYearB" class="tm-pick-sel"></select>
-            <select id="tmPickRoundB" class="tm-pick-sel">
-              <option value="1">1st Round</option>
-              <option value="2">2nd Round</option>
-            </select>
-            <select id="tmPickOriginB" class="tm-pick-sel tm-pick-origin-sel"></select>
-            <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmPick('B')">Add</button>
-            <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelPick('B')">✕</button>
           </div>
         </div>
 
@@ -1534,23 +1524,6 @@
     <div class="tm-result" id="tmResult"></div>
 
   </div><!-- /Trade Machine card -->
-
-  <!-- Commissioner: Owed Picks Manager -->
-  <div class="card" style="margin-top:16px;">
-    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
-      <span>Owed Picks (Commissioner)</span>
-      <span id="tmPicksUpdatedAt" style="font-size:0.65rem;color:#475569;font-weight:400;"></span>
-    </div>
-    <p style="font-size:0.75rem;color:#64748b;margin-bottom:10px;">
-      Enter each owed pick on a new line in the format:<br>
-      <code style="color:#94a3b8;">FROM_ABBR YEAR ROUND TO_ABBR</code>&nbsp; e.g. <code style="color:#94a3b8;">ORL 2036 1 MIA</code>
-    </p>
-    <textarea id="tmOwedPicksInput" class="tm-comm-panel" style="width:100%;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:5px;padding:8px;font-size:0.72rem;font-family:monospace;resize:vertical;min-height:80px;" placeholder="ORL 2036 1 MIA&#10;ATL 2037 2 BOS&#10;DEN 2035 1 LAL"></textarea>
-    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
-      <button class="btn btn-green" onclick="tmSaveOwedPicks()" style="padding:5px 18px;font-size:0.75rem;">Save Owed Picks</button>
-      <span id="tmOwedPicksStatus" style="font-size:0.72rem;color:#94a3b8;"></span>
-    </div>
-  </div>
 
   </div><!-- /tabTrade -->
 
@@ -1739,9 +1712,8 @@ function switchTab(tab) {
   document.getElementById('tabBtnDepth').classList.toggle('active', tab === 'depth');
   document.getElementById('tabBtnTrade').classList.toggle('active', tab === 'trade');
   document.getElementById('tabBtnDraft').classList.toggle('active', tab === 'draft');
-  // Load owed picks and build Trade Machine logo grids lazily on first visit
+  // Build Trade Machine logo grids lazily on first visit
   if (tab === 'trade' && !tmLogoGridsBuilt) {
-    tmLoadOwedPicks();
     buildTMLogoGrids();
     tmLogoGridsBuilt = true;
   }
@@ -3404,10 +3376,11 @@ function clearTradeMachine() {
     // Refresh FA panel Add buttons (all back to "+ Add")
     if (faLoaded) renderSideFAPanel(side);
     // Clear picks
-    tmPicksA = side === 'A' ? [] : tmPicksA;
-    tmPicksB = side === 'B' ? [] : tmPicksB;
+    if (side === 'A') tmPicksA = []; else tmPicksB = [];
     tmRenderPickPills(side);
     document.getElementById(`tmPickSelector${side}`).style.display = 'none';
+    const pickBtn = document.getElementById(`tmPickBtn${side}`);
+    if (pickBtn) pickBtn.style.display = 'none';
   });
   // Clear result panel
   document.getElementById('tmResult').innerHTML = '';
@@ -3473,27 +3446,8 @@ function tmPickLabel(pick) {
 }
 
 function tmPopulatePickSelectors(side) {
-  const abbr = side === 'A'
-    ? TM_TEAMS.find(t => t.url === document.getElementById('tmSelectA').value?.replace(TM_BASE,''))?.abbr
-    : TM_TEAMS.find(t => t.url === document.getElementById('tmSelectB').value?.replace(TM_BASE,''))?.abbr;
-  if (!abbr) return;
-
-  // Year selector
   const yearSel = document.getElementById(`tmPickYear${side}`);
-  yearSel.innerHTML = TM_PICK_YEARS.map(y => `<option value="${y}">${y}</option>`).join('');
-
-  // Origin selector: own pick + acquired picks available
-  const available = tmAvailablePicks(abbr);
-  const originSel = document.getElementById(`tmPickOrigin${side}`);
-  originSel.innerHTML = `<option value="${abbr}">${abbr} (own pick)</option>`;
-  const acquired = available.filter(p => p.originalAbbr !== abbr);
-  const seen = new Set();
-  for (const p of acquired) {
-    if (!seen.has(p.originalAbbr)) {
-      seen.add(p.originalAbbr);
-      originSel.innerHTML += `<option value="${p.originalAbbr}">via ${p.originalAbbr}</option>`;
-    }
-  }
+  if (yearSel) yearSel.innerHTML = TM_PICK_YEARS.map(y => `<option value="${y}">${y}</option>`).join('');
 }
 
 function tmGetSideAbbr(side) {
@@ -3513,27 +3467,18 @@ function tmCancelPick(side) {
 }
 
 function tmConfirmPick(side) {
-  const ownerAbbr    = tmGetSideAbbr(side);
+  const ownerAbbr = tmGetSideAbbr(side);
   if (!ownerAbbr) return;
-  const year         = parseInt(document.getElementById(`tmPickYear${side}`).value);
-  const round        = parseInt(document.getElementById(`tmPickRound${side}`).value);
-  const originalAbbr = document.getElementById(`tmPickOrigin${side}`).value;
+  const year  = parseInt(document.getElementById(`tmPickYear${side}`).value);
+  const round = parseInt(document.getElementById(`tmPickRound${side}`).value);
 
-  const pick = { year, round, ownerAbbr, originalAbbr };
-  pick.label = tmPickLabel(pick);
-
-  // Check if already added
   const arr = side === 'A' ? tmPicksA : tmPicksB;
-  const dup = arr.find(p => p.year === year && p.round === round && p.originalAbbr === originalAbbr);
-  if (dup) { alert('That pick is already added.'); return; }
-
-  // Check if this pick was already owed away (shouldn't be available but guard)
-  const owedAway = tmOwedPicks.find(p => p.from_abbr === originalAbbr && p.year === year && p.round === round && p.to_abbr !== ownerAbbr);
-  if (owedAway) {
-    alert(`Warning: ${originalAbbr} ${year} ${round === 1 ? '1st' : '2nd'} round pick is owed to ${owedAway.to_abbr}, not ${ownerAbbr}.`);
-    return;
+  if (arr.find(p => p.year === year && p.round === round)) {
+    alert('That pick is already added.'); return;
   }
 
+  const pick = { year, round, ownerAbbr, originalAbbr: ownerAbbr };
+  pick.label = tmPickLabel(pick);
   arr.push(pick);
   tmRenderPickPills(side);
   document.getElementById(`tmPickSelector${side}`).style.display = 'none';
@@ -3631,12 +3576,10 @@ async function loadTMTeam(side) {
     // Reveal the + Free Agent button now that a team is loaded for this side
     const faBtnEl = document.getElementById(`tmFABtn${side}`);
     if (faBtnEl) faBtnEl.style.display = '';
-    // Reveal draft picks section and populate year/origin dropdowns
-    const picksSection = document.getElementById(`tmPicksSection${side}`);
-    if (picksSection) {
-      picksSection.style.display = '';
-      tmPopulatePickSelectors(side);
-    }
+    // Reveal "+ Add Pick" button now that a team is loaded
+    const pickBtn = document.getElementById(`tmPickBtn${side}`);
+    if (pickBtn) pickBtn.style.display = '';
+    tmPopulatePickSelectors(side);
     // If this side's FA panel is open and data is loaded, refresh it
     if (document.getElementById(`tmFAPanel${side}`).style.display !== 'none' && faLoaded) {
       renderSideFAPanel(side);
