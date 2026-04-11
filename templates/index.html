@@ -1420,11 +1420,7 @@
           </div>
           <!-- Pick selector -->
           <div id="tmPickSelectorA" class="tm-pick-selector" style="display:none;">
-            <select id="tmPickYearA" class="tm-pick-sel"></select>
-            <select id="tmPickRoundA" class="tm-pick-sel">
-              <option value="1">1st Round</option>
-              <option value="2">2nd Round</option>
-            </select>
+            <select id="tmPickSelA" class="tm-pick-sel" style="min-width:200px;"></select>
             <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmPick('A')">Add</button>
             <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelPick('A')">✕</button>
           </div>
@@ -1476,11 +1472,7 @@
           </div>
           <!-- Pick selector -->
           <div id="tmPickSelectorB" class="tm-pick-selector" style="display:none;">
-            <select id="tmPickYearB" class="tm-pick-sel"></select>
-            <select id="tmPickRoundB" class="tm-pick-sel">
-              <option value="1">1st Round</option>
-              <option value="2">2nd Round</option>
-            </select>
+            <select id="tmPickSelB" class="tm-pick-sel" style="min-width:200px;"></select>
             <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmPick('B')">Add</button>
             <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelPick('B')">✕</button>
           </div>
@@ -1514,8 +1506,22 @@
 
     </div><!-- /tm-columns -->
 
+    <!-- RP fields -->
+    <div id="tmRPRow" style="display:flex;gap:12px;justify-content:center;align-items:center;margin-top:14px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="font-size:0.75rem;color:#94a3b8;" id="tmRPLabelA">Team A RPs:</label>
+        <input type="number" id="tmRPInputA" min="0" max="1500" placeholder="0"
+          style="width:80px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 8px;font-size:0.8rem;">
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="font-size:0.75rem;color:#94a3b8;" id="tmRPLabelB">Team B RPs:</label>
+        <input type="number" id="tmRPInputB" min="0" max="1500" placeholder="0"
+          style="width:80px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 8px;font-size:0.8rem;">
+      </div>
+    </div>
+
     <!-- Validate / Clear buttons -->
-    <div style="text-align:center;margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+    <div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
       <button class="btn btn-green" onclick="validateTradeMatch()" style="padding:10px 32px;">Check Trade Validity</button>
       <button class="btn btn-slate" onclick="clearTradeMachine()" style="padding:10px 24px;">✕ Clear</button>
     </div>
@@ -1712,10 +1718,11 @@ function switchTab(tab) {
   document.getElementById('tabBtnDepth').classList.toggle('active', tab === 'depth');
   document.getElementById('tabBtnTrade').classList.toggle('active', tab === 'trade');
   document.getElementById('tabBtnDraft').classList.toggle('active', tab === 'draft');
-  // Build Trade Machine logo grids lazily on first visit
+  // Build Trade Machine logo grids + load owed picks lazily on first visit
   if (tab === 'trade' && !tmLogoGridsBuilt) {
     buildTMLogoGrids();
     tmLogoGridsBuilt = true;
+    tmLoadOwedPicks();
   }
   // Load draft players lazily on first visit; start/stop polling with tab
   if (tab === 'draft') {
@@ -3382,8 +3389,14 @@ function clearTradeMachine() {
     const pickBtn = document.getElementById(`tmPickBtn${side}`);
     if (pickBtn) pickBtn.style.display = 'none';
   });
-  // Clear result panel
+  // Clear result panel and RP inputs
   document.getElementById('tmResult').innerHTML = '';
+  ['A','B'].forEach(side => {
+    const rp = document.getElementById(`tmRPInput${side}`);
+    if (rp) rp.value = '';
+    const lbl = document.getElementById(`tmRPLabel${side}`);
+    if (lbl) lbl.textContent = `Team ${side} RPs:`;
+  });
 }
 
 function fmtSal(n) {
@@ -3393,7 +3406,7 @@ function fmtSal(n) {
 
 // ─── Draft Picks in Trade Machine ─────────────────────────────────────────────
 const TM_LEAGUE_YEAR = 2035;
-const TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + i); // 2035-2040
+const TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + 1 + i); // 2036-2041
 
 let tmPicksA = [];   // [{year, round, ownerAbbr, originalAbbr, label}]
 let tmPicksB = [];
@@ -3405,15 +3418,10 @@ async function tmLoadOwedPicks() {
     if (!res.ok) return;
     const data = await res.json();
     tmOwedPicks = data.owed || [];
-    if (data.updated_at) {
-      const el = document.getElementById('tmPicksUpdatedAt');
-      if (el) el.textContent = 'Last updated: ' + new Date(data.updated_at + 'Z').toLocaleDateString();
-    }
-    // Pre-fill commissioner textarea
-    const ta = document.getElementById('tmOwedPicksInput');
-    if (ta && tmOwedPicks.length) {
-      ta.value = tmOwedPicks.map(p => `${p.from_abbr} ${p.year} ${p.round} ${p.to_abbr}`).join('\n');
-    }
+    // Re-populate selectors if teams already loaded
+    ['A','B'].forEach(side => {
+      if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side);
+    });
   } catch(e) {}
 }
 
@@ -3446,8 +3454,19 @@ function tmPickLabel(pick) {
 }
 
 function tmPopulatePickSelectors(side) {
-  const yearSel = document.getElementById(`tmPickYear${side}`);
-  if (yearSel) yearSel.innerHTML = TM_PICK_YEARS.map(y => `<option value="${y}">${y}</option>`).join('');
+  const sel = document.getElementById(`tmPickSel${side}`);
+  if (!sel) return;
+  const abbr = tmGetSideAbbr(side);
+  const available = abbr
+    ? tmAvailablePicks(abbr)
+    : TM_PICK_YEARS.flatMap(y => [1,2].map(r => ({year:y, round:r, ownerAbbr:'', originalAbbr:''})));
+  if (available.length === 0) {
+    sel.innerHTML = '<option value="">No picks available</option>';
+    return;
+  }
+  sel.innerHTML = available.map(p =>
+    `<option value="${p.year}:${p.round}:${p.originalAbbr}">${tmPickLabel(p)}</option>`
+  ).join('');
 }
 
 function tmGetSideAbbr(side) {
@@ -3469,15 +3488,18 @@ function tmCancelPick(side) {
 function tmConfirmPick(side) {
   const ownerAbbr = tmGetSideAbbr(side);
   if (!ownerAbbr) return;
-  const year  = parseInt(document.getElementById(`tmPickYear${side}`).value);
-  const round = parseInt(document.getElementById(`tmPickRound${side}`).value);
+  const selVal = document.getElementById(`tmPickSel${side}`).value;
+  if (!selVal) return;
+  const [yearStr, roundStr, originalAbbr] = selVal.split(':');
+  const year  = parseInt(yearStr);
+  const round = parseInt(roundStr);
 
   const arr = side === 'A' ? tmPicksA : tmPicksB;
-  if (arr.find(p => p.year === year && p.round === round)) {
+  if (arr.find(p => p.year === year && p.round === round && p.originalAbbr === originalAbbr)) {
     alert('That pick is already added.'); return;
   }
 
-  const pick = { year, round, ownerAbbr, originalAbbr: ownerAbbr };
+  const pick = { year, round, ownerAbbr, originalAbbr };
   pick.label = tmPickLabel(pick);
   arr.push(pick);
   tmRenderPickPills(side);
@@ -3571,6 +3593,10 @@ async function loadTMTeam(side) {
     const nameEl = document.getElementById(`tmTeamName${side}`);
     nameEl.textContent = teamName;
     nameEl.style.display = '';
+
+    // Update RP label with actual team name
+    const rpLabel = document.getElementById(`tmRPLabel${side}`);
+    if (rpLabel) rpLabel.textContent = `${teamName} RPs:`;
 
     buildTMPlayerList(side);
     // Reveal the + Free Agent button now that a team is loaded for this side
@@ -3822,14 +3848,17 @@ function validateTradeMatch() {
 
   // ── Copyable plain-text block ─────────────────────────────────────────────
   if (hasA || hasB || hasPicksA || hasPicksB) {
-    const buildSideText = (teamName, players, picks) => {
+    const rpA = parseInt(document.getElementById('tmRPInputA')?.value) || 0;
+    const rpB = parseInt(document.getElementById('tmRPInputB')?.value) || 0;
+    const buildSideText = (teamName, players, picks, rp) => {
       const lines = [];
       players.forEach(p => lines.push(`  • ${p.name}`));
       picks.forEach(p => lines.push(`  • ${p.label}`));
+      if (rp > 0) lines.push(`  • ${rp} RP`);
       return `${teamName} sends:\n${lines.join('\n')}`;
     };
-    const sideAText = buildSideText(tmNameA, playersA, picksA);
-    const sideBText = buildSideText(tmNameB, playersB, picksB);
+    const sideAText = buildSideText(tmNameA, playersA, picksA, rpA);
+    const sideBText = buildSideText(tmNameB, playersB, picksB, rpB);
     const copyText = `TRADE SUMMARY\n${'─'.repeat(40)}\n${sideAText}\n\n${sideBText}`;
     window._tmCopyText = copyText;
 

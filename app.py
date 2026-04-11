@@ -26,6 +26,8 @@ def get_db():
                     (id INTEGER PRIMARY KEY CHECK (id = 1),
                      data TEXT,
                      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS settings
+                    (key TEXT PRIMARY KEY, value TEXT)''')
     conn.commit()
     return conn
 
@@ -650,6 +652,107 @@ def load_draft():
     return jsonify({})
 
 
+SLN_PICKS_URL = 'https://simleaguenirvana.com/viewtopic.php?p=82277&hilit=owed#p82277'
+
+TEAM_NAME_TO_ABBR = {
+    'boston celtics': 'BOS', 'miami heat': 'MIA', 'new jersey nets': 'NJN',
+    'new york knicks': 'NYK', 'orlando magic': 'ORL', 'philadelphia 76ers': 'PHI',
+    'washington bullets': 'WAS', 'atlanta hawks': 'ATL', 'charlotte hornets': 'CHA',
+    'chicago bulls': 'CHI', 'cleveland cavaliers': 'CLE', 'detroit pistons': 'DET',
+    'indiana pacers': 'IND', 'milwaukee bucks': 'MIL', 'toronto raptors': 'TOR',
+    'dallas mavericks': 'DAL', 'denver nuggets': 'DEN', 'houston rockets': 'HOU',
+    'minnesota timberwolves': 'MIN', 'san antonio spurs': 'SAS', 'utah jazz': 'UTA',
+    'vancouver grizzlies': 'VAN', 'golden state warriors': 'GSW',
+    'los angeles clippers': 'LAC', 'los angeles lakers': 'LAL', 'phoenix suns': 'PHX',
+    'portland trail blazers': 'POR', 'sacramento kings': 'SAC',
+    'seattle supersonics': 'SEA',
+    # Short forms
+    'celtics': 'BOS', 'heat': 'MIA', 'nets': 'NJN', 'knicks': 'NYK',
+    'magic': 'ORL', '76ers': 'PHI', 'sixers': 'PHI', 'bullets': 'WAS', 'wizards': 'WAS',
+    'hawks': 'ATL', 'hornets': 'CHA', 'bulls': 'CHI', 'cavaliers': 'CLE', 'cavs': 'CLE',
+    'pistons': 'DET', 'pacers': 'IND', 'bucks': 'MIL', 'raptors': 'TOR',
+    'mavericks': 'DAL', 'mavs': 'DAL', 'nuggets': 'DEN', 'rockets': 'HOU',
+    'timberwolves': 'MIN', 'wolves': 'MIN', 'spurs': 'SAS', 'jazz': 'UTA',
+    'grizzlies': 'VAN', 'warriors': 'GSW', 'clippers': 'LAC', 'lakers': 'LAL',
+    'suns': 'PHX', 'trail blazers': 'POR', 'blazers': 'POR', 'kings': 'SAC',
+    'supersonics': 'SEA', 'sonics': 'SEA',
+}
+
+ALL_ABBRS = set(TEAM_NAME_TO_ABBR.values())
+
+
+def find_abbr(text):
+    """Find a team abbreviation in a text string."""
+    t = text.lower().strip()
+    # Direct abbr match
+    if t.upper() in ALL_ABBRS:
+        return t.upper()
+    # Full/partial name match (longest first)
+    for name in sorted(TEAM_NAME_TO_ABBR.keys(), key=len, reverse=True):
+        if name in t:
+            return TEAM_NAME_TO_ABBR[name]
+    return None
+
+
+def parse_owed_picks(post_text):
+    """Parse forum post text to extract owed picks.
+    Tries to find patterns like:
+      - 'TEAM owes their YEAR 1st/2nd round pick to TEAM2'
+      - 'TEAM → TEAM2 (YEAR 1st)'
+      - Lines with two team names + year + round
+    Returns list of {from_abbr, year, round, to_abbr}
+    """
+    owed = []
+    seen = set()
+
+    lines = post_text.replace('\r', '').split('\n')
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # Try pattern: "X owes ... YEAR ... 1st/2nd ... to Y"
+        year_m = re.search(r'\b(20[3-9]\d)\b', line)
+        round_m = re.search(r'\b(1st|2nd|first|second)\b', line, re.I)
+        if not year_m or not round_m:
+            continue
+
+        year = int(year_m.group(1))
+        rnd_str = round_m.group(1).lower()
+        rnd = 1 if rnd_str in ('1st', 'first') else 2
+
+        # Try to find FROM team (before "owes" or before "→")
+        from_abbr = to_abbr = None
+
+        # Pattern: "TEAM owes ... to TEAM2"
+        owes_m = re.search(r'(.+?)\s+owes?\s+.+?\bto\s+(.+)', line, re.I)
+        if owes_m:
+            from_abbr = find_abbr(owes_m.group(1))
+            to_abbr   = find_abbr(owes_m.group(2))
+
+        # Pattern: "TEAM → TEAM2" or "TEAM -> TEAM2"
+        if not from_abbr:
+            arrow_m = re.search(r'(.+?)\s*[→\->]+\s*(.+)', line)
+            if arrow_m:
+                from_abbr = find_abbr(arrow_m.group(1))
+                to_abbr   = find_abbr(arrow_m.group(2))
+
+        # Pattern: "TEAM to TEAM2" (simpler)
+        if not from_abbr:
+            to_m = re.search(r'(.+?)\s+to\s+(.+)', line, re.I)
+            if to_m:
+                from_abbr = find_abbr(to_m.group(1))
+                to_abbr   = find_abbr(to_m.group(2))
+
+        if from_abbr and to_abbr and from_abbr != to_abbr:
+            key = (from_abbr, year, rnd, to_abbr)
+            if key not in seen:
+                seen.add(key)
+                owed.append({'from_abbr': from_abbr, 'year': year, 'round': rnd, 'to_abbr': to_abbr})
+
+    return owed
+
+
 @app.route('/api/picks', methods=['GET'])
 def get_picks():
     db = get_db()
@@ -658,6 +761,71 @@ def get_picks():
     if row:
         return jsonify({'owed': json.loads(row[0]), 'updated_at': row[1]})
     return jsonify({'owed': [], 'updated_at': None})
+
+
+@app.route('/api/picks/sync', methods=['POST'])
+def sync_picks():
+    """Fetch and parse owed picks from SLN forum. Requires SLN session cookie."""
+    db = get_db()
+    # Get cookie from DB settings or env
+    cookie_row = db.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
+    cookie = (cookie_row[0] if cookie_row else None) or os.environ.get('SLN_COOKIE', '')
+
+    if not cookie:
+        db.close()
+        return jsonify({'error': 'No SLN session cookie configured. Set SLN_COOKIE env var on Render.'}), 400
+
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+            'Cookie': cookie
+        }
+        resp = requests.get(SLN_PICKS_URL, headers=headers, timeout=15)
+        if resp.status_code != 200:
+            db.close()
+            return jsonify({'error': f'HTTP {resp.status_code} from SLN'}), 502
+
+        soup = BeautifulSoup(resp.text, 'html.parser')
+
+        # Check if we got a login page instead of the actual forum post
+        if 'requires you to be registered' in resp.text or 'login' in resp.url.lower():
+            db.close()
+            return jsonify({'error': 'Session cookie invalid or expired. Update SLN_COOKIE on Render.'}), 401
+
+        # Find the specific post
+        post_el = soup.find('div', id='p82277') or soup.find('div', class_='content')
+        if not post_el:
+            # Try to find any post content
+            post_el = soup.find('div', class_='postbody') or soup.find('div', class_='post')
+
+        post_text = post_el.get_text(separator='\n') if post_el else soup.get_text(separator='\n')
+        owed = parse_owed_picks(post_text)
+
+        db.execute(
+            'INSERT OR REPLACE INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)',
+            (json.dumps(owed),)
+        )
+        db.commit()
+        db.close()
+        return jsonify({'ok': True, 'count': len(owed), 'owed': owed})
+
+    except Exception as e:
+        db.close()
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/picks/set-cookie', methods=['POST'])
+def set_sln_cookie():
+    """Store the SLN session cookie for scraping."""
+    body = request.get_json()
+    cookie = (body.get('cookie') or '').strip()
+    if not cookie:
+        return jsonify({'error': 'cookie required'}), 400
+    db = get_db()
+    db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('sln_cookie', ?)", (cookie,))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True})
 
 
 @app.route('/api/picks/update', methods=['POST'])
