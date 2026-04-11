@@ -3424,10 +3424,29 @@ async function tmLoadOwedPicks() {
     if (!res.ok) return;
     const data = await res.json();
     tmOwedPicks = data.owed || [];
-    // Re-populate selectors if teams already loaded
     ['A','B'].forEach(side => {
       if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side);
     });
+
+    // If server is syncing fresh data in background, poll for results
+    if (data.syncing) {
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        try {
+          const r2 = await fetch('/api/picks');
+          if (!r2.ok) { clearInterval(poll); return; }
+          const d2 = await r2.json();
+          if (!d2.syncing || attempts >= 12) {
+            clearInterval(poll);
+            tmOwedPicks = d2.owed || [];
+            ['A','B'].forEach(side => {
+              if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side);
+            });
+          }
+        } catch(e) { clearInterval(poll); }
+      }, 5000); // poll every 5s, up to 60s
+    }
   } catch(e) {}
 }
 
@@ -3463,9 +3482,16 @@ function tmPopulatePickSelectors(side) {
   const sel = document.getElementById(`tmPickSel${side}`);
   if (!sel) return;
   const abbr = tmGetSideAbbr(side);
-  const available = abbr
+  const all = abbr
     ? tmAvailablePicks(abbr)
     : TM_PICK_YEARS.flatMap(y => [1,2].map(r => ({year:y, round:r, ownerAbbr:'', originalAbbr:''})));
+
+  // Filter out picks already added to this side's trade
+  const alreadyAdded = side === 'A' ? tmPicksA : tmPicksB;
+  const available = all.filter(p =>
+    !alreadyAdded.find(a => a.year === p.year && a.round === p.round && a.originalAbbr === p.originalAbbr)
+  );
+
   if (available.length === 0) {
     sel.innerHTML = '<option value="">No picks available</option>';
     return;
@@ -3534,6 +3560,7 @@ function tmConfirmPick(side) {
   arr.push(pick);
   tmRenderPickPills(side);
   document.getElementById(`tmPickSelector${side}`).style.display = 'none';
+  tmPopulatePickSelectors(side); // refresh selector to remove the just-added pick
 }
 
 function tmRenderPickPills(side) {
@@ -3551,6 +3578,7 @@ function tmRemovePick(side, idx) {
   if (side === 'A') tmPicksA.splice(idx, 1);
   else              tmPicksB.splice(idx, 1);
   tmRenderPickPills(side);
+  tmPopulatePickSelectors(side); // restore removed pick to dropdown
 }
 
 async function tmSaveOwedPicks() {

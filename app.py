@@ -6,6 +6,8 @@ import re
 import sqlite3
 import json
 import os
+import threading
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
@@ -719,21 +721,20 @@ def parse_roster_draft_picks(html, owner_abbr, target_years):
     soup = BeautifulSoup(html, 'html.parser')
     picks = []
 
-    # Find the "Draft Picks" heading
-    draft_header = None
-    for tag in soup.find_all(['b', 'strong', 'h1', 'h2', 'h3', 'h4', 'u', 'td', 'th']):
-        if 'draft picks' in tag.get_text(strip=True).lower():
-            draft_header = tag
-            break
-    if not draft_header:
-        return picks
-
-    # Find the next <table> after the header
-    table = None
-    for node in draft_header.find_all_next():
-        if node.name == 'table':
-            table = node
-            break
+    # Find the anchor/element that is INSIDE the Draft Picks table.
+    # The pattern on SLN roster pages is: <a name="draft">Draft Picks</a>
+    # which is inside the first <td> of the table — so we use find_parent('table').
+    draft_anchor = soup.find('a', attrs={'name': 'draft'})
+    if draft_anchor:
+        table = draft_anchor.find_parent('table')
+    else:
+        # Fallback: find first <td>/<th> whose text is "Draft Picks" and get its parent table
+        table = None
+        for tag in soup.find_all(['td', 'th', 'b', 'strong', 'u']):
+            if tag.get_text(strip=True).lower() == 'draft picks':
+                table = tag.find_parent('table')
+                if table:
+                    break
     if not table:
         return picks
 
@@ -741,18 +742,25 @@ def parse_roster_draft_picks(html, owner_abbr, target_years):
     if len(rows) < 2:
         return picks
 
-    # Row 0: year headers (may use colspan)
+    # Skip the title row ("Draft Picks") — find the row that has year headers
     year_col_map = {}  # col_index -> year
-    col = 0
-    for cell in rows[0].find_all(['th', 'td']):
-        colspan = int(cell.get('colspan', 1))
-        txt = cell.get_text(strip=True)
-        m = re.search(r'\b(20[3-9]\d)\b', txt)
-        if m:
-            year = int(m.group(1))
-            for c in range(col, col + colspan):
-                year_col_map[c] = year
-        col += colspan
+    year_row_idx = None
+    for ri, row in enumerate(rows):
+        col = 0
+        found = {}
+        for cell in row.find_all(['th', 'td']):
+            colspan = int(cell.get('colspan', 1))
+            txt = cell.get_text(strip=True)
+            m = re.search(r'\b(20[3-9]\d)\b', txt)
+            if m:
+                year = int(m.group(1))
+                for c in range(col, col + colspan):
+                    found[c] = year
+            col += colspan
+        if found:
+            year_col_map = found
+            year_row_idx = ri
+            break
 
     if not year_col_map:
         return picks
@@ -766,12 +774,14 @@ def parse_roster_draft_picks(html, owner_abbr, target_years):
             seen_year[year] = c
             year_sections[year] = (c, c + 1)
 
-    # Skip sub-header row if it contains "round"/"team"
-    data_rows = rows[1:]
-    if data_rows:
+    # Skip year-header row and any sub-header row(s) containing "round"/"team"
+    data_rows = rows[year_row_idx + 1:]
+    while data_rows:
         cells_text = [c.get_text(strip=True).lower() for c in data_rows[0].find_all(['th', 'td'])]
         if any(t in ('round', 'team', 'r', 't') for t in cells_text):
             data_rows = data_rows[1:]
+        else:
+            break
 
     for row in data_rows:
         cells = row.find_all(['td', 'th'])
@@ -854,34 +864,25 @@ def parse_owed_picks_from_thread(post_text):
     return owed
 
 
-@app.route('/api/picks', methods=['GET'])
-def get_picks():
-    db = get_db()
-    row = db.execute('SELECT data, updated_at FROM owed_picks WHERE id = 1').fetchone()
-    db.close()
-    if row:
-        return jsonify({'owed': json.loads(row[0]), 'updated_at': row[1]})
-    return jsonify({'owed': [], 'updated_at': None})
+_sync_lock = threading.Lock()
+_sync_running = False
 
 
-@app.route('/api/picks/sync', methods=['POST'])
-def sync_picks():
-    """Sync owed picks:
-    - Years 2036-2037: scrape all 29 roster pages (public, no cookie needed)
-    - Years 2038-2041: scrape first post of SLN owed-picks thread (requires cookie)
+def _execute_picks_sync():
+    """Core sync logic: scrapes roster pages (2036-2037) and forum thread (2038-2041).
+    Returns (owed_list, errors_list).
     """
     db = get_db()
     cookie_row = db.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
     cookie = (cookie_row[0] if cookie_row else None) or os.environ.get('SLN_COOKIE', '')
+    db.close()
 
     owed = []
     errors = []
     seen = set()
-
-    # ── Step 1: Roster pages for years 2036-2037 ─────────────────────────────
     pub_headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
 
-    # owned_picks[abbr] = [(year, round, original_abbr), ...]
+    # ── Step 1: Roster pages for years 2036-2037 ─────────────────────────────
     owned_map = {}
     for roster_file, owner_abbr in ROSTER_MAP.items():
         try:
@@ -892,27 +893,22 @@ def sync_picks():
         except Exception as e:
             errors.append(f'Roster {roster_file}: {e}')
 
-    # Which (year, round, original_abbr) tuples appear on any team's page
     all_owned = set()
     for picks in owned_map.values():
         for p in picks:
             all_owned.add((p['year'], p['round'], p['original_abbr']))
 
-    # Build owed picks from roster data
     for owner_abbr, picks in owned_map.items():
         for p in picks:
             orig = p['original_abbr']
             year = p['year']
             rnd  = p['round']
             if orig != owner_abbr:
-                # owner_abbr has acquired orig's pick
                 key = (orig, year, rnd, owner_abbr)
                 if key not in seen:
                     seen.add(key)
                     owed.append({'from_abbr': orig, 'year': year, 'round': rnd, 'to_abbr': owner_abbr})
 
-    # Mark picks that were traded away (not on any page) so they don't show for the original team
-    # Use 'EXT' as a sentinel meaning "traded, destination not tracked here"
     for abbr in owned_map:
         for year in ROSTER_PICK_YEARS:
             for rnd in (1, 2):
@@ -929,7 +925,6 @@ def sync_picks():
             resp = requests.get(SLN_THREAD_URL, headers=auth_headers, timeout=15)
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
-                # Get first post content
                 post_el = (soup.find('div', class_='content') or
                            soup.find('div', class_='postbody') or
                            soup.find('div', class_='post'))
@@ -948,12 +943,69 @@ def sync_picks():
     else:
         errors.append('No SLN cookie — skipped years 2038-2041 from forum thread')
 
+    db = get_db()
     db.execute(
         'INSERT OR REPLACE INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)',
         (json.dumps(owed),)
     )
     db.commit()
     db.close()
+    return owed, errors
+
+
+def _bg_sync():
+    """Run sync in background thread, guarded by lock."""
+    global _sync_running
+    with _sync_lock:
+        if _sync_running:
+            return
+        _sync_running = True
+    try:
+        _execute_picks_sync()
+    except Exception:
+        pass
+    finally:
+        _sync_running = False
+
+
+# Auto-sync picks when the app starts (non-blocking)
+def _startup_sync():
+    import time
+    time.sleep(5)
+    _bg_sync()
+
+threading.Thread(target=_startup_sync, daemon=True).start()
+
+
+@app.route('/api/picks', methods=['GET'])
+def get_picks():
+    db = get_db()
+    row = db.execute('SELECT data, updated_at FROM owed_picks WHERE id = 1').fetchone()
+    db.close()
+
+    stale = True
+    if row and row[1]:
+        try:
+            updated = datetime.strptime(row[1], '%Y-%m-%d %H:%M:%S')
+            stale = (datetime.utcnow() - updated) > timedelta(hours=1)
+        except Exception:
+            pass
+
+    if stale and not _sync_running:
+        threading.Thread(target=_bg_sync, daemon=True).start()
+
+    if row:
+        return jsonify({'owed': json.loads(row[0]), 'updated_at': row[1], 'syncing': stale})
+    return jsonify({'owed': [], 'updated_at': None, 'syncing': True})
+
+
+@app.route('/api/picks/sync', methods=['POST'])
+def sync_picks():
+    """Sync owed picks:
+    - Years 2036-2037: scrape all 29 roster pages (public, no cookie needed)
+    - Years 2038-2041: scrape first post of SLN owed-picks thread (requires cookie)
+    """
+    owed, errors = _execute_picks_sync()
     return jsonify({'ok': True, 'count': len(owed), 'owed': owed, 'errors': errors})
 
 
