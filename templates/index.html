@@ -3822,19 +3822,15 @@ function validateTradeMatch() {
 
   // ── Copyable plain-text block ─────────────────────────────────────────────
   if (hasA || hasB || hasPicksA || hasPicksB) {
-    const buildSideText = (teamName, players, vmCnt, vmTotal, picks, sal) => {
+    const buildSideText = (teamName, players, picks) => {
       const lines = [];
-      players.forEach(p => lines.push(`  • ${p.name} (${fmtSal(p.salary)})`));
-      if (vmCnt > 0) lines.push(`  • ${vmCnt} vet min${vmCnt > 1 ? 's' : ''} (${fmtSal(vmTotal)})`);
-      picks.forEach(p => lines.push(`  • 🏀 ${p.label}`));
-      if (sal > 0) lines.push(`  Salary out: ${fmtSal(sal)}`);
+      players.forEach(p => lines.push(`  • ${p.name}`));
+      picks.forEach(p => lines.push(`  • ${p.label}`));
       return `${teamName} sends:\n${lines.join('\n')}`;
     };
-    const sideAText = buildSideText(tmNameA, playersA, vetMinCntA, vetMinA, picksA, salA);
-    const sideBText = buildSideText(tmNameB, playersB, vetMinCntB, vetMinB, picksB, salB);
-    let copyText = `TRADE SUMMARY\n${'─'.repeat(40)}\n${sideAText}\n\n${sideBText}\n${'─'.repeat(40)}\n`;
-    if (hasA && hasB) copyText += `Salary difference: ${fmtSal(Math.abs(salA - salB))}\n`;
-    copyText += passed ? 'Status: ✓ Trade Appears Valid' : 'Status: ✗ Trade Has Issues';
+    const sideAText = buildSideText(tmNameA, playersA, picksA);
+    const sideBText = buildSideText(tmNameB, playersB, picksB);
+    const copyText = `TRADE SUMMARY\n${'─'.repeat(40)}\n${sideAText}\n\n${sideBText}`;
     window._tmCopyText = copyText;
 
     html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid #334155;">`;
