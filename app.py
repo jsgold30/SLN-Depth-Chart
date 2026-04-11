@@ -1096,6 +1096,46 @@ def sln_login():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/picks/from-paste', methods=['POST'])
+def picks_from_paste():
+    """Accept pasted text from the SLN owed-picks forum post.
+    Parses years 3-6 picks and merges them with whatever roster-page data is in the DB.
+    """
+    body = request.get_json() or {}
+    text = (body.get('text') or '').strip()
+    if not text:
+        return jsonify({'error': 'text required'}), 400
+
+    forum_picks = parse_owed_picks_from_thread(text)
+    if not forum_picks:
+        return jsonify({'error': 'No picks found — make sure you copied the full post text'}), 400
+
+    db = get_db()
+    row = db.execute('SELECT data FROM owed_picks WHERE id = 1').fetchone()
+    existing = json.loads(row[0]) if row else []
+
+    # Keep roster-page picks (years 2036-2037), replace forum-year picks with new paste
+    kept = [p for p in existing if p.get('year') in ROSTER_PICK_YEARS]
+    seen = {(p['from_abbr'], p['year'], p['round'], p['to_abbr']) for p in kept}
+
+    added = 0
+    for p in forum_picks:
+        if p['year'] in FORUM_PICK_YEARS:
+            key = (p['from_abbr'], p['year'], p['round'], p['to_abbr'])
+            if key not in seen:
+                seen.add(key)
+                kept.append(p)
+                added += 1
+
+    db.execute(
+        'INSERT OR REPLACE INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)',
+        (json.dumps(kept),)
+    )
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'added': added, 'total': len(kept)})
+
+
 @app.route('/api/picks/update', methods=['POST'])
 def update_picks():
     body = request.get_json()
