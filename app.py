@@ -652,7 +652,25 @@ def load_draft():
     return jsonify({})
 
 
-SLN_PICKS_URL = 'https://simleaguenirvana.com/viewtopic.php?p=82277&hilit=owed#p82277'
+SLN_THREAD_URL = 'https://simleaguenirvana.com/viewtopic.php?t=18'
+
+LEAGUE_YEAR = 2035
+ROSTER_PICK_YEARS = [LEAGUE_YEAR + 1, LEAGUE_YEAR + 2]   # 2036, 2037
+FORUM_PICK_YEARS  = list(range(LEAGUE_YEAR + 3, LEAGUE_YEAR + 7))  # 2038-2041
+
+ROSTER_MAP = {
+    'roster1.htm': 'BOS', 'roster2.htm': 'MIA', 'roster3.htm': 'NJN',
+    'roster4.htm': 'NYK', 'roster5.htm': 'ORL', 'roster6.htm': 'PHI',
+    'roster7.htm': 'WAS', 'roster8.htm': 'ATL', 'roster9.htm': 'CHA',
+    'roster10.htm': 'CHI', 'roster11.htm': 'CLE', 'roster12.htm': 'DET',
+    'roster13.htm': 'IND', 'roster14.htm': 'MIL', 'roster15.htm': 'TOR',
+    'roster16.htm': 'DAL', 'roster17.htm': 'DEN', 'roster18.htm': 'HOU',
+    'roster19.htm': 'MIN', 'roster20.htm': 'SAS', 'roster21.htm': 'UTA',
+    'roster22.htm': 'VAN', 'roster23.htm': 'GSW', 'roster24.htm': 'LAC',
+    'roster25.htm': 'LAL', 'roster26.htm': 'PHX', 'roster27.htm': 'POR',
+    'roster28.htm': 'SAC', 'roster29.htm': 'SEA',
+}
+ROSTER_BASE = 'https://www.simleaguenirvana.com/rosters/'
 
 TEAM_NAME_TO_ABBR = {
     'boston celtics': 'BOS', 'miami heat': 'MIA', 'new jersey nets': 'NJN',
@@ -672,7 +690,7 @@ TEAM_NAME_TO_ABBR = {
     'hawks': 'ATL', 'hornets': 'CHA', 'bulls': 'CHI', 'cavaliers': 'CLE', 'cavs': 'CLE',
     'pistons': 'DET', 'pacers': 'IND', 'bucks': 'MIL', 'raptors': 'TOR',
     'mavericks': 'DAL', 'mavs': 'DAL', 'nuggets': 'DEN', 'rockets': 'HOU',
-    'timberwolves': 'MIN', 'wolves': 'MIN', 'spurs': 'SAS', 'jazz': 'UTA',
+    'timberwolves': 'MIN', 'wolves': 'MIN', 'spurs': 'SAS', 'sa': 'SAS', 'jazz': 'UTA',
     'grizzlies': 'VAN', 'warriors': 'GSW', 'clippers': 'LAC', 'lakers': 'LAL',
     'suns': 'PHX', 'trail blazers': 'POR', 'blazers': 'POR', 'kings': 'SAC',
     'supersonics': 'SEA', 'sonics': 'SEA',
@@ -694,61 +712,144 @@ def find_abbr(text):
     return None
 
 
-def parse_owed_picks(post_text):
-    """Parse forum post text to extract owed picks.
-    Tries to find patterns like:
-      - 'TEAM owes their YEAR 1st/2nd round pick to TEAM2'
-      - 'TEAM → TEAM2 (YEAR 1st)'
-      - Lines with two team names + year + round
-    Returns list of {from_abbr, year, round, to_abbr}
+def parse_roster_draft_picks(html, owner_abbr, target_years):
+    """Parse Draft Picks table from a roster page.
+    Returns list of {year, round, original_abbr} — picks the owner currently holds.
+    """
+    soup = BeautifulSoup(html, 'html.parser')
+    picks = []
+
+    # Find the "Draft Picks" heading
+    draft_header = None
+    for tag in soup.find_all(['b', 'strong', 'h1', 'h2', 'h3', 'h4', 'u', 'td', 'th']):
+        if 'draft picks' in tag.get_text(strip=True).lower():
+            draft_header = tag
+            break
+    if not draft_header:
+        return picks
+
+    # Find the next <table> after the header
+    table = None
+    for node in draft_header.find_all_next():
+        if node.name == 'table':
+            table = node
+            break
+    if not table:
+        return picks
+
+    rows = table.find_all('tr')
+    if len(rows) < 2:
+        return picks
+
+    # Row 0: year headers (may use colspan)
+    year_col_map = {}  # col_index -> year
+    col = 0
+    for cell in rows[0].find_all(['th', 'td']):
+        colspan = int(cell.get('colspan', 1))
+        txt = cell.get_text(strip=True)
+        m = re.search(r'\b(20[3-9]\d)\b', txt)
+        if m:
+            year = int(m.group(1))
+            for c in range(col, col + colspan):
+                year_col_map[c] = year
+        col += colspan
+
+    if not year_col_map:
+        return picks
+
+    # Determine round/team column types per year section
+    # Within each year's colspan, first col = round, second = team
+    year_sections = {}  # year -> (round_col, team_col)
+    seen_year = {}
+    for c, year in sorted(year_col_map.items()):
+        if year not in seen_year:
+            seen_year[year] = c
+            year_sections[year] = (c, c + 1)
+
+    # Skip sub-header row if it contains "round"/"team"
+    data_rows = rows[1:]
+    if data_rows:
+        cells_text = [c.get_text(strip=True).lower() for c in data_rows[0].find_all(['th', 'td'])]
+        if any(t in ('round', 'team', 'r', 't') for t in cells_text):
+            data_rows = data_rows[1:]
+
+    for row in data_rows:
+        cells = row.find_all(['td', 'th'])
+        cell_texts = [c.get_text(strip=True) for c in cells]
+        for year, (round_col, team_col) in year_sections.items():
+            if year not in target_years:
+                continue
+            rnd_txt  = cell_texts[round_col]  if round_col  < len(cell_texts) else ''
+            team_txt = cell_texts[team_col]   if team_col   < len(cell_texts) else ''
+            if not rnd_txt or not team_txt:
+                continue
+            try:
+                rnd = int(rnd_txt)
+            except ValueError:
+                continue
+            if rnd not in (1, 2):
+                continue
+            orig = find_abbr(team_txt)
+            if orig:
+                picks.append({'year': year, 'round': rnd, 'original_abbr': orig})
+
+    return picks
+
+
+def parse_owed_picks_from_thread(post_text):
+    """Parse owed picks from the SLN owed-picks thread first post.
+    Format:
+      YYYY:
+      TEAM 1st to TEAM
+      TEAM 2nd to TEAM [optional notes]
+    Returns list of {from_abbr, year, round, to_abbr}.
     """
     owed = []
     seen = set()
+    current_year = None
 
-    lines = post_text.replace('\r', '').split('\n')
-    for line in lines:
-        line = line.strip()
+    for raw_line in post_text.replace('\r', '').split('\n'):
+        line = raw_line.strip()
         if not line:
             continue
 
-        # Try pattern: "X owes ... YEAR ... 1st/2nd ... to Y"
-        year_m = re.search(r'\b(20[3-9]\d)\b', line)
-        round_m = re.search(r'\b(1st|2nd|first|second)\b', line, re.I)
-        if not year_m or not round_m:
+        # Year header line: "2038:" or "2038"
+        year_header = re.match(r'^(20[3-9]\d)\s*:?\s*$', line)
+        if year_header:
+            current_year = int(year_header.group(1))
             continue
 
-        year = int(year_m.group(1))
-        rnd_str = round_m.group(1).lower()
-        rnd = 1 if rnd_str in ('1st', 'first') else 2
+        if not current_year:
+            continue
 
-        # Try to find FROM team (before "owes" or before "→")
-        from_abbr = to_abbr = None
+        # Must contain 1st or 2nd
+        round_m = re.search(r'\b(1st|2nd)\b', line, re.I)
+        if not round_m:
+            continue
+        rnd = 1 if round_m.group(1).lower() == '1st' else 2
 
-        # Pattern: "TEAM owes ... to TEAM2"
-        owes_m = re.search(r'(.+?)\s+owes?\s+.+?\bto\s+(.+)', line, re.I)
-        if owes_m:
-            from_abbr = find_abbr(owes_m.group(1))
-            to_abbr   = find_abbr(owes_m.group(2))
+        # Split on " to "
+        parts = re.split(r'\s+to\s+', line, maxsplit=1, flags=re.I)
+        if len(parts) < 2:
+            continue
 
-        # Pattern: "TEAM → TEAM2" or "TEAM -> TEAM2"
-        if not from_abbr:
-            arrow_m = re.search(r'(.+?)\s*[→\->]+\s*(.+)', line)
-            if arrow_m:
-                from_abbr = find_abbr(arrow_m.group(1))
-                to_abbr   = find_abbr(arrow_m.group(2))
+        from_part = re.sub(r'\s*\b(1st|2nd)\b.*', '', parts[0], flags=re.I).strip()
+        # to_part: stop at notes like "(", "*", " via "
+        to_part = re.split(r'\s*[\(\*]|\s+via\s+|\s+\(', parts[1])[0].strip()
 
-        # Pattern: "TEAM to TEAM2" (simpler)
-        if not from_abbr:
-            to_m = re.search(r'(.+?)\s+to\s+(.+)', line, re.I)
-            if to_m:
-                from_abbr = find_abbr(to_m.group(1))
-                to_abbr   = find_abbr(to_m.group(2))
+        to_abbr = find_abbr(to_part)
+        if not to_abbr:
+            continue
 
-        if from_abbr and to_abbr and from_abbr != to_abbr:
-            key = (from_abbr, year, rnd, to_abbr)
-            if key not in seen:
-                seen.add(key)
-                owed.append({'from_abbr': from_abbr, 'year': year, 'round': rnd, 'to_abbr': to_abbr})
+        # Handle dual-team from like "SA/MIA"
+        from_teams = [t.strip() for t in from_part.split('/')]
+        for ft in from_teams:
+            from_abbr = find_abbr(ft)
+            if from_abbr and from_abbr != to_abbr:
+                key = (from_abbr, current_year, rnd, to_abbr)
+                if key not in seen:
+                    seen.add(key)
+                    owed.append({'from_abbr': from_abbr, 'year': current_year, 'round': rnd, 'to_abbr': to_abbr})
 
     return owed
 
@@ -765,53 +866,95 @@ def get_picks():
 
 @app.route('/api/picks/sync', methods=['POST'])
 def sync_picks():
-    """Fetch and parse owed picks from SLN forum. Requires SLN session cookie."""
+    """Sync owed picks:
+    - Years 2036-2037: scrape all 29 roster pages (public, no cookie needed)
+    - Years 2038-2041: scrape first post of SLN owed-picks thread (requires cookie)
+    """
     db = get_db()
-    # Get cookie from DB settings or env
     cookie_row = db.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
     cookie = (cookie_row[0] if cookie_row else None) or os.environ.get('SLN_COOKIE', '')
 
-    if not cookie:
-        db.close()
-        return jsonify({'error': 'No SLN session cookie configured. Set SLN_COOKIE env var on Render.'}), 400
+    owed = []
+    errors = []
+    seen = set()
 
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-            'Cookie': cookie
-        }
-        resp = requests.get(SLN_PICKS_URL, headers=headers, timeout=15)
-        if resp.status_code != 200:
-            db.close()
-            return jsonify({'error': f'HTTP {resp.status_code} from SLN'}), 502
+    # ── Step 1: Roster pages for years 2036-2037 ─────────────────────────────
+    pub_headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
 
-        soup = BeautifulSoup(resp.text, 'html.parser')
+    # owned_picks[abbr] = [(year, round, original_abbr), ...]
+    owned_map = {}
+    for roster_file, owner_abbr in ROSTER_MAP.items():
+        try:
+            resp = requests.get(ROSTER_BASE + roster_file, headers=pub_headers, timeout=10)
+            if resp.status_code == 200:
+                picks = parse_roster_draft_picks(resp.text, owner_abbr, ROSTER_PICK_YEARS)
+                owned_map[owner_abbr] = picks
+        except Exception as e:
+            errors.append(f'Roster {roster_file}: {e}')
 
-        # Check if we got a login page instead of the actual forum post
-        if 'requires you to be registered' in resp.text or 'login' in resp.url.lower():
-            db.close()
-            return jsonify({'error': 'Session cookie invalid or expired. Update SLN_COOKIE on Render.'}), 401
+    # Which (year, round, original_abbr) tuples appear on any team's page
+    all_owned = set()
+    for picks in owned_map.values():
+        for p in picks:
+            all_owned.add((p['year'], p['round'], p['original_abbr']))
 
-        # Find the specific post
-        post_el = soup.find('div', id='p82277') or soup.find('div', class_='content')
-        if not post_el:
-            # Try to find any post content
-            post_el = soup.find('div', class_='postbody') or soup.find('div', class_='post')
+    # Build owed picks from roster data
+    for owner_abbr, picks in owned_map.items():
+        for p in picks:
+            orig = p['original_abbr']
+            year = p['year']
+            rnd  = p['round']
+            if orig != owner_abbr:
+                # owner_abbr has acquired orig's pick
+                key = (orig, year, rnd, owner_abbr)
+                if key not in seen:
+                    seen.add(key)
+                    owed.append({'from_abbr': orig, 'year': year, 'round': rnd, 'to_abbr': owner_abbr})
 
-        post_text = post_el.get_text(separator='\n') if post_el else soup.get_text(separator='\n')
-        owed = parse_owed_picks(post_text)
+    # Mark picks that were traded away (not on any page) so they don't show for the original team
+    # Use 'EXT' as a sentinel meaning "traded, destination not tracked here"
+    for abbr in owned_map:
+        for year in ROSTER_PICK_YEARS:
+            for rnd in (1, 2):
+                if (year, rnd, abbr) not in all_owned:
+                    key = (abbr, year, rnd, 'EXT')
+                    if key not in seen:
+                        seen.add(key)
+                        owed.append({'from_abbr': abbr, 'year': year, 'round': rnd, 'to_abbr': 'EXT'})
 
-        db.execute(
-            'INSERT OR REPLACE INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)',
-            (json.dumps(owed),)
-        )
-        db.commit()
-        db.close()
-        return jsonify({'ok': True, 'count': len(owed), 'owed': owed})
+    # ── Step 2: Forum thread first post for years 2038-2041 ──────────────────
+    if cookie:
+        try:
+            auth_headers = {**pub_headers, 'Cookie': cookie}
+            resp = requests.get(SLN_THREAD_URL, headers=auth_headers, timeout=15)
+            if resp.status_code == 200:
+                soup = BeautifulSoup(resp.text, 'html.parser')
+                # Get first post content
+                post_el = (soup.find('div', class_='content') or
+                           soup.find('div', class_='postbody') or
+                           soup.find('div', class_='post'))
+                if post_el:
+                    forum_picks = parse_owed_picks_from_thread(post_el.get_text(separator='\n'))
+                    for o in forum_picks:
+                        if o['year'] in FORUM_PICK_YEARS:
+                            key = (o['from_abbr'], o['year'], o['round'], o['to_abbr'])
+                            if key not in seen:
+                                seen.add(key)
+                                owed.append(o)
+            else:
+                errors.append(f'Forum thread HTTP {resp.status_code}')
+        except Exception as e:
+            errors.append(f'Forum thread: {e}')
+    else:
+        errors.append('No SLN cookie — skipped years 2038-2041 from forum thread')
 
-    except Exception as e:
-        db.close()
-        return jsonify({'error': str(e)}), 500
+    db.execute(
+        'INSERT OR REPLACE INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)',
+        (json.dumps(owed),)
+    )
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'count': len(owed), 'owed': owed, 'errors': errors})
 
 
 @app.route('/api/picks/set-cookie', methods=['POST'])

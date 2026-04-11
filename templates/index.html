@@ -1416,6 +1416,7 @@
             <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddA" onclick="addVetMin('A')">+ Add Vet Min</button>
             <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('A')">+ Custom Salary</button>
             <button class="btn btn-slate tm-vetmin-add" id="tmPickBtnA" onclick="tmAddPickUI('A')" style="display:none;">+ Add Pick</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tmRPBtnA" onclick="tmAddRPUI('A')" style="display:none;">+ Add RP</button>
             <button class="btn btn-slate tm-vetmin-add" id="tmFABtnA" onclick="toggleSideFAPanel('A')" style="display:none;">+ Free Agent</button>
           </div>
           <!-- Pick selector -->
@@ -1424,7 +1425,15 @@
             <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmPick('A')">Add</button>
             <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelPick('A')">✕</button>
           </div>
+          <!-- RP input -->
+          <div id="tmRPSelectorA" class="tm-pick-selector" style="display:none;">
+            <input type="number" id="tmRPValueA" min="1" max="1500" placeholder="RP amount"
+              style="width:120px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:3px 8px;font-size:0.8rem;">
+            <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmRP('A')">Add</button>
+            <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelRP('A')">✕</button>
+          </div>
           <div id="tmPicksPillsA" class="tm-picks-pills" style="margin-top:4px;"></div>
+          <div id="tmRPDisplayA" style="margin-top:4px;font-size:0.75rem;color:#94a3b8;display:none;"></div>
           <!-- Per-side FA panel -->
           <div id="tmFAPanelA" style="display:none;margin-top:10px;">
             <div class="fa-pos-filter" id="tmFAPosFilterA">
@@ -1468,6 +1477,7 @@
             <button class="btn btn-slate tm-vetmin-add" id="tmVetMinAddB" onclick="addVetMin('B')">+ Add Vet Min</button>
             <button class="btn btn-slate tm-vetmin-add" onclick="addCustomSalary('B')">+ Custom Salary</button>
             <button class="btn btn-slate tm-vetmin-add" id="tmPickBtnB" onclick="tmAddPickUI('B')" style="display:none;">+ Add Pick</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tmRPBtnB" onclick="tmAddRPUI('B')" style="display:none;">+ Add RP</button>
             <button class="btn btn-slate tm-vetmin-add" id="tmFABtnB" onclick="toggleSideFAPanel('B')" style="display:none;">+ Free Agent</button>
           </div>
           <!-- Pick selector -->
@@ -1476,7 +1486,15 @@
             <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmPick('B')">Add</button>
             <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelPick('B')">✕</button>
           </div>
+          <!-- RP input -->
+          <div id="tmRPSelectorB" class="tm-pick-selector" style="display:none;">
+            <input type="number" id="tmRPValueB" min="1" max="1500" placeholder="RP amount"
+              style="width:120px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:3px 8px;font-size:0.8rem;">
+            <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmRP('B')">Add</button>
+            <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelRP('B')">✕</button>
+          </div>
           <div id="tmPicksPillsB" class="tm-picks-pills" style="margin-top:4px;"></div>
+          <div id="tmRPDisplayB" style="margin-top:4px;font-size:0.75rem;color:#94a3b8;display:none;"></div>
           <!-- Per-side FA panel -->
           <div id="tmFAPanelB" style="display:none;margin-top:10px;">
             <div class="fa-pos-filter" id="tmFAPosFilterB">
@@ -1505,20 +1523,6 @@
       </div>
 
     </div><!-- /tm-columns -->
-
-    <!-- RP fields -->
-    <div id="tmRPRow" style="display:flex;gap:12px;justify-content:center;align-items:center;margin-top:14px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:6px;">
-        <label style="font-size:0.75rem;color:#94a3b8;" id="tmRPLabelA">Team A RPs:</label>
-        <input type="number" id="tmRPInputA" min="0" max="1500" placeholder="0"
-          style="width:80px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 8px;font-size:0.8rem;">
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <label style="font-size:0.75rem;color:#94a3b8;" id="tmRPLabelB">Team B RPs:</label>
-        <input type="number" id="tmRPInputB" min="0" max="1500" placeholder="0"
-          style="width:80px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 8px;font-size:0.8rem;">
-      </div>
-    </div>
 
     <!-- Validate / Clear buttons -->
     <div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
@@ -3388,15 +3392,15 @@ function clearTradeMachine() {
     document.getElementById(`tmPickSelector${side}`).style.display = 'none';
     const pickBtn = document.getElementById(`tmPickBtn${side}`);
     if (pickBtn) pickBtn.style.display = 'none';
+    // Clear RP
+    if (side === 'A') tmRPA = 0; else tmRPB = 0;
+    document.getElementById(`tmRPSelector${side}`).style.display = 'none';
+    const rpBtn = document.getElementById(`tmRPBtn${side}`);
+    if (rpBtn) rpBtn.style.display = 'none';
+    const rpDisp = document.getElementById(`tmRPDisplay${side}`);
+    if (rpDisp) { rpDisp.style.display = 'none'; rpDisp.textContent = ''; }
   });
-  // Clear result panel and RP inputs
   document.getElementById('tmResult').innerHTML = '';
-  ['A','B'].forEach(side => {
-    const rp = document.getElementById(`tmRPInput${side}`);
-    if (rp) rp.value = '';
-    const lbl = document.getElementById(`tmRPLabel${side}`);
-    if (lbl) lbl.textContent = `Team ${side} RPs:`;
-  });
 }
 
 function fmtSal(n) {
@@ -3411,6 +3415,8 @@ const TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + 1 + i)
 let tmPicksA = [];   // [{year, round, ownerAbbr, originalAbbr, label}]
 let tmPicksB = [];
 let tmOwedPicks = []; // [{from_abbr, year, round, to_abbr}] — loaded from server
+let tmRPA = 0;        // Roster Points being traded by side A
+let tmRPB = 0;        // Roster Points being traded by side B
 
 async function tmLoadOwedPicks() {
   try {
@@ -3437,9 +3443,9 @@ function tmAvailablePicks(abbr) {
       }
     }
   }
-  // Acquired picks from other teams
+  // Acquired picks from other teams (exclude sentinel 'EXT')
   for (const p of tmOwedPicks) {
-    if (p.to_abbr === abbr) {
+    if (p.to_abbr === abbr && p.to_abbr !== 'EXT') {
       picks.push({ year: p.year, round: p.round, ownerAbbr: abbr, originalAbbr: p.from_abbr });
     }
   }
@@ -3483,6 +3489,30 @@ function tmAddPickUI(side) {
 
 function tmCancelPick(side) {
   document.getElementById(`tmPickSelector${side}`).style.display = 'none';
+}
+
+function tmAddRPUI(side) {
+  document.getElementById(`tmRPSelector${side}`).style.display = '';
+  document.getElementById(`tmRPValue${side}`).value = side === 'A' ? (tmRPA || '') : (tmRPB || '');
+  document.getElementById(`tmRPValue${side}`).focus();
+}
+
+function tmCancelRP(side) {
+  document.getElementById(`tmRPSelector${side}`).style.display = 'none';
+}
+
+function tmConfirmRP(side) {
+  const val = parseInt(document.getElementById(`tmRPValue${side}`).value) || 0;
+  if (side === 'A') tmRPA = val; else tmRPB = val;
+  document.getElementById(`tmRPSelector${side}`).style.display = 'none';
+  const disp = document.getElementById(`tmRPDisplay${side}`);
+  if (val > 0) {
+    disp.textContent = `🏷 ${val} RP included`;
+    disp.style.display = '';
+  } else {
+    disp.textContent = '';
+    disp.style.display = 'none';
+  }
 }
 
 function tmConfirmPick(side) {
@@ -3594,17 +3624,16 @@ async function loadTMTeam(side) {
     nameEl.textContent = teamName;
     nameEl.style.display = '';
 
-    // Update RP label with actual team name
-    const rpLabel = document.getElementById(`tmRPLabel${side}`);
-    if (rpLabel) rpLabel.textContent = `${teamName} RPs:`;
 
     buildTMPlayerList(side);
     // Reveal the + Free Agent button now that a team is loaded for this side
     const faBtnEl = document.getElementById(`tmFABtn${side}`);
     if (faBtnEl) faBtnEl.style.display = '';
-    // Reveal "+ Add Pick" button now that a team is loaded
+    // Reveal "+ Add Pick" and "+ Add RP" buttons now that a team is loaded
     const pickBtn = document.getElementById(`tmPickBtn${side}`);
     if (pickBtn) pickBtn.style.display = '';
+    const rpBtn = document.getElementById(`tmRPBtn${side}`);
+    if (rpBtn) rpBtn.style.display = '';
     tmPopulatePickSelectors(side);
     // If this side's FA panel is open and data is loaded, refresh it
     if (document.getElementById(`tmFAPanel${side}`).style.display !== 'none' && faLoaded) {
@@ -3848,8 +3877,8 @@ function validateTradeMatch() {
 
   // ── Copyable plain-text block ─────────────────────────────────────────────
   if (hasA || hasB || hasPicksA || hasPicksB) {
-    const rpA = parseInt(document.getElementById('tmRPInputA')?.value) || 0;
-    const rpB = parseInt(document.getElementById('tmRPInputB')?.value) || 0;
+    const rpA = tmRPA || 0;
+    const rpB = tmRPB || 0;
     const buildSideText = (teamName, players, picks, rp) => {
       const lines = [];
       players.forEach(p => lines.push(`  • ${p.name}`));
