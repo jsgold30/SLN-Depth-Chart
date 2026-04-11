@@ -1395,7 +1395,40 @@
 
   <!-- ── TRADE MACHINE ── -->
   <div class="card">
-    <div class="card-title">Trade Machine</div>
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+      Trade Machine
+      <button onclick="tmToggleAdminPin()" style="font-size:0.68rem;padding:3px 10px;background:#1e293b;color:#64748b;border:1px solid #334155;border-radius:6px;cursor:pointer;letter-spacing:0.04em;">Admin</button>
+    </div>
+    <!-- Admin PIN entry -->
+    <div id="tmAdminPinPanel" style="display:none;padding:10px 0 2px;border-bottom:1px solid #1e293b;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <input type="password" id="tmAdminPinInput" placeholder="PIN" maxlength="4" inputmode="numeric"
+          onkeydown="if(event.key==='Enter')tmCheckAdminPin()"
+          style="width:80px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:4px 8px;font-size:0.8rem;letter-spacing:0.2em;">
+        <button class="btn btn-slate" style="padding:3px 12px;font-size:0.73rem;" onclick="tmCheckAdminPin()">Unlock</button>
+        <span id="tmAdminPinError" style="font-size:0.72rem;color:#f87171;"></span>
+      </div>
+    </div>
+    <!-- Admin sync panel (unlocked) -->
+    <div id="tmAdminPanel" style="display:none;padding:10px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;margin-bottom:12px;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <span style="color:#94a3b8;font-size:0.75rem;font-weight:600;">Sync Owed Picks (years 2038+)</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <a href="https://simleaguenirvana.com/viewtopic.php?t=18" target="_blank"
+            style="font-size:0.72rem;color:#7dd3fc;text-decoration:none;">Open SLN Picks Page ↗</a>
+          <button onclick="tmCloseAdmin()" style="font-size:0.7rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
+        </div>
+      </div>
+      <p style="color:#64748b;font-size:0.72rem;margin:0;">
+        Log into SLN, open the owed picks page, select all text (Ctrl+A), copy (Ctrl+C), then paste below.
+      </p>
+      <textarea id="tmAdminPasteText" rows="6" placeholder="Paste the owed picks post content here…"
+        style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:8px;border-radius:6px;font-size:0.72rem;resize:vertical;width:100%;box-sizing:border-box;"></textarea>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="btn btn-green" style="padding:5px 14px;font-size:0.75rem;" onclick="tmSubmitPicksPaste()">Parse &amp; Save</button>
+        <span id="tmAdminPasteStatus" style="font-size:0.73rem;color:#94a3b8;"></span>
+      </div>
+    </div>
 
     <!-- Two-team columns -->
     <div class="tm-columns">
@@ -1618,24 +1651,6 @@
             <button class="dc-add-round-btn" id="dcUndoBtn" onclick="dcUndoPick()" style="display:none;">⎌ Undo</button>
             <button class="dc-reset-btn" onclick="dcClearAll()">✕ Clear All</button>
             <button class="dc-add-round-btn" onclick="dcLockMod()" style="margin-left:auto;color:#f87171;border-color:#7f1d1d;">🔒 Lock</button>
-            <button class="dc-add-round-btn" onclick="dcTogglePicksPaste()" id="dcPicksPasteBtn" style="color:#7dd3fc;border-color:#0ea5e9;">📋 Sync Picks</button>
-          </div>
-          <!-- Owed picks paste panel (commissioner only) -->
-          <div id="dcPicksPastePanel" style="display:none;margin-top:8px;padding:12px;background:#1e293b;border:1px solid #334155;border-radius:8px;flex-direction:column;gap:8px;">
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-              <span style="color:#94a3b8;font-size:0.75rem;font-weight:600;">Sync Owed Picks (years 2038+)</span>
-              <a href="https://simleaguenirvana.com/viewtopic.php?t=18" target="_blank"
-                style="font-size:0.72rem;color:#7dd3fc;text-decoration:none;">Open SLN Picks Page ↗</a>
-            </div>
-            <p style="color:#64748b;font-size:0.72rem;margin:0;">
-              Log into SLN, open the owed picks page, select all text (Ctrl+A), copy (Ctrl+C), then paste below.
-            </p>
-            <textarea id="dcPicksPasteText" rows="6" placeholder="Paste the owed picks post content here…"
-              style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:8px;border-radius:6px;font-size:0.72rem;resize:vertical;width:100%;box-sizing:border-box;"></textarea>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <button class="btn btn-green" style="padding:5px 14px;font-size:0.75rem;" onclick="dcSubmitPicksPaste()">Parse &amp; Save</button>
-              <span id="dcPicksPasteStatus" style="font-size:0.73rem;color:#94a3b8;"></span>
-            </div>
           </div>
         </div>
         <!-- ON THE CLOCK banner -->
@@ -4552,21 +4567,52 @@ function dcLockMod() {
   document.getElementById('dcModControls').style.display = 'none';
   document.getElementById('dcModLockBtn').style.display  = '';
   document.getElementById('dcExportBtn').style.display   = 'none';
-  document.getElementById('dcPicksPastePanel').style.display = 'none';
   dcRenderOrder();
   dcRefreshNotesPanel();
 }
 
-function dcTogglePicksPaste() {
-  const panel = document.getElementById('dcPicksPastePanel');
-  const isHidden = panel.style.display === 'none' || !panel.style.display;
-  panel.style.display = isHidden ? 'flex' : 'none';
-  if (isHidden) document.getElementById('dcPicksPasteText').focus();
+const TM_ADMIN_PIN = '3256';
+let tmAdminUnlocked = false;
+
+function tmToggleAdminPin() {
+  if (tmAdminUnlocked) {
+    // Already unlocked — toggle the panel visibility
+    const panel = document.getElementById('tmAdminPanel');
+    panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    return;
+  }
+  const pinPanel = document.getElementById('tmAdminPinPanel');
+  const isHidden = pinPanel.style.display === 'none' || !pinPanel.style.display;
+  pinPanel.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    document.getElementById('tmAdminPinInput').value = '';
+    document.getElementById('tmAdminPinError').textContent = '';
+    setTimeout(() => document.getElementById('tmAdminPinInput').focus(), 50);
+  }
 }
 
-async function dcSubmitPicksPaste() {
-  const text   = document.getElementById('dcPicksPasteText').value.trim();
-  const status = document.getElementById('dcPicksPasteStatus');
+function tmCheckAdminPin() {
+  const val = document.getElementById('tmAdminPinInput').value.trim();
+  if (val === TM_ADMIN_PIN) {
+    tmAdminUnlocked = true;
+    document.getElementById('tmAdminPinPanel').style.display = 'none';
+    document.getElementById('tmAdminPanel').style.display = 'flex';
+    setTimeout(() => document.getElementById('tmAdminPasteText').focus(), 50);
+  } else {
+    document.getElementById('tmAdminPinError').textContent = 'Incorrect PIN.';
+    document.getElementById('tmAdminPinInput').value = '';
+    document.getElementById('tmAdminPinInput').focus();
+  }
+}
+
+function tmCloseAdmin() {
+  document.getElementById('tmAdminPanel').style.display = 'none';
+  tmAdminUnlocked = false;
+}
+
+async function tmSubmitPicksPaste() {
+  const text   = document.getElementById('tmAdminPasteText').value.trim();
+  const status = document.getElementById('tmAdminPasteStatus');
   if (!text) { status.style.color = '#f87171'; status.textContent = 'Paste the post content first.'; return; }
   status.style.color = '#94a3b8';
   status.textContent = 'Parsing…';
@@ -4583,7 +4629,7 @@ async function dcSubmitPicksPaste() {
     } else {
       status.style.color = '#4ade80';
       status.textContent = `✓ Saved ${data.added} picks (${data.total} total)`;
-      document.getElementById('dcPicksPasteText').value = '';
+      document.getElementById('tmAdminPasteText').value = '';
       tmLoadOwedPicks();
     }
   } catch(e) {
