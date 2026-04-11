@@ -1023,6 +1023,62 @@ def set_sln_cookie():
     return jsonify({'ok': True})
 
 
+@app.route('/api/picks/login', methods=['POST'])
+def sln_login():
+    """Log into the SLN phpBB forum, store the resulting session cookie."""
+    body = request.get_json() or {}
+    username = (body.get('username') or '').strip()
+    password = (body.get('password') or '').strip()
+    if not username or not password:
+        return jsonify({'error': 'username and password required'}), 400
+
+    login_url = 'https://simleaguenirvana.com/ucp.php?mode=login'
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
+
+    try:
+        session = requests.Session()
+        # Fetch the login page first to get any hidden fields / existing sid
+        get_resp = session.get(login_url, headers=headers, timeout=10)
+        soup = BeautifulSoup(get_resp.text, 'html.parser')
+        form = soup.find('form', id='login') or soup.find('form')
+        hidden = {}
+        if form:
+            for inp in form.find_all('input', type='hidden'):
+                if inp.get('name'):
+                    hidden[inp['name']] = inp.get('value', '')
+
+        payload = {
+            **hidden,
+            'username': username,
+            'password': password,
+            'login':    'Login',
+            'redirect': './index.php',
+        }
+        post_resp = session.post(login_url, data=payload, headers=headers,
+                                 timeout=10, allow_redirects=True)
+
+        # Check we're actually logged in (phpBB sets uid cookie != 1 for real users)
+        cookies = session.cookies.get_dict()
+        uid_key = next((k for k in cookies if k.endswith('_u')), None)
+        if not uid_key or cookies.get(uid_key, '1') == '1':
+            return jsonify({'error': 'Login failed — check username/password'}), 401
+
+        # Build cookie header string and persist it
+        cookie_str = '; '.join(f'{k}={v}' for k, v in cookies.items())
+        db = get_db()
+        db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('sln_cookie', ?)", (cookie_str,))
+        db.commit()
+        db.close()
+
+        # Kick off a fresh sync now that we have a valid cookie
+        threading.Thread(target=_bg_sync, daemon=True).start()
+
+        return jsonify({'ok': True, 'message': 'Logged in and sync started'})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/picks/update', methods=['POST'])
 def update_picks():
     body = request.get_json()
