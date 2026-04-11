@@ -74,6 +74,7 @@ PG_STARTER_EXCEPTIONS = {
     'jeremiah fears',
     'dyson daniels',
     'egor demin',
+    'isaac bonga',
 }
 
 # Grade scale: index 0 = worst, 12 = best
@@ -193,6 +194,10 @@ def index():
 @app.route('/mockups')
 def mockups():
     return render_template('mockups.html')
+
+@app.route('/mockup-team-select')
+def mockup_team_select():
+    return render_template('mockup_team_select.html')
 
 
 @app.route('/fetch_roster', methods=['POST'])
