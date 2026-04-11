@@ -3441,7 +3441,7 @@ function tmAvailablePicks(abbr) {
 
 function tmPickLabel(pick) {
   const r = pick.round === 1 ? '1st' : '2nd';
-  const base = `${pick.year} ${r} Round`;
+  const base = `${pick.year} ${r} Round Pick`;
   return pick.originalAbbr !== pick.ownerAbbr ? `${base} (via ${pick.originalAbbr})` : base;
 }
 
@@ -3564,7 +3564,7 @@ async function loadTMTeam(side) {
     const data = await res.json();
     if (data.error) { statusEl.textContent = '⚠ ' + data.error; return; }
 
-    const teamName = data.team_name || (side === 'A' ? 'Team A' : 'Team B');
+    const teamName = (data.team_name || (side === 'A' ? 'Team A' : 'Team B')).replace(/\s*Roster$/i, '').trim();
     if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; }
     else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; }
 
