@@ -1032,36 +1032,53 @@ def sln_login():
     if not username or not password:
         return jsonify({'error': 'username and password required'}), 400
 
-    login_url = 'https://simleaguenirvana.com/ucp.php?mode=login'
-    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
+    base_url  = 'https://simleaguenirvana.com'
+    login_url = f'{base_url}/ucp.php?mode=login'
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        'Referer': login_url,
+    }
 
     try:
         session = requests.Session()
-        # Fetch the login page first to get any hidden fields / existing sid
+
+        # Fetch the login page to pick up the session cookie + CSRF token
         get_resp = session.get(login_url, headers=headers, timeout=10)
         soup = BeautifulSoup(get_resp.text, 'html.parser')
         form = soup.find('form', id='login') or soup.find('form')
+
+        # Collect all hidden fields (last value wins for duplicates)
         hidden = {}
         if form:
             for inp in form.find_all('input', type='hidden'):
                 if inp.get('name'):
                     hidden[inp['name']] = inp.get('value', '')
 
+        # Resolve the form's action URL (it includes ?sid=...)
+        action = (form.get('action') or 'ucp.php?mode=login') if form else 'ucp.php?mode=login'
+        if action.startswith('./'):
+            action = action[2:]
+        post_url = f'{base_url}/{action}'
+
         payload = {
             **hidden,
             'username': username,
             'password': password,
+            'autologin': 'on',   # "remember me" — extends session life
             'login':    'Login',
-            'redirect': './index.php',
         }
-        post_resp = session.post(login_url, data=payload, headers=headers,
+        post_resp = session.post(post_url, data=payload, headers=headers,
                                  timeout=10, allow_redirects=True)
 
-        # Check we're actually logged in (phpBB sets uid cookie != 1 for real users)
-        cookies = session.cookies.get_dict()
+        # phpBB sets the _u cookie to the user's numeric ID (> 1) on success
+        cookies = {c.name: c.value for c in session.cookies}
         uid_key = next((k for k in cookies if k.endswith('_u')), None)
         if not uid_key or cookies.get(uid_key, '1') == '1':
-            return jsonify({'error': 'Login failed — check username/password'}), 401
+            # Try to surface the error phpBB showed
+            soup2 = BeautifulSoup(post_resp.text, 'html.parser')
+            err_el = soup2.find(class_='error') or soup2.find(class_='errorbox')
+            msg = err_el.get_text(' ', strip=True)[:120] if err_el else 'Login failed — check username/password'
+            return jsonify({'error': msg}), 401
 
         # Build cookie header string and persist it
         cookie_str = '; '.join(f'{k}={v}' for k, v in cookies.items())
