@@ -525,6 +525,39 @@
       color: #475569;
       margin-bottom: 5px;
     }
+    .tm-picks-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid #334155; }
+    .tm-picks-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
+    .tm-pick-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #0c2540; border: 1px solid #1e4a7a; border-radius: 20px;
+      padding: 3px 10px 3px 10px; font-size: 0.72rem; color: #7dd3fc; font-weight: 600;
+    }
+    .tm-pick-pill .tm-pick-via { color: #64748b; font-size: 0.65rem; font-weight: 400; }
+    .tm-pick-pill .tm-pick-owed-warn { color: #f87171; font-size: 0.65rem; }
+    .tm-pick-pill-remove {
+      background: none; border: none; color: #475569; cursor: pointer;
+      font-size: 0.8rem; padding: 0 0 0 2px; line-height: 1;
+    }
+    .tm-pick-pill-remove:hover { color: #f87171; }
+    .tm-pick-selector {
+      display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 6px;
+      background: #0f172a; border: 1px solid #334155; border-radius: 7px; padding: 8px;
+    }
+    .tm-pick-sel {
+      background: #1e293b; color: #e2e8f0; border: 1px solid #334155;
+      border-radius: 5px; font-size: 0.72rem; padding: 4px 6px; cursor: pointer;
+    }
+    .tm-pick-origin-sel { max-width: 140px; }
+    /* Commissioner picks panel */
+    .tm-comm-panel {
+      background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+      padding: 14px; margin-top: 12px; font-size: 0.78rem;
+    }
+    .tm-comm-panel textarea {
+      width: 100%; background: #1e293b; color: #e2e8f0; border: 1px solid #334155;
+      border-radius: 5px; padding: 8px; font-size: 0.72rem; font-family: monospace;
+      resize: vertical; min-height: 80px;
+    }
     .tm-vetmin-row {
       display: flex;
       align-items: center;
@@ -1401,6 +1434,23 @@
           </div>
         </div>
 
+        <!-- Draft Picks -->
+        <div class="tm-picks-section" id="tmPicksSectionA" style="display:none;">
+          <div class="tm-vetmin-label">Draft Picks</div>
+          <div id="tmPicksPillsA" class="tm-picks-pills"></div>
+          <button class="btn btn-slate tm-vetmin-add" onclick="tmAddPickUI('A')" style="margin-top:4px;">+ Add Pick</button>
+          <div id="tmPickSelectorA" class="tm-pick-selector" style="display:none;">
+            <select id="tmPickYearA" class="tm-pick-sel"></select>
+            <select id="tmPickRoundA" class="tm-pick-sel">
+              <option value="1">1st Round</option>
+              <option value="2">2nd Round</option>
+            </select>
+            <select id="tmPickOriginA" class="tm-pick-sel tm-pick-origin-sel"></select>
+            <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmPick('A')">Add</button>
+            <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelPick('A')">✕</button>
+          </div>
+        </div>
+
         <div class="tm-total-row">
           <span>Sending:</span>
           <span id="tmSendingA" style="color:#38bdf8;">$0</span>
@@ -1445,6 +1495,23 @@
           </div>
         </div>
 
+        <!-- Draft Picks -->
+        <div class="tm-picks-section" id="tmPicksSectionB" style="display:none;">
+          <div class="tm-vetmin-label">Draft Picks</div>
+          <div id="tmPicksPillsB" class="tm-picks-pills"></div>
+          <button class="btn btn-slate tm-vetmin-add" onclick="tmAddPickUI('B')" style="margin-top:4px;">+ Add Pick</button>
+          <div id="tmPickSelectorB" class="tm-pick-selector" style="display:none;">
+            <select id="tmPickYearB" class="tm-pick-sel"></select>
+            <select id="tmPickRoundB" class="tm-pick-sel">
+              <option value="1">1st Round</option>
+              <option value="2">2nd Round</option>
+            </select>
+            <select id="tmPickOriginB" class="tm-pick-sel tm-pick-origin-sel"></select>
+            <button class="btn btn-green" style="padding:3px 12px;font-size:0.72rem;" onclick="tmConfirmPick('B')">Add</button>
+            <button class="btn btn-slate" style="padding:3px 8px;font-size:0.72rem;" onclick="tmCancelPick('B')">✕</button>
+          </div>
+        </div>
+
         <div class="tm-total-row">
           <span>Sending:</span>
           <span id="tmSendingB" style="color:#38bdf8;">$0</span>
@@ -1467,6 +1534,23 @@
     <div class="tm-result" id="tmResult"></div>
 
   </div><!-- /Trade Machine card -->
+
+  <!-- Commissioner: Owed Picks Manager -->
+  <div class="card" style="margin-top:16px;">
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Owed Picks (Commissioner)</span>
+      <span id="tmPicksUpdatedAt" style="font-size:0.65rem;color:#475569;font-weight:400;"></span>
+    </div>
+    <p style="font-size:0.75rem;color:#64748b;margin-bottom:10px;">
+      Enter each owed pick on a new line in the format:<br>
+      <code style="color:#94a3b8;">FROM_ABBR YEAR ROUND TO_ABBR</code>&nbsp; e.g. <code style="color:#94a3b8;">ORL 2036 1 MIA</code>
+    </p>
+    <textarea id="tmOwedPicksInput" class="tm-comm-panel" style="width:100%;background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:5px;padding:8px;font-size:0.72rem;font-family:monospace;resize:vertical;min-height:80px;" placeholder="ORL 2036 1 MIA&#10;ATL 2037 2 BOS&#10;DEN 2035 1 LAL"></textarea>
+    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-green" onclick="tmSaveOwedPicks()" style="padding:5px 18px;font-size:0.75rem;">Save Owed Picks</button>
+      <span id="tmOwedPicksStatus" style="font-size:0.72rem;color:#94a3b8;"></span>
+    </div>
+  </div>
 
   </div><!-- /tabTrade -->
 
@@ -1655,8 +1739,9 @@ function switchTab(tab) {
   document.getElementById('tabBtnDepth').classList.toggle('active', tab === 'depth');
   document.getElementById('tabBtnTrade').classList.toggle('active', tab === 'trade');
   document.getElementById('tabBtnDraft').classList.toggle('active', tab === 'draft');
-  // Build Trade Machine logo grids lazily on first visit
+  // Load owed picks and build Trade Machine logo grids lazily on first visit
   if (tab === 'trade' && !tmLogoGridsBuilt) {
+    tmLoadOwedPicks();
     buildTMLogoGrids();
     tmLogoGridsBuilt = true;
   }
@@ -3318,6 +3403,11 @@ function clearTradeMachine() {
     if (faBtnEl) faBtnEl.textContent = '+ Free Agent';
     // Refresh FA panel Add buttons (all back to "+ Add")
     if (faLoaded) renderSideFAPanel(side);
+    // Clear picks
+    tmPicksA = side === 'A' ? [] : tmPicksA;
+    tmPicksB = side === 'B' ? [] : tmPicksB;
+    tmRenderPickPills(side);
+    document.getElementById(`tmPickSelector${side}`).style.display = 'none';
   });
   // Clear result panel
   document.getElementById('tmResult').innerHTML = '';
@@ -3326,6 +3416,181 @@ function clearTradeMachine() {
 function fmtSal(n) {
   if (!n) return '$0';
   return '$' + Math.round(n).toLocaleString();
+}
+
+// ─── Draft Picks in Trade Machine ─────────────────────────────────────────────
+const TM_LEAGUE_YEAR = 2035;
+const TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + i); // 2035-2040
+
+let tmPicksA = [];   // [{year, round, ownerAbbr, originalAbbr, label}]
+let tmPicksB = [];
+let tmOwedPicks = []; // [{from_abbr, year, round, to_abbr}] — loaded from server
+
+async function tmLoadOwedPicks() {
+  try {
+    const res = await fetch('/api/picks');
+    if (!res.ok) return;
+    const data = await res.json();
+    tmOwedPicks = data.owed || [];
+    if (data.updated_at) {
+      const el = document.getElementById('tmPicksUpdatedAt');
+      if (el) el.textContent = 'Last updated: ' + new Date(data.updated_at + 'Z').toLocaleDateString();
+    }
+    // Pre-fill commissioner textarea
+    const ta = document.getElementById('tmOwedPicksInput');
+    if (ta && tmOwedPicks.length) {
+      ta.value = tmOwedPicks.map(p => `${p.from_abbr} ${p.year} ${p.round} ${p.to_abbr}`).join('\n');
+    }
+  } catch(e) {}
+}
+
+// Returns all picks the team currently owns (own picks minus owed away, plus acquired)
+function tmAvailablePicks(abbr) {
+  const picks = [];
+  // Own picks for each year/round, unless owed away
+  for (const year of TM_PICK_YEARS) {
+    for (const round of [1, 2]) {
+      const owedAway = tmOwedPicks.find(p => p.from_abbr === abbr && p.year === year && p.round === round);
+      if (!owedAway) {
+        picks.push({ year, round, ownerAbbr: abbr, originalAbbr: abbr });
+      }
+    }
+  }
+  // Acquired picks from other teams
+  for (const p of tmOwedPicks) {
+    if (p.to_abbr === abbr) {
+      picks.push({ year: p.year, round: p.round, ownerAbbr: abbr, originalAbbr: p.from_abbr });
+    }
+  }
+  picks.sort((a, b) => a.year - b.year || a.round - b.round);
+  return picks;
+}
+
+function tmPickLabel(pick) {
+  const r = pick.round === 1 ? '1st' : '2nd';
+  const base = `${pick.year} ${r} Round`;
+  return pick.originalAbbr !== pick.ownerAbbr ? `${base} (via ${pick.originalAbbr})` : base;
+}
+
+function tmPopulatePickSelectors(side) {
+  const abbr = side === 'A'
+    ? TM_TEAMS.find(t => t.url === document.getElementById('tmSelectA').value?.replace(TM_BASE,''))?.abbr
+    : TM_TEAMS.find(t => t.url === document.getElementById('tmSelectB').value?.replace(TM_BASE,''))?.abbr;
+  if (!abbr) return;
+
+  // Year selector
+  const yearSel = document.getElementById(`tmPickYear${side}`);
+  yearSel.innerHTML = TM_PICK_YEARS.map(y => `<option value="${y}">${y}</option>`).join('');
+
+  // Origin selector: own pick + acquired picks available
+  const available = tmAvailablePicks(abbr);
+  const originSel = document.getElementById(`tmPickOrigin${side}`);
+  originSel.innerHTML = `<option value="${abbr}">${abbr} (own pick)</option>`;
+  const acquired = available.filter(p => p.originalAbbr !== abbr);
+  const seen = new Set();
+  for (const p of acquired) {
+    if (!seen.has(p.originalAbbr)) {
+      seen.add(p.originalAbbr);
+      originSel.innerHTML += `<option value="${p.originalAbbr}">via ${p.originalAbbr}</option>`;
+    }
+  }
+}
+
+function tmGetSideAbbr(side) {
+  const urlVal = document.getElementById(`tmSelect${side}`).value;
+  if (!urlVal) return null;
+  const urlFile = urlVal.replace(TM_BASE, '');
+  return TM_TEAMS.find(t => t.url === urlFile)?.abbr || null;
+}
+
+function tmAddPickUI(side) {
+  tmPopulatePickSelectors(side);
+  document.getElementById(`tmPickSelector${side}`).style.display = '';
+}
+
+function tmCancelPick(side) {
+  document.getElementById(`tmPickSelector${side}`).style.display = 'none';
+}
+
+function tmConfirmPick(side) {
+  const ownerAbbr    = tmGetSideAbbr(side);
+  if (!ownerAbbr) return;
+  const year         = parseInt(document.getElementById(`tmPickYear${side}`).value);
+  const round        = parseInt(document.getElementById(`tmPickRound${side}`).value);
+  const originalAbbr = document.getElementById(`tmPickOrigin${side}`).value;
+
+  const pick = { year, round, ownerAbbr, originalAbbr };
+  pick.label = tmPickLabel(pick);
+
+  // Check if already added
+  const arr = side === 'A' ? tmPicksA : tmPicksB;
+  const dup = arr.find(p => p.year === year && p.round === round && p.originalAbbr === originalAbbr);
+  if (dup) { alert('That pick is already added.'); return; }
+
+  // Check if this pick was already owed away (shouldn't be available but guard)
+  const owedAway = tmOwedPicks.find(p => p.from_abbr === originalAbbr && p.year === year && p.round === round && p.to_abbr !== ownerAbbr);
+  if (owedAway) {
+    alert(`Warning: ${originalAbbr} ${year} ${round === 1 ? '1st' : '2nd'} round pick is owed to ${owedAway.to_abbr}, not ${ownerAbbr}.`);
+    return;
+  }
+
+  arr.push(pick);
+  tmRenderPickPills(side);
+  document.getElementById(`tmPickSelector${side}`).style.display = 'none';
+}
+
+function tmRenderPickPills(side) {
+  const arr = side === 'A' ? tmPicksA : tmPicksB;
+  const container = document.getElementById(`tmPicksPills${side}`);
+  container.innerHTML = arr.map((p, i) => `
+    <span class="tm-pick-pill">
+      ${p.year} ${p.round === 1 ? '1st' : '2nd'}
+      ${p.originalAbbr !== p.ownerAbbr ? `<span class="tm-pick-via">via ${p.originalAbbr}</span>` : ''}
+      <button class="tm-pick-pill-remove" onclick="tmRemovePick('${side}',${i})">×</button>
+    </span>`).join('');
+}
+
+function tmRemovePick(side, idx) {
+  if (side === 'A') tmPicksA.splice(idx, 1);
+  else              tmPicksB.splice(idx, 1);
+  tmRenderPickPills(side);
+}
+
+async function tmSaveOwedPicks() {
+  const lines = document.getElementById('tmOwedPicksInput').value
+    .split('\n').map(l => l.trim()).filter(Boolean);
+  const owed = [];
+  const errors = [];
+  for (const line of lines) {
+    const parts = line.split(/\s+/);
+    if (parts.length !== 4) { errors.push(`Bad line: "${line}" — expected FROM YEAR ROUND TO`); continue; }
+    const [from_abbr, yearStr, roundStr, to_abbr] = parts;
+    const year  = parseInt(yearStr);
+    const round = parseInt(roundStr);
+    if (isNaN(year) || isNaN(round) || round < 1 || round > 2) { errors.push(`Bad values: "${line}"`); continue; }
+    owed.push({ from_abbr: from_abbr.toUpperCase(), year, round, to_abbr: to_abbr.toUpperCase() });
+  }
+  if (errors.length) { alert('Errors:\n' + errors.join('\n')); return; }
+  const statusEl = document.getElementById('tmOwedPicksStatus');
+  statusEl.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/picks/update', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ owed })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      tmOwedPicks = owed;
+      statusEl.textContent = `✓ Saved ${data.count} owed pick${data.count !== 1 ? 's' : ''}`;
+      const updEl = document.getElementById('tmPicksUpdatedAt');
+      if (updEl) updEl.textContent = 'Last updated: ' + new Date().toLocaleDateString();
+      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+    } else {
+      statusEl.textContent = '✗ Error saving';
+    }
+  } catch(e) {
+    statusEl.textContent = '✗ Network error';
+  }
 }
 
 const TM_HARD_CAP = 85_000_000;
@@ -3366,6 +3631,12 @@ async function loadTMTeam(side) {
     // Reveal the + Free Agent button now that a team is loaded for this side
     const faBtnEl = document.getElementById(`tmFABtn${side}`);
     if (faBtnEl) faBtnEl.style.display = '';
+    // Reveal draft picks section and populate year/origin dropdowns
+    const picksSection = document.getElementById(`tmPicksSection${side}`);
+    if (picksSection) {
+      picksSection.style.display = '';
+      tmPopulatePickSelectors(side);
+    }
     // If this side's FA panel is open and data is loaded, refresh it
     if (document.getElementById(`tmFAPanel${side}`).style.display !== 'none' && faLoaded) {
       renderSideFAPanel(side);
@@ -3488,11 +3759,21 @@ function validateTradeMatch() {
   const errors = [];
   const checks = [];
 
+  const picksA = [...tmPicksA];
+  const picksB = [...tmPicksB];
+
+  // ── Picks: 6-year cap check ──────────────────────────────────────────────
+  for (const p of [...picksA, ...picksB]) {
+    if (p.year > TM_LEAGUE_YEAR + 6) {
+      errors.push(`✗ ${p.label} — picks more than 6 seasons out (${TM_LEAGUE_YEAR + 6}) cannot be traded.`);
+    }
+  }
+
   // ── Rule: At least 1 player or salary on each side ───────────────────────
   const customCntA = document.querySelectorAll('#tmVetMinListA .tm-custom-sal-input').length;
   const customCntB = document.querySelectorAll('#tmVetMinListB .tm-custom-sal-input').length;
-  if (!playersA.length && !vetMinCntA && !customCntA) { errors.push(`Select at least one player or add a salary for ${tmNameA}.`); }
-  if (!playersB.length && !vetMinCntB && !customCntB) { errors.push(`Select at least one player or add a salary for ${tmNameB}.`); }
+  if (!playersA.length && !vetMinCntA && !customCntA && !picksA.length) { errors.push(`Select at least one player, salary, or pick for ${tmNameA}.`); }
+  if (!playersB.length && !vetMinCntB && !customCntB && !picksB.length) { errors.push(`Select at least one player, salary, or pick for ${tmNameB}.`); }
 
   // ── Rule: Max 5 players per side ──────────────────────────────────────────
   if (playersA.length > 5) {
@@ -3564,18 +3845,30 @@ function validateTradeMatch() {
   }
 
   // Summary block
-  if (hasA || hasB) {
+  const hasPicksA = picksA.length > 0;
+  const hasPicksB = picksB.length > 0;
+  if (hasA || hasB || hasPicksA || hasPicksB) {
     html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid #334155;font-size:0.78rem;">`;
     html += `<span style="color:#94a3b8;font-weight:700;">Trade Summary</span><br>`;
-    if (hasA) {
+    if (hasA || hasPicksA) {
       const namesA = playersA.map(p => p.name);
       if (vetMinCntA > 0) namesA.push(`${vetMinCntA} vet min${vetMinCntA > 1 ? 's' : ''} (${fmtSal(vetMinA)})`);
-      html += `<span style="color:#7dd3fc;">${tmNameA} gives:</span> <span style="color:#cbd5e1;">${namesA.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salA)} total)</span><br>`;
+      const pickLabelsA = picksA.map(p => `<span style="color:#7dd3fc;font-size:0.7rem;">🏀 ${p.label}</span>`);
+      html += `<span style="color:#7dd3fc;">${tmNameA} gives:</span> `;
+      if (namesA.length) html += `<span style="color:#cbd5e1;">${namesA.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salA)})</span>`;
+      if (namesA.length && pickLabelsA.length) html += `<span style="color:#475569;"> + </span>`;
+      if (pickLabelsA.length) html += pickLabelsA.join(', ');
+      html += `<br>`;
     }
-    if (hasB) {
+    if (hasB || hasPicksB) {
       const namesB = playersB.map(p => p.name);
       if (vetMinCntB > 0) namesB.push(`${vetMinCntB} vet min${vetMinCntB > 1 ? 's' : ''} (${fmtSal(vetMinB)})`);
-      html += `<span style="color:#7dd3fc;">${tmNameB} gives:</span> <span style="color:#cbd5e1;">${namesB.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salB)} total)</span><br>`;
+      const pickLabelsB = picksB.map(p => `<span style="color:#7dd3fc;font-size:0.7rem;">🏀 ${p.label}</span>`);
+      html += `<span style="color:#7dd3fc;">${tmNameB} gives:</span> `;
+      if (namesB.length) html += `<span style="color:#cbd5e1;">${namesB.join(', ')}</span> <span style="color:#4ade80;">(${fmtSal(salB)})</span>`;
+      if (namesB.length && pickLabelsB.length) html += `<span style="color:#475569;"> + </span>`;
+      if (pickLabelsB.length) html += pickLabelsB.join(', ');
+      html += `<br>`;
     }
     if (hasA && hasB) {
       const diff = Math.abs(salA - salB);

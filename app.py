@@ -22,6 +22,10 @@ def get_db():
                     (id INTEGER PRIMARY KEY CHECK (id = 1),
                      data TEXT,
                      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS owed_picks
+                    (id INTEGER PRIMARY KEY CHECK (id = 1),
+                     data TEXT,
+                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     conn.commit()
     return conn
 
@@ -644,6 +648,32 @@ def load_draft():
     if row:
         return jsonify(json.loads(row[0]))
     return jsonify({})
+
+
+@app.route('/api/picks', methods=['GET'])
+def get_picks():
+    db = get_db()
+    row = db.execute('SELECT data, updated_at FROM owed_picks WHERE id = 1').fetchone()
+    db.close()
+    if row:
+        return jsonify({'owed': json.loads(row[0]), 'updated_at': row[1]})
+    return jsonify({'owed': [], 'updated_at': None})
+
+
+@app.route('/api/picks/update', methods=['POST'])
+def update_picks():
+    body = request.get_json()
+    owed = body.get('owed', [])
+    if not isinstance(owed, list):
+        return jsonify({'error': 'owed must be a list'}), 400
+    db = get_db()
+    db.execute(
+        'INSERT OR REPLACE INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)',
+        (json.dumps(owed),)
+    )
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'count': len(owed)})
 
 
 if __name__ == '__main__':
