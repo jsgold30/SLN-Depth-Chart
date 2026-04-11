@@ -3498,7 +3498,14 @@ function tmAvailablePicks(abbr) {
   // Acquired picks from other teams (exclude sentinel 'EXT')
   for (const p of tmOwedPicks) {
     if (p.to_abbr === abbr && p.to_abbr !== 'EXT') {
-      picks.push({ year: p.year, round: p.round, ownerAbbr: abbr, originalAbbr: p.from_abbr });
+      picks.push({
+        year: p.year,
+        round: p.round,
+        ownerAbbr: abbr,
+        originalAbbr: p.from_abbr,
+        swapPartner: p.swap_partner || null,
+        qualifier: p.qualifier || null,
+      });
     }
   }
   picks.sort((a, b) => a.year - b.year || a.round - b.round);
@@ -3507,7 +3514,11 @@ function tmAvailablePicks(abbr) {
 
 function tmPickLabel(pick) {
   const r = pick.round === 1 ? '1st' : '2nd';
-  return `${pick.year} ${pick.originalAbbr} ${r} Round Pick`;
+  const origin = pick.swapPartner ? `${pick.originalAbbr}/${pick.swapPartner}` : pick.originalAbbr;
+  const suffix = pick.qualifier
+    ? ` (${pick.qualifier.charAt(0).toUpperCase() + pick.qualifier.slice(1)})`
+    : '';
+  return `${pick.year} ${origin} ${r} Round Pick${suffix}`;
 }
 
 function tmPopulatePickSelectors(side) {
@@ -3516,21 +3527,25 @@ function tmPopulatePickSelectors(side) {
   const abbr = tmGetSideAbbr(side);
   const all = abbr
     ? tmAvailablePicks(abbr)
-    : TM_PICK_YEARS.flatMap(y => [1,2].map(r => ({year:y, round:r, ownerAbbr:'', originalAbbr:''})));
+    : TM_PICK_YEARS.flatMap(y => [1,2].map(r => ({year:y, round:r, ownerAbbr:'', originalAbbr:'', swapPartner:null, qualifier:null})));
 
   // Filter out picks already added to this side's trade
   const alreadyAdded = side === 'A' ? tmPicksA : tmPicksB;
   const available = all.filter(p =>
-    !alreadyAdded.find(a => a.year === p.year && a.round === p.round && a.originalAbbr === p.originalAbbr)
+    !alreadyAdded.find(a =>
+      a.year === p.year && a.round === p.round &&
+      a.originalAbbr === p.originalAbbr && (a.qualifier||null) === (p.qualifier||null)
+    )
   );
 
   if (available.length === 0) {
     sel.innerHTML = '<option value="">No picks available</option>';
     return;
   }
-  sel.innerHTML = available.map(p =>
-    `<option value="${p.year}:${p.round}:${p.originalAbbr}">${tmPickLabel(p)}</option>`
-  ).join('');
+  sel.innerHTML = available.map(p => {
+    const val = `${p.year}:${p.round}:${p.originalAbbr}:${p.swapPartner||''}:${p.qualifier||''}`;
+    return `<option value="${val}">${tmPickLabel(p)}</option>`;
+  }).join('');
 }
 
 function tmGetSideAbbr(side) {
@@ -3578,16 +3593,22 @@ function tmConfirmPick(side) {
   if (!ownerAbbr) return;
   const selVal = document.getElementById(`tmPickSel${side}`).value;
   if (!selVal) return;
-  const [yearStr, roundStr, originalAbbr] = selVal.split(':');
-  const year  = parseInt(yearStr);
-  const round = parseInt(roundStr);
+  const parts = selVal.split(':');
+  const year         = parseInt(parts[0]);
+  const round        = parseInt(parts[1]);
+  const originalAbbr = parts[2];
+  const swapPartner  = parts[3] || null;
+  const qualifier    = parts[4] || null;
 
   const arr = side === 'A' ? tmPicksA : tmPicksB;
-  if (arr.find(p => p.year === year && p.round === round && p.originalAbbr === originalAbbr)) {
+  if (arr.find(p =>
+    p.year === year && p.round === round &&
+    p.originalAbbr === originalAbbr && (p.qualifier||null) === qualifier
+  )) {
     alert('That pick is already added.'); return;
   }
 
-  const pick = { year, round, ownerAbbr, originalAbbr };
+  const pick = { year, round, ownerAbbr, originalAbbr, swapPartner, qualifier };
   pick.label = tmPickLabel(pick);
   arr.push(pick);
   tmRenderPickPills(side);

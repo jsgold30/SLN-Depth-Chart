@@ -838,6 +838,10 @@ def parse_owed_picks_from_thread(post_text):
             continue
         rnd = 1 if round_m.group(1).lower() == '1st' else 2
 
+        # Detect pick-swap qualifier: (Worse) / (Better)
+        qualifier_m = re.search(r'\b(worse|better)\b', line, re.I)
+        qualifier = qualifier_m.group(1).lower() if qualifier_m else None
+
         # Split on " to "
         parts = re.split(r'\s+to\s+', line, maxsplit=1, flags=re.I)
         if len(parts) < 2:
@@ -853,13 +857,36 @@ def parse_owed_picks_from_thread(post_text):
 
         # Handle dual-team from like "SA/MIA"
         from_teams = [t.strip() for t in from_part.split('/')]
-        for ft in from_teams:
-            from_abbr = find_abbr(ft)
-            if from_abbr and from_abbr != to_abbr:
+
+        if len(from_teams) == 2 and qualifier:
+            # Pick swap: "SA/MIA 1st to CHA (Worse)" / "SA/MIA 1st to ATL (Better)"
+            # Worse → first team is from_abbr; Better → second team is from_abbr
+            # This ensures each team appears as from_abbr exactly once per swap pair,
+            # so each team's pick is correctly marked as owed away.
+            idx = 1 if qualifier == 'better' else 0
+            from_abbr = find_abbr(from_teams[idx])
+            swap_partner = find_abbr(from_teams[1 - idx])
+            if from_abbr and swap_partner and from_abbr != to_abbr:
                 key = (from_abbr, current_year, rnd, to_abbr)
                 if key not in seen:
                     seen.add(key)
-                    owed.append({'from_abbr': from_abbr, 'year': current_year, 'round': rnd, 'to_abbr': to_abbr})
+                    owed.append({
+                        'from_abbr': from_abbr,
+                        'year': current_year,
+                        'round': rnd,
+                        'to_abbr': to_abbr,
+                        'qualifier': qualifier,
+                        'swap_partner': swap_partner,
+                    })
+        else:
+            # Normal entry — one per team in the from-list
+            for ft in from_teams:
+                from_abbr = find_abbr(ft)
+                if from_abbr and from_abbr != to_abbr:
+                    key = (from_abbr, current_year, rnd, to_abbr)
+                    if key not in seen:
+                        seen.add(key)
+                        owed.append({'from_abbr': from_abbr, 'year': current_year, 'round': rnd, 'to_abbr': to_abbr})
 
     return owed
 
