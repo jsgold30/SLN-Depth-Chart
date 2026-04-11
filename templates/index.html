@@ -3968,7 +3968,7 @@ function validateTradeMatch() {
     };
     const sideAText = buildSideText(tmNameA, playersA, picksA, rpA);
     const sideBText = buildSideText(tmNameB, playersB, picksB, rpB);
-    const copyText = `TRADE SUMMARY\n${'─'.repeat(40)}\n${sideAText}\n\n${sideBText}`;
+    const copyText = `TRADE SUMMARY\n${sideAText}\n\n${sideBText}`;
     window._tmCopyText = copyText;
 
     html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid #334155;">`;
