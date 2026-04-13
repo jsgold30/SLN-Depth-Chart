@@ -227,6 +227,8 @@
     }
     .dc-left  { flex: 3; min-width: 0; }
     .dc-right { flex: 2; min-width: 0; }
+    .dc-left > .card:first-child,
+    .dc-right > .card:first-child { margin-top: 0; }
     @media (max-width: 900px) {
       .dc-two-col { flex-direction: column; }
       .dc-left, .dc-right { flex: none; width: 100%; }
