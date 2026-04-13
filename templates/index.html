@@ -223,15 +223,17 @@
     .dc-two-col {
       display: flex;
       gap: 16px;
-      align-items: flex-start;
+      align-items: stretch;
     }
     .dc-left  { flex: 3; min-width: 0; }
-    .dc-right { flex: 2; min-width: 0; }
+    .dc-right { flex: 2; min-width: 0; display: flex; flex-direction: column; }
     .dc-left > .card:first-child,
     .dc-right > .card:first-child { margin-top: 0; }
+    .dc-right > .card:last-child { flex: 1; }
     @media (max-width: 900px) {
       .dc-two-col { flex-direction: column; }
-      .dc-left, .dc-right { flex: none; width: 100%; }
+      .dc-left, .dc-right { flex: none; width: 100%; display: block; }
+      .dc-right > .card:last-child { flex: none; }
     }
 
     /* Options */
