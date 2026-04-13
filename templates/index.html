@@ -219,6 +219,19 @@
     .ir-label input[type="checkbox"] { display: none; }
     .ir-label.checked { border-color: #38bdf8; background: #0c1a2e; color: #38bdf8; }
 
+    /* Two-column layout: Depth Chart (left) + Options/Tactics (right) */
+    .dc-two-col {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .dc-left  { flex: 3; min-width: 0; }
+    .dc-right { flex: 2; min-width: 0; }
+    @media (max-width: 900px) {
+      .dc-two-col { flex-direction: column; }
+      .dc-left, .dc-right { flex: none; width: 100%; }
+    }
+
     /* Options */
     .options-col { display: flex; flex-direction: column; gap: 10px; }
 
@@ -1270,100 +1283,110 @@
     </div>
   </div>
 
-  <!-- ── DEPTH CHART ── -->
-  <div class="card">
-    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
-      <span>Depth Chart</span>
-      <button class="btn btn-slate" id="resetBtn" onclick="resetToLastGenerated()" style="display:none;padding:4px 10px;font-size:0.72rem;">Reset</button>
-    </div>
-    <div class="dc-header">
-      <span></span>
-      <span>Starter</span>
-      <span>Backup 1</span>
-      <span>Backup 2</span>
-    </div>
-    <div id="positionRows">
-      <p class="placeholder-msg">Load a roster above to begin building your depth chart.</p>
-    </div>
-  </div>
+  <!-- ── DEPTH CHART + OPTIONS/TACTICS (two-col on wide screens) ── -->
+  <div class="dc-two-col">
 
-  <!-- ── IR ── -->
-  <div class="card">
-    <div class="card-title">Injured Reserve (IR)</div>
-    <div id="irContainer">
-      <p class="placeholder-msg">Load a roster to see players.</p>
-    </div>
-  </div>
+    <!-- LEFT: Depth Chart + IR -->
+    <div class="dc-left">
+      <div class="card">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Depth Chart</span>
+          <button class="btn btn-slate" id="resetBtn" onclick="resetToLastGenerated()" style="display:none;padding:4px 10px;font-size:0.72rem;">Reset</button>
+        </div>
+        <div class="dc-header">
+          <span></span>
+          <span>Starter</span>
+          <span>Backup 1</span>
+          <span>Backup 2</span>
+        </div>
+        <div id="positionRows">
+          <p class="placeholder-msg">Load a roster above to begin building your depth chart.</p>
+        </div>
+      </div>
 
-  <!-- ── OPTIONS ── -->
-  <div class="card">
-    <div class="card-title">Options</div>
-    <div class="options-col" id="optionsContainer">
-      <div class="option-row">
-        <label class="bold-check" id="boldlabel_opt1"><input type="checkbox" id="bold_opt1" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt1')">B</label>
-        <select id="opt1" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 1 (optional) --</option></select>
-      </div>
-      <div class="option-row">
-        <label class="bold-check" id="boldlabel_opt2"><input type="checkbox" id="bold_opt2" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt2')">B</label>
-        <select id="opt2" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 2 (optional) --</option></select>
-      </div>
-      <div class="option-row">
-        <label class="bold-check" id="boldlabel_opt3"><input type="checkbox" id="bold_opt3" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt3')">B</label>
-        <select id="opt3" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 3 (optional) --</option></select>
+      <!-- ── IR ── -->
+      <div class="card">
+        <div class="card-title">Injured Reserve (IR)</div>
+        <div id="irContainer">
+          <p class="placeholder-msg">Load a roster to see players.</p>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- ── TACTICS ── -->
-  <div class="card">
-    <div class="card-title">Tactics</div>
-    <div class="tactics-grid">
-      <div class="tactic-item">
-        <label>Pace</label>
-        <div class="tactic-sel-row">
-          <label class="bold-check" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')">B</label>
-          <select id="t_pace" onmousedown="pushUndo()" onchange="saveState()">
-            <option>Very Fast</option><option>Fast</option>
-            <option selected>Normal</option>
-            <option>Slow</option><option>Very Slow</option>
-          </select>
+    <!-- RIGHT: Options + Tactics -->
+    <div class="dc-right">
+      <!-- ── OPTIONS ── -->
+      <div class="card">
+        <div class="card-title">Options</div>
+        <div class="options-col" id="optionsContainer">
+          <div class="option-row">
+            <label class="bold-check" id="boldlabel_opt1"><input type="checkbox" id="bold_opt1" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt1')">B</label>
+            <select id="opt1" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 1 (optional) --</option></select>
+          </div>
+          <div class="option-row">
+            <label class="bold-check" id="boldlabel_opt2"><input type="checkbox" id="bold_opt2" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt2')">B</label>
+            <select id="opt2" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 2 (optional) --</option></select>
+          </div>
+          <div class="option-row">
+            <label class="bold-check" id="boldlabel_opt3"><input type="checkbox" id="bold_opt3" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt3')">B</label>
+            <select id="opt3" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 3 (optional) --</option></select>
+          </div>
         </div>
       </div>
-      <div class="tactic-item">
-        <label>Trap</label>
-        <div class="tactic-sel-row">
-          <label class="bold-check" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')">B</label>
-          <select id="t_trap" onmousedown="pushUndo()" onchange="saveState()">
-            <option>Always</option><option>Often</option>
-            <option selected>Normal</option>
-            <option>Sometimes</option><option>Never</option>
-          </select>
-        </div>
-      </div>
-      <div class="tactic-item">
-        <label>Pressure</label>
-        <div class="tactic-sel-row">
-          <label class="bold-check" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')">B</label>
-          <select id="t_pressure" onmousedown="pushUndo()" onchange="saveState()">
-            <option>Always</option><option>Often</option>
-            <option selected>Normal</option>
-            <option>Sometimes</option><option>Never</option>
-          </select>
-        </div>
-      </div>
-      <div class="tactic-item">
-        <label>Offense Focus</label>
-        <div class="tactic-sel-row">
-          <label class="bold-check" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')">B</label>
-          <select id="t_offense" onmousedown="pushUndo()" onchange="saveState()">
-            <option>Inside</option>
-            <option selected>Balanced</option>
-            <option>Outside</option>
-          </select>
+
+      <!-- ── TACTICS ── -->
+      <div class="card">
+        <div class="card-title">Tactics</div>
+        <div class="tactics-grid">
+          <div class="tactic-item">
+            <label>Pace</label>
+            <div class="tactic-sel-row">
+              <label class="bold-check" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')">B</label>
+              <select id="t_pace" onmousedown="pushUndo()" onchange="saveState()">
+                <option>Very Fast</option><option>Fast</option>
+                <option selected>Normal</option>
+                <option>Slow</option><option>Very Slow</option>
+              </select>
+            </div>
+          </div>
+          <div class="tactic-item">
+            <label>Trap</label>
+            <div class="tactic-sel-row">
+              <label class="bold-check" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')">B</label>
+              <select id="t_trap" onmousedown="pushUndo()" onchange="saveState()">
+                <option>Always</option><option>Often</option>
+                <option selected>Normal</option>
+                <option>Sometimes</option><option>Never</option>
+              </select>
+            </div>
+          </div>
+          <div class="tactic-item">
+            <label>Pressure</label>
+            <div class="tactic-sel-row">
+              <label class="bold-check" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')">B</label>
+              <select id="t_pressure" onmousedown="pushUndo()" onchange="saveState()">
+                <option>Always</option><option>Often</option>
+                <option selected>Normal</option>
+                <option>Sometimes</option><option>Never</option>
+              </select>
+            </div>
+          </div>
+          <div class="tactic-item">
+            <label>Offense Focus</label>
+            <div class="tactic-sel-row">
+              <label class="bold-check" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')">B</label>
+              <select id="t_offense" onmousedown="pushUndo()" onchange="saveState()">
+                <option>Inside</option>
+                <option selected>Balanced</option>
+                <option>Outside</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+
+  </div><!-- /dc-two-col -->
 
   <!-- ── GENERATE ── -->
   <div class="generate-row">
