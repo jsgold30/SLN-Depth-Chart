@@ -5,33 +5,94 @@ from bs4 import BeautifulSoup
 import re
 import sqlite3
 import json
-import os
 import threading
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
+DATABASE_URL = os.environ.get('DATABASE_URL', '')
 DB_PATH = os.environ.get('DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'depth_charts.db'))
+USE_POSTGRES = bool(DATABASE_URL)
+
+# ── Database wrapper ──────────────────────────────────────────────────────────
+# Provides a unified interface over SQLite (local) and PostgreSQL (production).
+# All query placeholders should be written as ? — they are translated to %s
+# automatically when PostgreSQL is in use.
+
+class _DBConn:
+    """Thin wrapper that normalises SQLite and psycopg2 connections."""
+
+    def __init__(self, raw, is_pg):
+        self._raw = raw
+        self._is_pg = is_pg
+        self._cur = raw.cursor() if is_pg else None
+
+    def _adapt(self, sql):
+        """Replace ? placeholders with %s for PostgreSQL."""
+        if self._is_pg:
+            return sql.replace('?', '%s')
+        return sql
+
+    def execute(self, sql, params=()):
+        sql = self._adapt(sql)
+        if self._is_pg:
+            self._cur.execute(sql, params)
+            return self._cur
+        else:
+            return self._raw.execute(sql, params)
+
+    def commit(self):
+        self._raw.commit()
+
+    def close(self):
+        if self._is_pg:
+            self._cur.close()
+        self._raw.close()
 
 
 def get_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute('''CREATE TABLE IF NOT EXISTS team_charts
-                    (team_url TEXT PRIMARY KEY, data TEXT,
-                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS draft_state
-                    (id INTEGER PRIMARY KEY CHECK (id = 1),
-                     data TEXT,
-                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS owed_picks
-                    (id INTEGER PRIMARY KEY CHECK (id = 1),
-                     data TEXT,
-                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    conn.execute('''CREATE TABLE IF NOT EXISTS settings
-                    (key TEXT PRIMARY KEY, value TEXT)''')
-    conn.commit()
-    return conn
+    if USE_POSTGRES:
+        import psycopg2
+        url = DATABASE_URL
+        # Railway sometimes uses postgres:// which psycopg2 needs as postgresql://
+        if url.startswith('postgres://'):
+            url = url.replace('postgres://', 'postgresql://', 1)
+        raw = psycopg2.connect(url)
+        conn = _DBConn(raw, is_pg=True)
+        conn.execute('''CREATE TABLE IF NOT EXISTS team_charts
+                        (team_url TEXT PRIMARY KEY, data TEXT,
+                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS draft_state
+                        (id INTEGER PRIMARY KEY,
+                         data TEXT,
+                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS owed_picks
+                        (id INTEGER PRIMARY KEY,
+                         data TEXT,
+                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS settings
+                        (key TEXT PRIMARY KEY, value TEXT)''')
+        conn.commit()
+        return conn
+    else:
+        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+        raw = sqlite3.connect(DB_PATH)
+        conn = _DBConn(raw, is_pg=False)
+        conn.execute('''CREATE TABLE IF NOT EXISTS team_charts
+                        (team_url TEXT PRIMARY KEY, data TEXT,
+                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS draft_state
+                        (id INTEGER PRIMARY KEY CHECK (id = 1),
+                         data TEXT,
+                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS owed_picks
+                        (id INTEGER PRIMARY KEY CHECK (id = 1),
+                         data TEXT,
+                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS settings
+                        (key TEXT PRIMARY KEY, value TEXT)''')
+        conn.commit()
+        return conn
 
 
 @app.route('/save_chart', methods=['POST'])
@@ -44,7 +105,8 @@ def save_chart():
     try:
         conn = get_db()
         conn.execute(
-            'INSERT OR REPLACE INTO team_charts (team_url, data, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
+            '''INSERT INTO team_charts (team_url, data, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+               ON CONFLICT (team_url) DO UPDATE SET data=EXCLUDED.data, updated_at=EXCLUDED.updated_at''',
             (team_url, json.dumps(data))
         )
         conn.commit()
@@ -972,7 +1034,8 @@ def _execute_picks_sync():
 
     db = get_db()
     db.execute(
-        'INSERT OR REPLACE INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)',
+        '''INSERT INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)
+               ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data, updated_at=EXCLUDED.updated_at''',
         (json.dumps(owed),)
     )
     db.commit()
@@ -1044,7 +1107,7 @@ def set_sln_cookie():
     if not cookie:
         return jsonify({'error': 'cookie required'}), 400
     db = get_db()
-    db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('sln_cookie', ?)", (cookie,))
+    db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie,))
     db.commit()
     db.close()
     return jsonify({'ok': True})
@@ -1110,7 +1173,7 @@ def sln_login():
         # Build cookie header string and persist it
         cookie_str = '; '.join(f'{k}={v}' for k, v in cookies.items())
         db = get_db()
-        db.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('sln_cookie', ?)", (cookie_str,))
+        db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
         db.commit()
         db.close()
 
@@ -1155,7 +1218,8 @@ def picks_from_paste():
                 added += 1
 
     db.execute(
-        'INSERT OR REPLACE INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)',
+        '''INSERT INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)
+               ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data, updated_at=EXCLUDED.updated_at''',
         (json.dumps(kept),)
     )
     db.commit()
@@ -1171,7 +1235,8 @@ def update_picks():
         return jsonify({'error': 'owed must be a list'}), 400
     db = get_db()
     db.execute(
-        'INSERT OR REPLACE INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)',
+        '''INSERT INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)
+               ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data, updated_at=EXCLUDED.updated_at''',
         (json.dumps(owed),)
     )
     db.commit()
