@@ -4585,12 +4585,11 @@ function dcLoadCsv(input) {
       const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
       // Expect at least: #, Team
       if (parts.length < 2) continue;
-      let pickNum, teamRaw, tradeNote, prePlayer;
+      let pickNum, teamRaw, tradeNote;
       if (/^\d+$/.test(parts[0])) {
-        [pickNum, teamRaw, tradeNote, prePlayer] = parts;
+        [pickNum, teamRaw, tradeNote] = parts;
       } else {
-        // No pick number column — just Team, Trade, Player
-        [teamRaw, tradeNote, prePlayer] = parts;
+        [teamRaw, tradeNote] = parts;
       }
       if (!teamRaw) continue;
       // Resolve team styling (strip "via X" / "from X" suffixes for lookup)
@@ -4606,7 +4605,7 @@ function dcLoadCsv(input) {
         url:           team ? team.url   : null,
         trade:         (tradeNote && tradeNote !== '') ? tradeNote : null,
         round:         currentRound,
-        draftedPlayer: (prePlayer && prePlayer !== '') ? prePlayer : null,
+        draftedPlayer: null,
         draftedPos:    null,
       };
       newOrder.push(entry);
@@ -4614,8 +4613,7 @@ function dcLoadCsv(input) {
     if (newOrder.length === 0) { alert('No valid picks found in CSV.'); input.value = ''; return; }
     // Advance current pick past any pre-filled players
     dcOrder = newOrder;
-    dcCurrentPick = dcOrder.findIndex(p => !p.draftedPlayer);
-    if (dcCurrentPick === -1) dcCurrentPick = dcOrder.length;
+    dcCurrentPick = 0;
     dcSave();
     dcRenderOrder();
     dcRenderLog();
