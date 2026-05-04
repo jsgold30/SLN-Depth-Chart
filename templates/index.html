@@ -4906,8 +4906,19 @@ function dcRescindFromModal() {
   const pickNum = dcEditingIdx + 1;
   team.draftedPlayer = '(Rescinded)';
   team.draftedPos = '';
-  dcResults.push({ pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: '(Rescinded)', pos: '', rescinded: true });
-  if (dcCurrentPick <= dcEditingIdx) dcCurrentPick = dcEditingIdx + 1;
+  // Replace existing result for this pick if it exists, otherwise insert at correct position
+  const existingIdx = dcResults.findIndex(r => r.pick === pickNum);
+  const rescindedEntry = { pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: '(Rescinded)', pos: '', rescinded: true };
+  if (existingIdx >= 0) {
+    dcResults[existingIdx] = rescindedEntry;
+  } else {
+    // Insert in pick-number order
+    const insertAt = dcResults.findIndex(r => r.pick > pickNum);
+    if (insertAt === -1) dcResults.push(rescindedEntry);
+    else dcResults.splice(insertAt, 0, rescindedEntry);
+  }
+  // Only advance currentPick if this is the current pick
+  if (dcCurrentPick === dcEditingIdx) dcCurrentPick = dcEditingIdx + 1;
   dcHideAddPick();
   dcSave();
   dcRenderOrder();
