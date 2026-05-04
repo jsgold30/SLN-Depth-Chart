@@ -717,7 +717,7 @@ DRAFT_PLAYER_POOL = [
 
 @app.route('/fetch_draft_players', methods=['POST'])
 def fetch_draft_players():
-    players = [dict(p, id=str(i+1)) for i, p in enumerate(DRAFT_PLAYER_POOL)]
+    players = [dict(p, id=str(i+1), out=p.get('out_rat',''), in_rating=p.get('in_rat','')) for i, p in enumerate(DRAFT_PLAYER_POOL)]
     return jsonify({'players': players})
 
 
