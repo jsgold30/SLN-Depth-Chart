@@ -1678,6 +1678,7 @@
             🔒 <span>Draft Mod</span>
           </button>
           <button class="dc-rescind-btn" id="dcRescindBtn" onclick="dcRescindPick()" disabled style="opacity:0.4;">Rescind Pick</button>
+          <button class="dc-rescind-btn" id="dcUndoBtn" onclick="dcUndoPick()" disabled style="opacity:0.4;">⎌ Undo</button>
           <!-- Unlocked controls (hidden until correct PIN) -->
           <div id="dcModControls" style="display:none;display:none;flex-wrap:wrap;gap:8px;align-items:center;">
             <button class="dc-add-round-btn" style="background:#0ea5e9;border-color:#0ea5e9;color:#fff;font-weight:700;" onclick="dcShowAddPick()">+ Add Pick</button>
@@ -1685,7 +1686,6 @@
               ⬆ Import CSV
               <input type="file" id="dcCsvInput" accept=".csv,.txt" style="display:none" onchange="dcLoadCsv(this)">
             </label>
-            <button class="dc-add-round-btn" id="dcUndoBtn" onclick="dcUndoPick()" style="display:none;">⎌ Undo</button>
             <button class="dc-reset-btn" onclick="dcClearAll()">✕ Clear All</button>
             <button class="dc-add-round-btn" onclick="dcLockMod()" style="margin-left:auto;color:#f87171;border-color:#7f1d1d;">🔒 Lock</button>
           </div>
@@ -4433,7 +4433,7 @@ function dcRenderOrder() {
   const clockTeamEl = document.getElementById('dcClockTeam');
   const clockPickEl = document.getElementById('dcClockPickNum');
   const undoBtn     = document.getElementById('dcUndoBtn');
-  if (undoBtn) undoBtn.style.display = dcCurrentPick > 0 ? 'inline-block' : 'none';
+  if (undoBtn) { const canUndo = dcCurrentPick > 0; undoBtn.disabled = !canUndo; undoBtn.style.opacity = canUndo ? '1' : '0.4'; }
   const rescindBtn = document.getElementById('dcRescindBtn');
   if (rescindBtn) { const can = dcOrder.length > 0 && dcCurrentPick < dcOrder.length; rescindBtn.disabled = !can; rescindBtn.style.opacity = can ? '1' : '0.4'; }
 
