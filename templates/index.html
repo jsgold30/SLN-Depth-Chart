@@ -1632,6 +1632,7 @@
               <th>Wt</th>
               <th>Age</th>
               <th>In</th>
+              <th>Out</th>
               <th>Df</th>
               <th>Hn</th>
               <th>Reb</th>
@@ -1639,7 +1640,7 @@
             </tr>
           </thead>
           <tbody id="dcPoolBody">
-            <tr><td colspan="10" class="dc-pool-empty">Load players to begin draft</td></tr>
+            <tr><td colspan="11" class="dc-pool-empty">Load players to begin draft</td></tr>
           </tbody>
         </table>
       </div>
@@ -4205,6 +4206,7 @@ function dcRenderPool() {
       <td>${p.wt}</td>
       <td>${p.age}</td>
       <td class="${dcGradeClass(p.in_rat)}">${p.in_rat}</td>
+      <td class="${dcGradeClass(p.out)}">${p.out}</td>
       <td class="${dcGradeClass(p.df)}">${p.df}</td>
       <td class="${dcGradeClass(p.hn)}">${p.hn}</td>
       <td class="${dcGradeClass(p.reb)}">${p.reb}</td>
@@ -4214,7 +4216,7 @@ function dcRenderPool() {
   });
 
   if (dcPool.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" class="dc-pool-empty">All players have been drafted</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="dc-pool-empty">All players have been drafted</td></tr>';
   }
 
   const countEl = document.getElementById('dcPoolCount');
@@ -4257,6 +4259,7 @@ function dcSelectPlayer(playerId) {
     <span>Wt <b>${player.wt}</b></span>
     <span>Age <b>${player.age}</b></span>
     <span class="${dcGradeClass(player.in_rat)}">IN <b>${player.in_rat}</b></span>
+    <span class="${dcGradeClass(player.out)}">OUT <b>${player.out}</b></span>
     <span class="${dcGradeClass(player.df)}">DF <b>${player.df}</b></span>
     <span class="${dcGradeClass(player.hn)}">HN <b>${player.hn}</b></span>
     <span class="${dcGradeClass(player.reb)}">REB <b>${player.reb}</b></span>
