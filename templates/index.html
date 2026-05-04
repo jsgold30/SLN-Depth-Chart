@@ -4114,12 +4114,13 @@ async function dcLoadFromServer() {
     if (!res.ok) return false;
     const s = await res.json();
     if (!s || (!s.pool && !s.order)) return false;
-    dcPool        = s.pool        || [];
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
     dcPlayerNotes = s.playerNotes || {};
     dcLastSyncStamp = s.ts || 0;
+    // Rebuild pool from saved pool until dcAllPlayers is available
+    dcPool = s.pool || [];
     // Cache locally
     try { localStorage.setItem(DC_LS_KEY, JSON.stringify(s)); } catch(e) {}
     return dcPool.length > 0 || dcOrder.length > 0 || Object.keys(dcPlayerNotes).length > 0;
@@ -5064,12 +5065,18 @@ async function dcPollServer() {
     if (s.ts <= dcLastSyncStamp) return;
     dcLastSyncStamp = s.ts;
     const prevPick = dcCurrentPick;
-    dcPool        = s.pool        || [];
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
     dcPlayerNotes = s.playerNotes || {};
     try { localStorage.setItem(DC_LS_KEY, JSON.stringify(s)); } catch(e) {}
+    // Always rebuild pool from authoritative player list minus drafted players
+    if (dcAllPlayers.length > 0) {
+      const draftedNames = new Set((dcResults).map(r => r.playerName).filter(n => n && n !== '(Rescinded)'));
+      dcPool = dcAllPlayers.filter(p => !draftedNames.has(p.name));
+    } else {
+      dcPool = s.pool || [];
+    }
     dcRenderPool();
     dcRenderOrder();
     dcRenderLog();
