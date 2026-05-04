@@ -1022,6 +1022,13 @@
       flex-shrink: 0;
     }
     .dc-confirm-draft-btn:hover { background: #15803d; }
+    .dc-rescind-btn {
+      padding: 7px 14px; border-radius: 6px; border: 1px solid #7f1d1d;
+      background: #450a0a; color: #fca5a5; font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; transition: background 0.15s; white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .dc-rescind-btn:hover { background: #7f1d1d; }
     .dc-selected-clear {
       background: none; border: none; color: #475569; font-size: 1rem;
       cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0;
@@ -1643,6 +1650,7 @@
         <div class="dc-selected-meta" id="dcSelectedMeta"></div>
       </div>
       <button class="dc-confirm-draft-btn" onclick="dcConfirmDraft()">Draft</button>
+      <button class="dc-rescind-btn" onclick="dcRescindPick()" title="Skip this pick — team passes without selecting a player">Rescind Pick</button>
       <button class="dc-selected-clear" onclick="dcClearSelection()" title="Clear selection">✕</button>
     </div>
     <!-- Scout Notes Panel -->
@@ -4261,6 +4269,31 @@ function dcConfirmDraft() {
   dcDraftPlayer(dcSelectedId);
 }
 
+function dcRescindPick() {
+  if (dcOrder.length === 0) { alert('Set up a draft order first.'); return; }
+  if (dcCurrentPick >= dcOrder.length) { alert('Draft is complete.'); return; }
+  if (!confirm('Rescind this pick? The team will pass without selecting a player.')) return;
+
+  const team    = dcOrder[dcCurrentPick];
+  const pickNum = dcResults.length + 1;
+
+  team.draftedPlayer = '(Rescinded)';
+  team.draftedPos    = '';
+
+  dcResults.push({ pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: '(Rescinded)', pos: '', rescinded: true });
+
+  dcCurrentPick++;
+
+  dcClearSelection();
+  dcSave();
+  dcRenderPool();
+  dcRenderOrder();
+  dcRenderLog();
+
+  const onClockEl = document.querySelector('.dc-order-row.on-clock');
+  if (onClockEl) onClockEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 // ── Scout notes (Draft Mod only) ─────────────────────────────────────────
 function dcSaveNote() {
   if (!dcSelectedId) return;
@@ -4876,7 +4909,7 @@ function dcRenderLog() {
       <td style="color:#64748b;">${r.pick}</td>
       <td>${r.teamName}</td>
       ${tradeTd}
-      <td style="font-weight:600;">${r.playerName || '<span style="color:#334155;">—</span>'}</td>
+      <td style="font-weight:600;">${r.rescinded ? '<span style="color:#ef4444;font-style:italic;">(Rescinded)</span>' : (r.playerName || '<span style="color:#334155;">—</span>')}</td>
       ${posTd}
     `;
     tbody.appendChild(tr);
