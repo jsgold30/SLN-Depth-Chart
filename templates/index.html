@@ -1633,8 +1633,8 @@
               <th onclick="dcSortPool('age')" style="cursor:pointer;user-select:none;">Age <span id="dcSort_age"></span></th>
               <th onclick="dcSortPool('in_rat')" style="cursor:pointer;user-select:none;">In <span id="dcSort_in_rat"></span></th>
               <th onclick="dcSortPool('out')" style="cursor:pointer;user-select:none;">Out <span id="dcSort_out"></span></th>
-              <th onclick="dcSortPool('df')" style="cursor:pointer;user-select:none;">Df <span id="dcSort_df"></span></th>
               <th onclick="dcSortPool('hn')" style="cursor:pointer;user-select:none;">Hn <span id="dcSort_hn"></span></th>
+              <th onclick="dcSortPool('df')" style="cursor:pointer;user-select:none;">Df <span id="dcSort_df"></span></th>
               <th onclick="dcSortPool('reb')" style="cursor:pointer;user-select:none;">Reb <span id="dcSort_reb"></span></th>
               <th onclick="dcSortPool('pot')" style="cursor:pointer;user-select:none;">Pot <span id="dcSort_pot"></span></th>
             </tr>
@@ -4246,8 +4246,8 @@ function dcRenderPool() {
       <td>${p.age}</td>
       <td class="${dcGradeClass(p.in_rat)}">${p.in_rat}</td>
       <td class="${dcGradeClass(p.out)}">${p.out}</td>
-      <td class="${dcGradeClass(p.df)}">${p.df}</td>
       <td class="${dcGradeClass(p.hn)}">${p.hn}</td>
+      <td class="${dcGradeClass(p.df)}">${p.df}</td>
       <td class="${dcGradeClass(p.reb)}">${p.reb}</td>
       <td class="${dcGradeClass(p.pot)}">${p.pot}</td>
     `;
@@ -4299,8 +4299,8 @@ function dcSelectPlayer(playerId) {
     <span>Age <b>${player.age}</b></span>
     <span class="${dcGradeClass(player.in_rat)}">IN <b>${player.in_rat}</b></span>
     <span class="${dcGradeClass(player.out)}">OUT <b>${player.out}</b></span>
-    <span class="${dcGradeClass(player.df)}">DF <b>${player.df}</b></span>
     <span class="${dcGradeClass(player.hn)}">HN <b>${player.hn}</b></span>
+    <span class="${dcGradeClass(player.df)}">DF <b>${player.df}</b></span>
     <span class="${dcGradeClass(player.reb)}">REB <b>${player.reb}</b></span>
     <span class="${dcGradeClass(player.pot)}">POT <b>${player.pot}</b></span>
   `;
