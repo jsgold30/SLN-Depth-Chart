@@ -4120,7 +4120,7 @@ async function dcLoadFromServer() {
     dcLastSyncStamp = s.ts || 0;
     // Cache locally
     try { localStorage.setItem(DC_LS_KEY, JSON.stringify(s)); } catch(e) {}
-    return dcPool.length > 0 || dcOrder.length > 0;
+    return dcPool.length > 0 || dcOrder.length > 0 || Object.keys(dcPlayerNotes).length > 0;
   } catch(e) { return false; }
 }
 
@@ -4133,8 +4133,9 @@ function dcLoad() {
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
+    dcPlayerNotes = s.playerNotes || {};
     dcLastSyncStamp = s.ts || 0;
-    return dcPool.length > 0 || dcOrder.length > 0;
+    return dcPool.length > 0 || dcOrder.length > 0 || Object.keys(dcPlayerNotes).length > 0;
   } catch(e) { return false; }
 }
 
