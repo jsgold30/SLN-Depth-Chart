@@ -1777,6 +1777,7 @@
     </div>
 
     <div class="dc-add-pick-actions" style="margin-top:16px;">
+      <button id="dcPickRescindBtn" onclick="dcRescindFromModal()" style="display:none;background:#450a0a;border:1px solid #7f1d1d;color:#fca5a5;border-radius:6px;padding:6px 14px;font-size:0.8rem;cursor:pointer;margin-right:auto;">Rescind Pick</button>
       <button class="dc-btn-cancel" onclick="dcHideAddPick()">Cancel</button>
       <button class="dc-btn-confirm" id="dcPickConfirmBtn" onclick="dcConfirmAddPick()">Add Pick</button>
     </div>
@@ -4879,6 +4880,7 @@ function dcEditPick(idx) {
   dcPopulateTeamSelects();
   document.getElementById('dcPickModalTitle').textContent = `Edit Pick ${idx + 1}`;
   document.getElementById('dcPickConfirmBtn').textContent = 'Save Changes';
+  document.getElementById('dcPickRescindBtn').style.display = 'inline-block';
   document.getElementById('dcTradeHopList').innerHTML = '';
   document.getElementById('dcTradeChainPreview').innerHTML = '';
 
@@ -4897,8 +4899,25 @@ function dcEditPick(idx) {
   document.getElementById('dcAddPickOverlay').classList.add('open');
 }
 
+function dcRescindFromModal() {
+  if (dcEditingIdx < 0) return;
+  if (!confirm('Rescind this pick? The team will pass without selecting a player.')) return;
+  const team = dcOrder[dcEditingIdx];
+  const pickNum = dcEditingIdx + 1;
+  team.draftedPlayer = '(Rescinded)';
+  team.draftedPos = '';
+  dcResults.push({ pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: '(Rescinded)', pos: '', rescinded: true });
+  if (dcCurrentPick <= dcEditingIdx) dcCurrentPick = dcEditingIdx + 1;
+  dcHideAddPick();
+  dcSave();
+  dcRenderOrder();
+  dcRenderLog();
+  dcRenderPool();
+}
+
 function dcHideAddPick() {
   document.getElementById('dcAddPickOverlay').classList.remove('open');
+  document.getElementById('dcPickRescindBtn').style.display = 'none';
   dcEditingIdx = -1;
 }
 
