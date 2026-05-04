@@ -966,7 +966,7 @@
     }
     /* Selected player panel */
     .dc-selected-panel {
-      display: flex; background: #0c1a2e;
+      display: none; background: #0c1a2e;
       border: 1px solid #0ea5e9; border-radius: 8px 8px 0 0;
       padding: 14px 16px; margin-bottom: 0;
       align-items: center; gap: 14px; flex-wrap: wrap;
@@ -1678,6 +1678,7 @@
           <button class="dc-add-round-btn" id="dcModLockBtn" onclick="dcShowModPin()" style="display:flex;align-items:center;gap:5px;">
             🔒 <span>Draft Mod</span>
           </button>
+          <button class="dc-rescind-btn" id="dcRescindBtn" onclick="dcRescindPick()" disabled style="opacity:0.4;">Rescind Pick</button>
           <!-- Unlocked controls (hidden until correct PIN) -->
           <div id="dcModControls" style="display:none;display:none;flex-wrap:wrap;gap:8px;align-items:center;">
             <button class="dc-add-round-btn" style="background:#0ea5e9;border-color:#0ea5e9;color:#fff;font-weight:700;" onclick="dcShowAddPick()">+ Add Pick</button>
@@ -4265,14 +4266,14 @@ function dcSelectPlayer(playerId) {
   dcRefreshNotesPanel();
 
   // Scroll panel into view
+  document.getElementById('dcSelectedPanel').classList.add('visible');
   document.getElementById('dcSelectedPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function dcClearSelection() {
   dcSelectedId = null;
   document.querySelectorAll('.dc-pool-table tr.dc-row-selected').forEach(r => r.classList.remove('dc-row-selected'));
-  document.getElementById('dcSelectedName').textContent = '—';
-  document.getElementById('dcSelectedMeta').innerHTML = '';
+  document.getElementById('dcSelectedPanel').classList.remove('visible');
   document.getElementById('dcNotesPanel').classList.remove('visible');
 }
 
@@ -4434,6 +4435,8 @@ function dcRenderOrder() {
   const clockPickEl = document.getElementById('dcClockPickNum');
   const undoBtn     = document.getElementById('dcUndoBtn');
   if (undoBtn) undoBtn.style.display = dcCurrentPick > 0 ? 'inline-block' : 'none';
+  const rescindBtn = document.getElementById('dcRescindBtn');
+  if (rescindBtn) { const can = dcOrder.length > 0 && dcCurrentPick < dcOrder.length; rescindBtn.disabled = !can; rescindBtn.style.opacity = can ? '1' : '0.4'; }
 
   if (dcOrder.length === 0) {
     list.innerHTML = '<div style="color:#64748b;font-size:0.78rem;text-align:center;padding:16px 0;">Use <strong style="color:#94a3b8;">+ Add Pick</strong> or <strong style="color:#94a3b8;">Import CSV</strong> to build the draft order</div>';
