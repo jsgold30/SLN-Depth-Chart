@@ -4187,10 +4187,10 @@ async function dcFetchPlayers() {
 let dcSortCol = null;
 let dcSortAsc = true;
 
-const GRADE_ORDER = ['A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-','F',''];
+const DC_GRADE_ORDER = ['A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-','F',''];
 
 function dcGradeVal(g) {
-  const i = GRADE_ORDER.indexOf(g || '');
+  const i = DC_GRADE_ORDER.indexOf(g || '');
   return i === -1 ? 99 : i;
 }
 
