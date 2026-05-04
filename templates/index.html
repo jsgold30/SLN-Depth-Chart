@@ -4982,8 +4982,9 @@ function dcRenderLog() {
     return;
   }
 
-  // Show in ascending order (pick 1 on top)
-  dcResults.forEach(r => {
+  // Show in ascending pick-number order
+  const sortedResults = [...dcResults].sort((a, b) => a.pick - b.pick);
+  sortedResults.forEach(r => {
     const tr = document.createElement('tr');
     const tradeTd = r.trade
       ? `<td><span class="dc-trade-badge">⇄ ${r.trade}</span></td>`
