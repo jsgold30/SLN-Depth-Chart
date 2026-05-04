@@ -4330,7 +4330,7 @@ function dcRescindPick() {
   if (!confirm('Rescind this pick? The team will pass without selecting a player.')) return;
 
   const team    = dcOrder[dcCurrentPick];
-  const pickNum = dcResults.length + 1;
+  const pickNum = dcCurrentPick + 1;
 
   team.draftedPlayer = '(Rescinded)';
   team.draftedPos    = '';
@@ -4411,7 +4411,7 @@ function dcDraftPlayer(playerId) {
 
   const player  = dcPool[playerIdx];
   const team    = dcOrder[dcCurrentPick];
-  const pickNum = dcResults.length + 1;
+  const pickNum = dcCurrentPick + 1;
 
   // Store drafted player on the order entry so it shows inline
   team.draftedPlayer = player.name;
