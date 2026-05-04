@@ -1625,18 +1625,18 @@
       <div class="dc-pool-wrap">
         <table class="dc-pool-table" id="dcPoolTable">
           <thead>
-            <tr>
-              <th>Name</th>
-              <th>Pos</th>
-              <th>Ht</th>
-              <th>Wt</th>
-              <th>Age</th>
-              <th>In</th>
-              <th>Out</th>
-              <th>Df</th>
-              <th>Hn</th>
-              <th>Reb</th>
-              <th>Pot</th>
+            <tr id="dcPoolHeaderRow">
+              <th onclick="dcSortPool('name')" style="cursor:pointer;user-select:none;">Name <span id="dcSort_name"></span></th>
+              <th onclick="dcSortPool('pos')" style="cursor:pointer;user-select:none;">Pos <span id="dcSort_pos"></span></th>
+              <th onclick="dcSortPool('ht')" style="cursor:pointer;user-select:none;">Ht <span id="dcSort_ht"></span></th>
+              <th onclick="dcSortPool('wt')" style="cursor:pointer;user-select:none;">Wt <span id="dcSort_wt"></span></th>
+              <th onclick="dcSortPool('age')" style="cursor:pointer;user-select:none;">Age <span id="dcSort_age"></span></th>
+              <th onclick="dcSortPool('in_rat')" style="cursor:pointer;user-select:none;">In <span id="dcSort_in_rat"></span></th>
+              <th onclick="dcSortPool('out')" style="cursor:pointer;user-select:none;">Out <span id="dcSort_out"></span></th>
+              <th onclick="dcSortPool('df')" style="cursor:pointer;user-select:none;">Df <span id="dcSort_df"></span></th>
+              <th onclick="dcSortPool('hn')" style="cursor:pointer;user-select:none;">Hn <span id="dcSort_hn"></span></th>
+              <th onclick="dcSortPool('reb')" style="cursor:pointer;user-select:none;">Reb <span id="dcSort_reb"></span></th>
+              <th onclick="dcSortPool('pot')" style="cursor:pointer;user-select:none;">Pot <span id="dcSort_pot"></span></th>
             </tr>
           </thead>
           <tbody id="dcPoolBody">
@@ -4181,6 +4181,44 @@ async function dcFetchPlayers() {
   } catch(e) {
     statusEl.textContent = 'Failed to load players.';
   }
+}
+
+// ── Pool sort ────────────────────────────────────────────────────────────
+let dcSortCol = null;
+let dcSortAsc = true;
+
+const GRADE_ORDER = ['A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-','F',''];
+
+function dcGradeVal(g) {
+  const i = GRADE_ORDER.indexOf(g || '');
+  return i === -1 ? 99 : i;
+}
+
+function dcSortPool(col) {
+  if (dcSortCol === col) {
+    dcSortAsc = !dcSortAsc;
+  } else {
+    dcSortCol = col;
+    dcSortAsc = true;
+  }
+  const gradeFields = ['in_rat','out','df','hn','reb','pot'];
+  dcPool.sort((a, b) => {
+    let av = a[col] || '', bv = b[col] || '';
+    let cmp;
+    if (gradeFields.includes(col)) {
+      cmp = dcGradeVal(av) - dcGradeVal(bv);
+    } else if (!isNaN(parseFloat(av)) && !isNaN(parseFloat(bv))) {
+      cmp = parseFloat(av) - parseFloat(bv);
+    } else {
+      cmp = av.toString().localeCompare(bv.toString());
+    }
+    return dcSortAsc ? cmp : -cmp;
+  });
+  // Update header indicators
+  document.querySelectorAll('[id^="dcSort_"]').forEach(el => el.textContent = '');
+  const ind = document.getElementById('dcSort_' + col);
+  if (ind) ind.textContent = dcSortAsc ? ' ▲' : ' ▼';
+  dcRenderPool();
 }
 
 // ── Render player pool table ─────────────────────────────────────────────
