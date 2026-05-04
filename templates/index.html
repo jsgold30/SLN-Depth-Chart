@@ -4324,6 +4324,28 @@ function dcConfirmDraft() {
   dcDraftPlayer(dcSelectedId);
 }
 
+function dcRescindByIdx(idx) {
+  if (!confirm('Rescind this pick? The team will pass without selecting a player.')) return;
+  const team = dcOrder[idx];
+  const pickNum = idx + 1;
+  team.draftedPlayer = '(Rescinded)';
+  team.draftedPos = '';
+  const rescindedEntry = { pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: '(Rescinded)', pos: '', rescinded: true };
+  const existingIdx = dcResults.findIndex(r => r.pick === pickNum);
+  if (existingIdx >= 0) {
+    dcResults[existingIdx] = rescindedEntry;
+  } else {
+    const insertAt = dcResults.findIndex(r => r.pick > pickNum);
+    if (insertAt === -1) dcResults.push(rescindedEntry);
+    else dcResults.splice(insertAt, 0, rescindedEntry);
+  }
+  if (dcCurrentPick === idx) dcCurrentPick = idx + 1;
+  dcSave();
+  dcRenderOrder();
+  dcRenderLog();
+  dcRenderPool();
+}
+
 function dcRescindPick() {
   if (dcOrder.length === 0) { alert('Set up a draft order first.'); return; }
   if (dcCurrentPick >= dcOrder.length) { alert('Draft is complete.'); return; }
@@ -4544,11 +4566,13 @@ function dcRenderOrder() {
         ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;word-break:break-word;">${tradeParts[0]}</span>`
         : `<span style="color:#334155;">—</span>`;
 
+    const rescindRowBtn = `<button onclick="dcRescindByIdx(${idx})" title="Rescind pick" style="background:#450a0a;border:1px solid #7f1d1d;color:#fca5a5;border-radius:4px;padding:1px 7px;font-size:0.7rem;cursor:pointer;">Rescind</button>`;
     const controls = dcModUnlocked ? `
       <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+        ${rescindRowBtn}
         <button class="dc-move-btn" onclick="dcEditPick(${idx})" title="Edit" style="font-size:0.75rem;padding:1px 5px;">✎</button>
         <button class="dc-order-del" onclick="dcRemoveOrder(${idx})" title="Remove">✕</button>
-      </div>` : '';
+      </div>` : `<div style="display:flex;justify-content:flex-end;">${rescindRowBtn}</div>`;
 
     const tr = document.createElement('tr');
     tr.dataset.idx = idx;
