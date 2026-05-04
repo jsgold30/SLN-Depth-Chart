@@ -1619,6 +1619,8 @@
         <button class="dc-filter-btn" data-pos="C"  onclick="dcFilterPos(this)">C</button>
         <span id="dcPoolCount" style="margin-left:auto;font-size:0.72rem;color:#64748b;align-self:center;"></span>
       </div>
+      <input id="dcSearchInput" type="text" placeholder="Search players…" oninput="dcSearchPool(this.value)"
+        style="width:100%;box-sizing:border-box;background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:5px 10px;color:#e2e8f0;font-size:0.8rem;margin-bottom:6px;outline:none;">
       <div id="dcPoolStatus" style="font-size:0.78rem;color:#94a3b8;margin-bottom:8px;min-height:18px;"></div>
       <div class="dc-pool-wrap">
         <table class="dc-pool-table" id="dcPoolTable">
@@ -4073,6 +4075,7 @@ let dcCurrentPick  = 0;    // index into dcOrder
 let dcResults      = [];   // [{ pick, teamName, playerName, pos }, ...]
 let dcPlayerNotes  = {};   // { [playerId]: "note text" } – scout notes per player
 let dcPosFilter    = 'ALL';
+let dcSearchQuery  = '';
 let dcSelectedId   = null; // id of player currently selected for drafting
 const DC_LS_KEY    = 'draftCenter_v3';
 
@@ -4186,7 +4189,8 @@ function dcRenderPool() {
   let visible = 0;
 
   dcPool.forEach((p, idx) => {
-    const show = (dcPosFilter === 'ALL' || p.pos === dcPosFilter);
+    const q = dcSearchQuery.toLowerCase();
+    const show = (dcPosFilter === 'ALL' || p.pos === dcPosFilter) && (!q || p.name.toLowerCase().includes(q));
     if (show) visible++;
 
     const tr = document.createElement('tr');
@@ -4222,6 +4226,11 @@ function dcFilterPos(btn) {
   document.querySelectorAll('.dc-filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   dcPosFilter = btn.dataset.pos;
+  dcRenderPool();
+}
+
+function dcSearchPool(val) {
+  dcSearchQuery = val;
   dcRenderPool();
 }
 
