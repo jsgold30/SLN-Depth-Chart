@@ -639,56 +639,85 @@ def fetch_salary_roster():
         return jsonify({'error': f'Error parsing salary data: {str(e)}'}), 500
 
 
+# ── Static draft player pool (snapshot: 2026-05-04) ─────────────────────────
+# To update this list, re-fetch https://www.simleaguenirvana.com/draft/draftplayers-pot.htm
+DRAFT_PLAYER_POOL = [
+    {'id':'','name':'Legend Gracey','pos':'PF','ht':"6'7\"" ,'wt':'225','age':'21','in_rat':'B+','out_rat':'C' ,'hn':'B' ,'df':'C-','reb':'C' ,'pot':'A'},
+    {'id':'','name':'Chief Peace','pos':'SG','ht':"6'4\"" ,'wt':'190','age':'20','in_rat':'C' ,'out_rat':'C' ,'hn':'B+','df':'C' ,'reb':'C' ,'pot':'A'},
+    {'id':'','name':'Kye Branson','pos':'PG','ht':"6'2\"" ,'wt':'180','age':'20','in_rat':'C' ,'out_rat':'B' ,'hn':'B' ,'df':'B-','reb':'C-','pot':'B'},
+    {'id':'','name':'Messiah Gregory','pos':'PG','ht':"6'2\"" ,'wt':'185','age':'20','in_rat':'B' ,'out_rat':'D+','hn':'C' ,'df':'B' ,'reb':'C+','pot':'B'},
+    {'id':'','name':'Kobe Corbo-Banks','pos':'SG','ht':"6'5\"" ,'wt':'200','age':'20','in_rat':'C' ,'out_rat':'B' ,'hn':'C' ,'df':'C' ,'reb':'C-','pot':'B'},
+    {'id':'','name':'Future McConnell','pos':'SF','ht':"6'6\"" ,'wt':'215','age':'20','in_rat':'B' ,'out_rat':'B' ,'hn':'C-','df':'B' ,'reb':'C+','pot':'B'},
+    {'id':'','name':'Krizzio Eustaquio','pos':'SF','ht':"6'7\"" ,'wt':'220','age':'21','in_rat':'B-','out_rat':'B-','hn':'C-','df':'C+','reb':'C' ,'pot':'B'},
+    {'id':'','name':'Che Ali Griffith','pos':'C','ht':"6'10\"" ,'wt':'245','age':'20','in_rat':'B' ,'out_rat':'C+','hn':'D+','df':'B' ,'reb':'C+','pot':'B'},
+    {'id':'','name':'King Vincent','pos':'C','ht':"6'11\"" ,'wt':'250','age':'21','in_rat':'C+','out_rat':'C' ,'hn':'D' ,'df':'C' ,'reb':'B' ,'pot':'B'},
+    {'id':'','name':'Judah Butler','pos':'SG','ht':"6'4\"" ,'wt':'195','age':'21','in_rat':'C' ,'out_rat':'C+','hn':'C+','df':'C+','reb':'C' ,'pot':'B'},
+    {'id':'','name':'Scooby Harris','pos':'SG','ht':"6'5\"" ,'wt':'200','age':'21','in_rat':'B' ,'out_rat':'C' ,'hn':'C+','df':'C+','reb':'C-','pot':'B'},
+    {'id':'','name':'Hezekiah McGrew','pos':'PF','ht':"6'8\"" ,'wt':'230','age':'20','in_rat':'C' ,'out_rat':'C' ,'hn':'C-','df':'B' ,'reb':'B-','pot':'B'},
+    {'id':'','name':'Tazwell Lewis','pos':'SF','ht':"6'7\"" ,'wt':'215','age':'23','in_rat':'C' ,'out_rat':'B-','hn':'C-','df':'B-','reb':'C' ,'pot':'B'},
+    {'id':'','name':'Cash Rader','pos':'SF','ht':"6'6\"" ,'wt':'210','age':'20','in_rat':'C+','out_rat':'B+','hn':'C' ,'df':'B-','reb':'C' ,'pot':'B'},
+    {'id':'','name':'Zaiden Middleton','pos':'PG','ht':"6'3\"" ,'wt':'185','age':'21','in_rat':'C' ,'out_rat':'B-','hn':'C+','df':'B' ,'reb':'C-','pot':'B'},
+    {'id':'','name':'Grady Levine','pos':'PG','ht':"6'2\"" ,'wt':'180','age':'21','in_rat':'C' ,'out_rat':'C+','hn':'B+','df':'C' ,'reb':'C-','pot':'B'},
+    {'id':'','name':'Aquarius Rhodes Jr.','pos':'PG','ht':"6'2\"" ,'wt':'185','age':'21','in_rat':'C' ,'out_rat':'C+','hn':'B' ,'df':'C+','reb':'C-','pot':'B'},
+    {'id':'','name':'Justus Thomas','pos':'PF','ht':"6'8\"" ,'wt':'225','age':'21','in_rat':'C+','out_rat':'B' ,'hn':'C' ,'df':'C+','reb':'C+','pot':'B'},
+    {'id':'','name':'Cainen Bell','pos':'C','ht':"6'10\"" ,'wt':'245','age':'22','in_rat':'C+','out_rat':'D+','hn':'D+','df':'B+','reb':'B-','pot':'B'},
+    {'id':'','name':'Jaxsen Jollif','pos':'SF','ht':"6'7\"" ,'wt':'215','age':'22','in_rat':'B-','out_rat':'C' ,'hn':'C-','df':'B' ,'reb':'C' ,'pot':'B'},
+    {'id':'','name':'Austin Cineas','pos':'C','ht':"6'10\"" ,'wt':'245','age':'22','in_rat':'C+','out_rat':'B+','hn':'D+','df':'C+','reb':'B' ,'pot':'B'},
+    {'id':'','name':'Kian Baxter','pos':'PG','ht':"6'1\"" ,'wt':'175','age':'22','in_rat':'C+','out_rat':'C' ,'hn':'B-','df':'C' ,'reb':'C' ,'pot':'B'},
+    {'id':'','name':'Kaijin Nelson','pos':'PF','ht':"6'8\"" ,'wt':'225','age':'22','in_rat':'C' ,'out_rat':'C-','hn':'C-','df':'B' ,'reb':'C+','pot':'B'},
+    {'id':'','name':'Enzo Pettigrew','pos':'SG','ht':"6'4\"" ,'wt':'195','age':'21','in_rat':'C' ,'out_rat':'B-','hn':'C' ,'df':'C+','reb':'C' ,'pot':'B'},
+    {'id':'','name':'Edward Houghton','pos':'PF','ht':"6'8\"" ,'wt':'225','age':'22','in_rat':'C+','out_rat':'C-','hn':'C-','df':'C+','reb':'C' ,'pot':'B'},
+    {'id':'','name':'Sam Hill','pos':'PF','ht':"6'8\"" ,'wt':'225','age':'22','in_rat':'B-','out_rat':'B-','hn':'C-','df':'C+','reb':'C' ,'pot':'B'},
+    {'id':'','name':"D'Ante Fields",'pos':'C','ht':"6'11\"" ,'wt':'250','age':'22','in_rat':'B-','out_rat':'D' ,'hn':'D-','df':'B' ,'reb':'C' ,'pot':'B'},
+    {'id':'','name':'Oscar Moss','pos':'SF','ht':"6'7\"" ,'wt':'215','age':'22','in_rat':'C+','out_rat':'C' ,'hn':'C-','df':'C+','reb':'C+','pot':'B'},
+    {'id':'','name':'Kieran Reed','pos':'PG','ht':"6'2\"" ,'wt':'180','age':'23','in_rat':'C' ,'out_rat':'C+','hn':'C' ,'df':'C' ,'reb':'C-','pot':'C'},
+    {'id':'','name':'Joe Powell','pos':'PG','ht':"6'1\"" ,'wt':'175','age':'22','in_rat':'C-','out_rat':'C+','hn':'C' ,'df':'C+','reb':'C-','pot':'C'},
+    {'id':'','name':'Boban Nastasic','pos':'SG','ht':"6'5\"" ,'wt':'200','age':'21','in_rat':'C' ,'out_rat':'B+','hn':'B+','df':'B+','reb':'C-','pot':'C'},
+    {'id':'','name':'Sabian Carr','pos':'SF','ht':"6'6\"" ,'wt':'210','age':'22','in_rat':'C' ,'out_rat':'B+','hn':'C-','df':'B+','reb':'C' ,'pot':'C'},
+    {'id':'','name':'Abram Miranda','pos':'SF','ht':"6'6\"" ,'wt':'210','age':'22','in_rat':'C' ,'out_rat':'B' ,'hn':'C' ,'df':'C+','reb':'C' ,'pot':'C'},
+    {'id':'','name':'Shakur Mathis','pos':'C','ht':"6'10\"" ,'wt':'245','age':'22','in_rat':'C+','out_rat':'C-','hn':'D+','df':'B-','reb':'C+','pot':'C'},
+    {'id':'','name':'Davarius Daniels','pos':'C','ht':"6'11\"" ,'wt':'250','age':'22','in_rat':'C+','out_rat':'C+','hn':'C-','df':'C+','reb':'C+','pot':'C'},
+    {'id':'','name':'Arthur Andrews','pos':'PF','ht':"6'8\"" ,'wt':'225','age':'22','in_rat':'C' ,'out_rat':'C' ,'hn':'C-','df':'B-','reb':'C+','pot':'C'},
+    {'id':'','name':'Kian Gomez','pos':'PF','ht':"6'8\"" ,'wt':'230','age':'22','in_rat':'B' ,'out_rat':'C+','hn':'C-','df':'C' ,'reb':'C+','pot':'C'},
+    {'id':'','name':'Zalen Bass','pos':'C','ht':"6'10\"" ,'wt':'245','age':'22','in_rat':'C+','out_rat':'C-','hn':'D' ,'df':'C+','reb':'B-','pot':'C'},
+    {'id':'','name':'Bo Becker','pos':'SG','ht':"6'4\"" ,'wt':'195','age':'22','in_rat':'B-','out_rat':'C+','hn':'C' ,'df':'C+','reb':'C-','pot':'C'},
+    {'id':'','name':'Jazeel Kelley','pos':'SG','ht':"6'4\"" ,'wt':'195','age':'23','in_rat':'C' ,'out_rat':'C+','hn':'C-','df':'C+','reb':'C-','pot':'C'},
+    {'id':'','name':'Spencer Fox','pos':'PF','ht':"6'8\"" ,'wt':'225','age':'23','in_rat':'C' ,'out_rat':'B' ,'hn':'C-','df':'B' ,'reb':'B-','pot':'C'},
+    {'id':'','name':"Ka'jai Dorsey",'pos':'SG','ht':"6'5\"" ,'wt':'200','age':'22','in_rat':'C' ,'out_rat':'B+','hn':'C' ,'df':'C' ,'reb':'C-','pot':'C'},
+    {'id':'','name':'Ray Crane','pos':'SF','ht':"6'6\"" ,'wt':'210','age':'22','in_rat':'B-','out_rat':'B-','hn':'C' ,'df':'C' ,'reb':'C' ,'pot':'C'},
+    {'id':'','name':'Tommy Waters','pos':'PF','ht':"6'8\"" ,'wt':'225','age':'22','in_rat':'C+','out_rat':'C-','hn':'D+','df':'C' ,'reb':'C+','pot':'C'},
+    {'id':'','name':'Jon Harris','pos':'SF','ht':"6'7\"" ,'wt':'215','age':'22','in_rat':'C' ,'out_rat':'C' ,'hn':'C' ,'df':'C+','reb':'C' ,'pot':'C'},
+    {'id':'','name':'Colin Knight','pos':'SG','ht':"6'4\"" ,'wt':'190','age':'21','in_rat':'C' ,'out_rat':'C' ,'hn':'C' ,'df':'C' ,'reb':'C-','pot':'C'},
+    {'id':'','name':'Jenson Stevens','pos':'PG','ht':"6'1\"" ,'wt':'175','age':'23','in_rat':'D+','out_rat':'C+','hn':'C' ,'df':'C+','reb':'D' ,'pot':'C'},
+    {'id':'','name':'Leon Harris','pos':'PG','ht':"6'2\"" ,'wt':'180','age':'22','in_rat':'C' ,'out_rat':'C+','hn':'C' ,'df':'C' ,'reb':'D+','pot':'C'},
+    {'id':'','name':'Otto Chaney','pos':'SF','ht':"6'6\"" ,'wt':'210','age':'22','in_rat':'C' ,'out_rat':'B-','hn':'D+','df':'C' ,'reb':'C' ,'pot':'C'},
+    {'id':'','name':'Callum Khan','pos':'SF','ht':"6'7\"" ,'wt':'215','age':'23','in_rat':'B-','out_rat':'C-','hn':'C' ,'df':'C' ,'reb':'C+','pot':'C'},
+    {'id':'','name':'Navier Webb','pos':'C','ht':"6'10\"" ,'wt':'245','age':'22','in_rat':'C' ,'out_rat':'C' ,'hn':'D' ,'df':'C+','reb':'C+','pot':'C'},
+    {'id':'','name':'Destin Greer','pos':'C','ht':"6'11\"" ,'wt':'250','age':'23','in_rat':'C' ,'out_rat':'B' ,'hn':'C-','df':'C' ,'reb':'C+','pot':'C'},
+    {'id':'','name':'Randall Golden','pos':'SG','ht':"6'4\"" ,'wt':'195','age':'21','in_rat':'C' ,'out_rat':'B' ,'hn':'C-','df':'C' ,'reb':'C-','pot':'C'},
+    {'id':'','name':'Keylon Poole','pos':'SF','ht':"6'6\"" ,'wt':'210','age':'22','in_rat':'C' ,'out_rat':'C' ,'hn':'C' ,'df':'C+','reb':'C' ,'pot':'C'},
+    {'id':'','name':'Dashaud Parker','pos':'SF','ht':"6'7\"" ,'wt':'215','age':'22','in_rat':'C' ,'out_rat':'C' ,'hn':'C' ,'df':'C' ,'reb':'C' ,'pot':'C'},
+    {'id':'','name':'Tevari Henry','pos':'C','ht':"6'10\"" ,'wt':'245','age':'24','in_rat':'B-','out_rat':'D' ,'hn':'D' ,'df':'C+','reb':'C' ,'pot':'C'},
+    {'id':'','name':'Kohen Torres','pos':'PG','ht':"6'2\"" ,'wt':'180','age':'23','in_rat':'C' ,'out_rat':'B-','hn':'B' ,'df':'C' ,'reb':'C-','pot':'C'},
+    {'id':'','name':'Byron Cross','pos':'PF','ht':"6'8\"" ,'wt':'225','age':'22','in_rat':'C' ,'out_rat':'C-','hn':'D+','df':'C+','reb':'B-','pot':'C'},
+    {'id':'','name':'Sawyer Harrison','pos':'PF','ht':"6'8\"" ,'wt':'225','age':'23','in_rat':'C+','out_rat':'C+','hn':'C-','df':'C' ,'reb':'C' ,'pot':'C'},
+    {'id':'','name':'Everett Farley','pos':'PG','ht':"6'2\"" ,'wt':'180','age':'23','in_rat':'C' ,'out_rat':'C' ,'hn':'C+','df':'C+','reb':'D+','pot':'C'},
+    {'id':'','name':'Takeo Calhoun','pos':'C','ht':"6'10\"" ,'wt':'245','age':'23','in_rat':'C+','out_rat':'C-','hn':'C-','df':'C+','reb':'C' ,'pot':'C'},
+    {'id':'','name':'Jevonne Bishop','pos':'C','ht':"6'10\"" ,'wt':'245','age':'22','in_rat':'C' ,'out_rat':'C-','hn':'C-','df':'C' ,'reb':'C+','pot':'C'},
+    {'id':'','name':'Brodie Rowland','pos':'SG','ht':"6'4\"" ,'wt':'195','age':'21','in_rat':'B' ,'out_rat':'C+','hn':'C' ,'df':'C+','reb':'D+','pot':'C'},
+    {'id':'','name':'Jamyron Wheeler','pos':'SF','ht':"6'6\"" ,'wt':'210','age':'23','in_rat':'C' ,'out_rat':'C' ,'hn':'C-','df':'C' ,'reb':'C-','pot':'D'},
+    {'id':'','name':'Ladarrell Reed','pos':'C','ht':"6'10\"" ,'wt':'245','age':'22','in_rat':'C' ,'out_rat':'D+','hn':'C-','df':'C' ,'reb':'C+','pot':'D'},
+    {'id':'','name':'Killion Mack','pos':'C','ht':"6'10\"" ,'wt':'245','age':'23','in_rat':'C' ,'out_rat':'D+','hn':'D' ,'df':'C+','reb':'C+','pot':'D'},
+    {'id':'','name':'Troy Allison','pos':'SG','ht':"6'4\"" ,'wt':'195','age':'22','in_rat':'C' ,'out_rat':'C' ,'hn':'C' ,'df':'C' ,'reb':'C-','pot':'D'},
+    {'id':'','name':'Kyler Goodwin','pos':'PG','ht':"6'1\"" ,'wt':'175','age':'23','in_rat':'D+','out_rat':'C' ,'hn':'B+','df':'C-','reb':'D' ,'pot':'D'},
+    {'id':'','name':'Harvey Burke','pos':'PF','ht':"6'8\"" ,'wt':'225','age':'22','in_rat':'C' ,'out_rat':'C-','hn':'D+','df':'C' ,'reb':'C' ,'pot':'D'},
+    {'id':'','name':'Shawn Randolph','pos':'PF','ht':"6'8\"" ,'wt':'225','age':'23','in_rat':'C' ,'out_rat':'C-','hn':'D+','df':'C+','reb':'C' ,'pot':'D'},
+    {'id':'','name':'Kaleem Barnes','pos':'SF','ht':"6'6\"" ,'wt':'210','age':'23','in_rat':'C' ,'out_rat':'C+','hn':'D' ,'df':'C' ,'reb':'C' ,'pot':'D'},
+]
+
 @app.route('/fetch_draft_players', methods=['POST'])
 def fetch_draft_players():
-    try:
-        headers = {
-            'User-Agent': (
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                'AppleWebKit/537.36 (KHTML, like Gecko) '
-                'Chrome/120.0.0.0 Safari/537.36'
-            )
-        }
-        r = requests.get(
-            'https://www.simleaguenirvana.com/draft/draftplayers-pot.htm',
-            headers=headers,
-            timeout=15
-        )
-        soup = BeautifulSoup(r.text, 'html.parser')
-        players = []
-        for row in soup.find_all('tr'):
-            cells = row.find_all('td', recursive=False)
-            if len(cells) < 11:
-                continue
-            name_cell = cells[0]
-            name = name_cell.get_text(strip=True)
-            if name == 'Name' or not name:
-                continue
-            link = name_cell.find('a')
-            pid = ''
-            if link and link.get('href'):
-                m = re.search(r'player(\d+)\.htm', link['href'])
-                if m:
-                    pid = m.group(1)
-            players.append({
-                'id': pid,
-                'name': name,
-                'pos': cells[1].get_text(strip=True),
-                'ht': cells[2].get_text(strip=True),
-                'wt': cells[3].get_text(strip=True),
-                'age': cells[4].get_text(strip=True),
-                'in_rat': cells[5].get_text(strip=True),
-                'out_rat': cells[6].get_text(strip=True),
-                'hn': cells[7].get_text(strip=True),
-                'df': cells[8].get_text(strip=True),
-                'reb': cells[9].get_text(strip=True),
-                'pot': cells[10].get_text(strip=True),
-            })
-        return jsonify({'players': players})
-    except requests.exceptions.Timeout:
-        return jsonify({'error': 'Request timed out.'}), 400
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    return jsonify({'players': DRAFT_PLAYER_POOL})
 
 
 @app.route('/save_draft', methods=['POST'])
