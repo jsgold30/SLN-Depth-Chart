@@ -4497,7 +4497,9 @@ function dcRenderOrder() {
     const tradeParts = team.trade ? team.trade.split(' to ').map(s => s.trim()).filter(Boolean) : [];
     const tradeCell = tradeParts.length >= 2
       ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;word-break:break-word;">${tradeParts.join('<span style="color:#64748b;"> → </span>')}</span>`
-      : `<span style="color:#334155;">—</span>`;
+      : tradeParts.length === 1
+        ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;word-break:break-word;">${tradeParts[0]}</span>`
+        : `<span style="color:#334155;">—</span>`;
 
     const controls = dcModUnlocked ? `
       <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
