@@ -4081,6 +4081,7 @@ let dcPosFilter    = 'ALL';
 let dcSearchQuery  = '';
 let dcSelectedId   = null; // id of player currently selected for drafting
 const DC_LS_KEY    = 'draftCenter_v3';
+let dcServerReached = false; // set to true once we get any response from /load_draft
 
 // ── Grade colour helper ──────────────────────────────────────────────────
 function dcGradeClass(g) {
@@ -4096,6 +4097,10 @@ function dcGradeClass(g) {
 
 // ── Persist / restore state ──────────────────────────────────────────────
 function dcSave() {
+  // Safety: never overwrite the DB with empty state if we haven't confirmed the server
+  // is reachable. Prevents cold-start network errors from wiping real data.
+  const hasData = dcOrder.length > 0 || dcResults.length > 0 || Object.keys(dcPlayerNotes).length > 0;
+  if (!hasData && !dcServerReached) return;
   const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, results: dcResults, playerNotes: dcPlayerNotes, ts: Date.now() };
   dcLastSyncStamp = payload.ts;
   // Save to server (shared across all devices)
@@ -4111,11 +4116,13 @@ function dcSave() {
 }
 
 async function dcLoadFromServer() {
+  // Returns: true = data restored, 'empty' = server reachable but no data, false = network error
   try {
     const res = await fetch('/load_draft');
     if (!res.ok) return false;
+    dcServerReached = true; // confirmed server is up
     const s = await res.json();
-    if (!s || (!s.pool && !s.order)) return false;
+    if (!s || (!s.pool && !s.order)) return 'empty'; // server reachable, DB is fresh
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
@@ -4125,7 +4132,7 @@ async function dcLoadFromServer() {
     dcPool = s.pool || [];
     // Cache locally
     try { localStorage.setItem(DC_LS_KEY, JSON.stringify(s)); } catch(e) {}
-    return dcPool.length > 0 || dcOrder.length > 0 || Object.keys(dcPlayerNotes).length > 0;
+    return dcPool.length > 0 || dcOrder.length > 0 || Object.keys(dcPlayerNotes).length > 0 || true;
   } catch(e) { return false; }
 }
 
@@ -4152,7 +4159,8 @@ async function dcFetchPlayers() {
   statusEl.textContent = 'Loading player pool…';
 
   // Try server first (shared across all devices), fall back to localStorage
-  let restored = await dcLoadFromServer();
+  const serverResult = await dcLoadFromServer(); // true | 'empty' | false
+  let restored = serverResult === true;
   if (!restored) restored = dcLoad();
 
   try {
@@ -4176,7 +4184,9 @@ async function dcFetchPlayers() {
     if (restored && (dcOrder.length > 0 || dcResults.length > 0)) {
       statusEl.textContent = 'Draft resumed from saved state.';
     } else {
-      dcSave();
+      // Only write initial state to DB if we confirmed the server is reachable.
+      // If serverResult === false (network error), do NOT save — we might overwrite real data.
+      if (serverResult !== false) dcSave();
       statusEl.textContent = '';
     }
 
@@ -5109,6 +5119,7 @@ async function dcPollServer() {
   try {
     const res = await fetch('/load_draft');
     if (!res.ok) return;
+    dcServerReached = true;
     const s = await res.json();
     if (!s || !s.ts) return;
     // Only update if server has newer data than what we last loaded
