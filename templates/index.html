@@ -4212,6 +4212,9 @@ function dcSortPool(col) {
     dcSortAsc = true;
   }
   const gradeFields = ['in_rat','out','df','hn','reb','pot'];
+  // Pre-build original index map for stable tiebreaking (restores site order on ties)
+  const origIdx = {};
+  dcAllPlayers.forEach((p, i) => { origIdx[p.id] = i; });
   dcPool.sort((a, b) => {
     let av = a[col] || '', bv = b[col] || '';
     let cmp;
@@ -4222,6 +4225,7 @@ function dcSortPool(col) {
     } else {
       cmp = av.toString().localeCompare(bv.toString());
     }
+    if (cmp === 0) cmp = (origIdx[a.id] ?? 999) - (origIdx[b.id] ?? 999);
     return dcSortAsc ? cmp : -cmp;
   });
   // Update header indicators
