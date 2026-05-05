@@ -4070,6 +4070,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // DRAFT CENTER
 // ═══════════════════════════════════════════════════════════════════════════
 let dcPlayersLoaded = false;
+let dcPlayersFetching = false; // guard against concurrent fetches
 let dcAllPlayers   = [];   // full pool fetched from server
 let dcPool         = [];   // remaining (un-drafted) players
 let dcOrder        = [];   // [{ name, abbr, c1, c2, url }, ...]  current draft order
@@ -4145,6 +4146,8 @@ function dcLoad() {
 
 // ── Fetch players from server ────────────────────────────────────────────
 async function dcFetchPlayers() {
+  if (dcPlayersFetching) return;
+  dcPlayersFetching = true;
   const statusEl = document.getElementById('dcPoolStatus');
   statusEl.textContent = 'Loading player pool…';
 
@@ -4159,10 +4162,11 @@ async function dcFetchPlayers() {
       body: JSON.stringify({})
     });
     const data = await resp.json();
-    if (data.error) { statusEl.textContent = 'Error: ' + data.error; return; }
+    if (data.error) { dcPlayersFetching = false; statusEl.textContent = 'Error: ' + data.error; return; }
 
     dcAllPlayers = data.players;
     dcPlayersLoaded = true;
+    dcPlayersFetching = false;
 
     // Always rebuild pool from the authoritative server list,
     // minus any players already drafted (by name) in saved results.
@@ -4182,7 +4186,10 @@ async function dcFetchPlayers() {
       dcRenderLog();
     }
   } catch(e) {
-    statusEl.textContent = 'Failed to load players.';
+    console.error('[dcFetchPlayers] error:', e);
+    dcPlayersFetching = false;
+    statusEl.innerHTML = 'Failed to load players. <button onclick="dcFetchPlayers()" style="margin-left:8px;padding:2px 10px;background:#0ea5e9;border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:0.75rem;">Retry</button>';
+    setTimeout(() => { if (!dcPlayersLoaded) dcFetchPlayers(); }, 4000);
   }
 }
 
