@@ -4352,7 +4352,7 @@ function dcRescindByIdx(idx) {
     if (insertAt === -1) dcResults.push(rescindedEntry);
     else dcResults.splice(insertAt, 0, rescindedEntry);
   }
-  if (dcCurrentPick === idx) dcCurrentPick = idx + 1;
+  if (dcCurrentPick === idx) { dcCurrentPick = idx + 1; dcAdvancePastRescinded(); }
   dcSave();
   dcRenderOrder();
   dcRenderLog();
@@ -4391,6 +4391,7 @@ function dcRescindPick() {
   dcResults.push({ pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: '(Rescinded)', pos: '', rescinded: true });
 
   dcCurrentPick++;
+  dcAdvancePastRescinded();
 
   dcClearSelection();
   dcSave();
@@ -4448,6 +4449,13 @@ function dcRefreshNotesPanel() {
   }
 }
 
+// ── Skip past any already-rescinded picks ────────────────────────────────
+function dcAdvancePastRescinded() {
+  while (dcCurrentPick < dcOrder.length && dcOrder[dcCurrentPick].draftedPlayer === '(Rescinded)') {
+    dcCurrentPick++;
+  }
+}
+
 // ── Draft a player ───────────────────────────────────────────────────────
 function dcDraftPlayer(playerId) {
   if (dcOrder.length === 0) {
@@ -4476,8 +4484,9 @@ function dcDraftPlayer(playerId) {
   // Remove from pool
   dcPool.splice(playerIdx, 1);
 
-  // Advance pick
+  // Advance pick (skip any pre-rescinded slots)
   dcCurrentPick++;
+  dcAdvancePastRescinded();
 
   dcClearSelection();
   dcSave();
@@ -4528,6 +4537,7 @@ function dcUndoPick() {
 
 // ── Render draft order ───────────────────────────────────────────────────
 function dcRenderOrder() {
+  dcAdvancePastRescinded(); // ensure clock never lands on a rescinded pick
   const list        = document.getElementById('dcOrderList');
   const banner      = document.getElementById('dcClockBanner');
   const clockTeamEl = document.getElementById('dcClockTeam');
@@ -4983,7 +4993,7 @@ function dcRescindFromModal() {
     else dcResults.splice(insertAt, 0, rescindedEntry);
   }
   // Only advance currentPick if this is the current pick
-  if (dcCurrentPick === dcEditingIdx) dcCurrentPick = dcEditingIdx + 1;
+  if (dcCurrentPick === dcEditingIdx) { dcCurrentPick = dcEditingIdx + 1; dcAdvancePastRescinded(); }
   dcHideAddPick();
   dcSave();
   dcRenderOrder();
