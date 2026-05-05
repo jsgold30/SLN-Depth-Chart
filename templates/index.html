@@ -4359,6 +4359,24 @@ function dcRescindByIdx(idx) {
   dcRenderPool();
 }
 
+function dcUndoRescindByIdx(idx) {
+  const team = dcOrder[idx];
+  if (!team || team.draftedPlayer !== '(Rescinded)') return;
+  // Remove from results
+  const pickNum = idx + 1;
+  const ri = dcResults.findIndex(r => r.pick === pickNum && r.rescinded);
+  if (ri >= 0) dcResults.splice(ri, 1);
+  // Clear team state
+  team.draftedPlayer = null;
+  team.draftedPos    = null;
+  // Step currentPick back if this was the immediately preceding pick
+  if (dcCurrentPick === idx + 1) dcCurrentPick = idx;
+  dcSave();
+  dcRenderOrder();
+  dcRenderLog();
+  dcRenderPool();
+}
+
 function dcRescindPick() {
   if (dcOrder.length === 0) { alert('Set up a draft order first.'); return; }
   if (dcCurrentPick >= dcOrder.length) { alert('Draft is complete.'); return; }
@@ -4557,9 +4575,10 @@ function dcRenderOrder() {
   let lastRound = null;
 
   dcOrder.forEach((team, idx) => {
-    const onClock = idx === dcCurrentPick;
-    const drafted = idx < dcCurrentPick;
-    if (drafted) return; // already in Draft Results — hide from order list
+    const onClock   = idx === dcCurrentPick;
+    const rescinded = team.draftedPlayer === '(Rescinded)';
+    const drafted   = idx < dcCurrentPick && !rescinded;
+    if (drafted) return; // drafted picks are shown in Draft Results only
 
     // Round separator
     const teamRound = team.round || 1;
@@ -4574,7 +4593,6 @@ function dcRenderOrder() {
       tbody.appendChild(sep);
     }
 
-
     // Trade: show full chain e.g. SAS → SAC → DEN
     const tradeParts = team.trade ? team.trade.split(' to ').map(s => s.trim()).filter(Boolean) : [];
     const tradeCell = tradeParts.length >= 2
@@ -4583,21 +4601,27 @@ function dcRenderOrder() {
         ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;word-break:break-word;">${tradeParts[0]}</span>`
         : `<span style="color:#334155;">—</span>`;
 
-    const rescindRowBtn = team.round === 2 ? `<button onclick="dcRescindByIdx(${idx})" title="Rescind pick" style="background:#450a0a;border:1px solid #7f1d1d;color:#fca5a5;border-radius:4px;padding:1px 7px;font-size:0.7rem;cursor:pointer;">Rescind</button>` : '';
+    let rowBtn = '';
+    if (rescinded) {
+      rowBtn = `<button onclick="dcUndoRescindByIdx(${idx})" title="Undo rescind" style="background:#1e3a52;border:1px solid #334155;color:#94a3b8;border-radius:4px;padding:1px 7px;font-size:0.7rem;cursor:pointer;">⎌ Undo</button>`;
+    } else if (team.round === 2) {
+      rowBtn = `<button onclick="dcRescindByIdx(${idx})" title="Rescind pick" style="background:#450a0a;border:1px solid #7f1d1d;color:#fca5a5;border-radius:4px;padding:1px 7px;font-size:0.7rem;cursor:pointer;">Rescind</button>`;
+    }
     const controls = dcModUnlocked ? `
       <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
-        ${rescindRowBtn}
-        <button class="dc-move-btn" onclick="dcEditPick(${idx})" title="Edit" style="font-size:0.75rem;padding:1px 5px;">✎</button>
-        <button class="dc-order-del" onclick="dcRemoveOrder(${idx})" title="Remove">✕</button>
-      </div>` : `<div style="display:flex;justify-content:flex-end;">${rescindRowBtn}</div>`;
+        ${rowBtn}
+        ${rescinded ? '' : `<button class="dc-move-btn" onclick="dcEditPick(${idx})" title="Edit" style="font-size:0.75rem;padding:1px 5px;">✎</button>`}
+        ${rescinded ? '' : `<button class="dc-order-del" onclick="dcRemoveOrder(${idx})" title="Remove">✕</button>`}
+      </div>` : `<div style="display:flex;justify-content:flex-end;">${rowBtn}</div>`;
 
     const tr = document.createElement('tr');
     tr.dataset.idx = idx;
-    if (dcModUnlocked) { tr.draggable = true; tr.style.cursor = 'grab'; }
+    if (dcModUnlocked && !rescinded) { tr.draggable = true; tr.style.cursor = 'grab'; }
     if (onClock) tr.classList.add('on-clock');
+    if (rescinded) tr.style.cssText = 'opacity:0.45;pointer-events:auto;';
     tr.innerHTML = `
-      <td><span class="dc-pick-badge">${idx + 1}</span></td>
-      <td><span class="dc-order-name">${team.name}</span></td>
+      <td><span class="dc-pick-badge" style="${rescinded ? 'text-decoration:line-through;' : ''}">${idx + 1}</span></td>
+      <td><span class="dc-order-name" style="${rescinded ? 'color:#475569;text-decoration:line-through;' : ''}">${team.name}</span>${rescinded ? ' <span style="font-size:0.68rem;color:#64748b;font-style:italic;">Rescinded</span>' : ''}</td>
       <td>${tradeCell}</td>
       <td>${controls}</td>`;
 
