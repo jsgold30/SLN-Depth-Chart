@@ -4473,26 +4473,30 @@ function dcUndoPick() {
 
   // Step back
   dcCurrentPick--;
-  const team   = dcOrder[dcCurrentPick];
-  const result = dcResults[dcResults.length - 1];
+  const team    = dcOrder[dcCurrentPick];
+  const pickNum = dcCurrentPick + 1;
 
-  // Restore player to pool (insert back at original position by name sort or just push)
-  if (result) {
-    const restored = dcAllPlayers.find(p => p.name === result.playerName);
-    if (restored && !dcPool.find(p => p.id === restored.id)) {
-      dcPool.push(restored);
-      // Re-sort pool to original order
-      const origOrder = dcAllPlayers.map(p => p.id);
-      dcPool.sort((a, b) => origOrder.indexOf(a.id) - origOrder.indexOf(b.id));
+  // Find and remove the result for this specific pick (not just the last entry —
+  // dcRescindByIdx splices entries in pick-number order, so pop() would hit the
+  // wrong entry when a future pick's rescind was inserted before later drafts)
+  const resultIdx = dcResults.findIndex(r => r.pick === pickNum);
+  if (resultIdx >= 0) {
+    const result = dcResults[resultIdx];
+    // Restore player to pool if it was a real draft (not a rescind)
+    if (result.playerName && result.playerName !== '(Rescinded)') {
+      const restored = dcAllPlayers.find(p => p.name === result.playerName);
+      if (restored && !dcPool.find(p => p.id === restored.id)) {
+        dcPool.push(restored);
+        const origOrder = dcAllPlayers.map(p => p.id);
+        dcPool.sort((a, b) => origOrder.indexOf(a.id) - origOrder.indexOf(b.id));
+      }
     }
+    dcResults.splice(resultIdx, 1);
   }
 
   // Clear order entry
   team.draftedPlayer = null;
   team.draftedPos    = null;
-
-  // Remove last result
-  dcResults.pop();
 
   dcSave();
   dcRenderPool();
