@@ -1471,7 +1471,7 @@
       <div class="tm-side">
         <input type="hidden" id="tmSelectA">
         <div id="tmLogoGridA" class="tm-logo-grid"></div>
-        <div id="tmStatusA" style="display:none;"></div>
+        <div id="tmStatusA" style="font-size:0.75rem;color:#94a3b8;margin-bottom:4px;min-height:16px;"></div>
         <div id="tmTeamNameA" style="font-size:0.85rem;font-weight:700;color:#7dd3fc;margin:6px 0 4px;display:none;"></div>
         <div id="tmPlayerListA" class="tm-player-list"></div>
 
@@ -1532,7 +1532,7 @@
       <div class="tm-side">
         <input type="hidden" id="tmSelectB">
         <div id="tmLogoGridB" class="tm-logo-grid"></div>
-        <div id="tmStatusB" style="display:none;"></div>
+        <div id="tmStatusB" style="font-size:0.75rem;color:#94a3b8;margin-bottom:4px;min-height:16px;"></div>
         <div id="tmTeamNameB" style="font-size:0.85rem;font-weight:700;color:#7dd3fc;margin:6px 0 4px;display:none;"></div>
         <div id="tmPlayerListB" class="tm-player-list"></div>
 
@@ -3720,6 +3720,7 @@ async function loadTMTeam(side) {
   const statusEl = document.getElementById(`tmStatus${side}`);
   if (!url) { statusEl.textContent = 'Select a team first.'; return; }
 
+  statusEl.style.display = '';
   statusEl.textContent = 'Loading…';
   document.getElementById(`tmPlayerList${side}`).innerHTML = '';
   document.getElementById(`tmSending${side}`).textContent = '$0';
@@ -3733,7 +3734,7 @@ async function loadTMTeam(side) {
       body: JSON.stringify({ url })
     });
     const data = await res.json();
-    if (data.error) { statusEl.textContent = '⚠ ' + data.error; return; }
+    if (data.error) { statusEl.style.display = ''; statusEl.textContent = '⚠ ' + data.error; return; }
 
     const teamName = (data.team_name || (side === 'A' ? 'Team A' : 'Team B')).replace(/\s*Roster$/i, '').trim();
     if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; }
@@ -3766,7 +3767,7 @@ async function loadTMTeam(side) {
       : ' <span style="color:#4ade80;font-weight:700;">● Under Cap</span>';
     statusEl.innerHTML = `✓ Total: ${fmtSal(total)}${capBadge}`;
   } catch(e) {
-    statusEl.textContent = 'Network error loading team.';
+    statusEl.style.display = ''; statusEl.textContent = 'Network error loading team.';
   }
 }
 
