@@ -1709,8 +1709,12 @@
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
           <div class="card-title" style="margin-bottom:0;">Draft Results</div>
-          <button id="dcExportBtn" onclick="dcExportCsv()" style="display:none;"
-            class="dc-add-round-btn" title="Export draft results as CSV">⬇ Export CSV</button>
+          <div style="display:flex;gap:6px;">
+            <button id="dcForumCopyBtn" onclick="dcCopyForumPost()" style="display:none;"
+              class="dc-add-round-btn" title="Copy draft results as forum post">📋 Copy Forum Post</button>
+            <button id="dcExportBtn" onclick="dcExportCsv()" style="display:none;"
+              class="dc-add-round-btn" title="Export draft results as CSV">⬇ Export CSV</button>
+          </div>
         </div>
         <div class="dc-log-table-wrap" style="overflow-x:auto;max-height:calc(100vh - 260px);overflow-y:auto;">
           <table class="dc-log-table" id="dcLogTable">
@@ -4784,7 +4788,8 @@ function dcConfirmModPin() {
     dcHideModPin();
     document.getElementById('dcModLockBtn').style.display  = 'none';
     document.getElementById('dcModControls').style.display = 'flex';
-    document.getElementById('dcExportBtn').style.display   = '';
+    document.getElementById('dcExportBtn').style.display      = '';
+    document.getElementById('dcForumCopyBtn').style.display   = '';
     dcRenderOrder();
     dcRefreshNotesPanel();
   } else {
@@ -4798,7 +4803,8 @@ function dcLockMod() {
   dcModUnlocked = false;
   document.getElementById('dcModControls').style.display = 'none';
   document.getElementById('dcModLockBtn').style.display  = '';
-  document.getElementById('dcExportBtn').style.display   = 'none';
+  document.getElementById('dcExportBtn').style.display      = 'none';
+  document.getElementById('dcForumCopyBtn').style.display   = 'none';
   dcRenderOrder();
   dcRefreshNotesPanel();
 }
@@ -4885,6 +4891,52 @@ function dcExportCsv() {
   a.download = 'draft_results.csv';
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ── Copy Forum Post ───────────────────────────────────────────────────────
+function dcCopyForumPost() {
+  const C_PICK  = 3;
+  const C_TEAM  = 40;
+  const C_TRADE = 12;
+  const DIVIDER = '==============================================================';
+  const SEP_ROW = '-'.repeat(C_PICK + 1) + '|' + '-'.repeat(C_TEAM) + '|' + '-'.repeat(C_TRADE) + '|' + '-'.repeat(22);
+
+  let text = '';
+  let lastRound = null;
+  let roundPickNum = 0;
+
+  dcOrder.forEach((team, idx) => {
+    const teamRound  = team.round || 1;
+    const rescinded  = team.draftedPlayer === '(Rescinded)';
+    if (rescinded) return;
+
+    // Round header
+    if (teamRound !== lastRound) {
+      if (lastRound !== null) text += '\n';
+      text += `[b][u]Round ${teamRound}[/u][/b]\n\n`;
+      text += DIVIDER + '\n\n';
+      text += String('#').padEnd(C_PICK) + ' | ' + 'Team'.padEnd(C_TEAM) + ' | ' + 'Trade'.padEnd(C_TRADE) + ' | Player\n';
+      text += SEP_ROW + '\n';
+      lastRound = teamRound;
+      roundPickNum = 0;
+    }
+
+    roundPickNum++;
+    const result     = dcResults.find(r => r.pick === idx + 1 && !r.rescinded);
+    const playerName = result ? (result.playerName || '') : '';
+    const trade      = team.trade || '';
+
+    text += String(roundPickNum).padEnd(C_PICK) + ' | ' + team.name.padEnd(C_TEAM) + ' | ' + trade.padEnd(C_TRADE) + ' | ' + playerName + '\n';
+  });
+
+  const btn = document.getElementById('dcForumCopyBtn');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => { btn.textContent = '📋 Copy Forum Post'; }, 2000);
+  }).catch(() => {
+    // Fallback: show in prompt so user can copy manually
+    prompt('Copy the forum post below:', text);
+  });
 }
 
 // ── Add Pick modal ────────────────────────────────────────────────────────
