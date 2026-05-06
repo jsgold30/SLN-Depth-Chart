@@ -4915,7 +4915,7 @@ function dcCopyForumPost() {
       if (lastRound !== null) text += '\n';
       text += `[b][u]Round ${teamRound}[/u][/b]\n\n`;
       text += DIVIDER + '\n\n';
-      text += String('#').padEnd(C_PICK) + ' | ' + 'Team'.padEnd(C_TEAM) + ' | ' + 'Trade'.padEnd(C_TRADE) + ' | Player\n';
+      text += String('#').padEnd(C_PICK) + '| ' + 'Team'.padEnd(C_TEAM) + '| ' + 'Trade'.padEnd(C_TRADE) + '| Player\n';
       text += SEP_ROW + '\n';
       lastRound = teamRound;
       roundPickNum = 0;
@@ -4926,7 +4926,7 @@ function dcCopyForumPost() {
     const playerName = result ? (result.playerName || '') : '';
     const trade      = team.trade || '';
 
-    text += String(roundPickNum).padEnd(C_PICK) + ' | ' + team.name.padEnd(C_TEAM) + ' | ' + trade.padEnd(C_TRADE) + ' | ' + playerName + '\n';
+    text += String(roundPickNum).padEnd(C_PICK) + '| ' + team.name.padEnd(C_TEAM) + '| ' + trade.padEnd(C_TRADE) + '| ' + playerName + '\n';
   });
 
   const btn = document.getElementById('dcForumCopyBtn');
