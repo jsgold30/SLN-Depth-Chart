@@ -1766,6 +1766,15 @@
       <select id="dcPickTeamSel"></select>
     </div>
 
+    <!-- Round -->
+    <div class="dc-add-pick-field" style="margin-top:10px;">
+      <label>Round</label>
+      <select id="dcPickRoundSel" style="background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-size:0.85rem;width:100%;">
+        <option value="1">Round 1</option>
+        <option value="2">Round 2</option>
+      </select>
+    </div>
+
     <!-- Trade chain -->
     <div style="margin-top:14px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -4954,6 +4963,10 @@ function dcShowAddPick() {
   document.getElementById('dcPickConfirmBtn').textContent = 'Add Pick';
   document.getElementById('dcTradeHopList').innerHTML = '';
   document.getElementById('dcTradeChainPreview').innerHTML = '';
+  document.getElementById('dcPickRescindBtn').style.display = 'none';
+  // Default round: match the last pick in order, or 1 if empty
+  const lastRoundInOrder = dcOrder.length > 0 ? (dcOrder[dcOrder.length - 1].round || 1) : 1;
+  document.getElementById('dcPickRoundSel').value = lastRoundInOrder;
   document.getElementById('dcAddPickOverlay').classList.add('open');
   // Update preview when receiving team changes
   document.getElementById('dcPickTeamSel').onchange = dcUpdateChainPreview;
@@ -4974,6 +4987,8 @@ function dcEditPick(idx) {
   const opt = [...sel.options].find(o => o.value === team.name);
   if (opt) sel.value = opt.value;
   sel.onchange = dcUpdateChainPreview;
+  // Pre-select round
+  document.getElementById('dcPickRoundSel').value = team.round || 1;
 
   // Pre-fill trade hops (all parts except the last = receiving abbr)
   if (team.trade) {
@@ -5040,6 +5055,7 @@ function dcConfirmAddPick() {
     c2:            receiving.c2,
     url:           receiving.url,
     trade:         tradeBadge,
+    round:         parseInt(document.getElementById('dcPickRoundSel').value) || 1,
     draftedPlayer: '',
     draftedPos:    ''
   };
