@@ -4908,7 +4908,6 @@ function dcCopyForumPost() {
   dcOrder.forEach((team, idx) => {
     const teamRound  = team.round || 1;
     const rescinded  = team.draftedPlayer === '(Rescinded)';
-    if (rescinded) return;
 
     // Round header
     if (teamRound !== lastRound) {
@@ -4922,8 +4921,8 @@ function dcCopyForumPost() {
     }
 
     roundPickNum++;
-    const result     = dcResults.find(r => r.pick === idx + 1 && !r.rescinded);
-    const playerName = result ? (result.playerName || '') : '';
+    const result     = rescinded ? null : dcResults.find(r => r.pick === idx + 1 && !r.rescinded);
+    const playerName = rescinded ? '(Rescinded)' : (result ? (result.playerName || '') : '');
     const trade      = team.trade || '';
 
     text += String(roundPickNum).padEnd(C_PICK) + '| ' + team.name.padEnd(C_TEAM) + '| ' + trade.padEnd(C_TRADE) + '| ' + playerName + '\n';
