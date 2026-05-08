@@ -1035,7 +1035,7 @@
       padding: 8px 10px; margin-bottom: 8px;
     }
     .dc-queue-item {
-      display: flex; flex-direction: column; align-items: stretch; gap: 0;
+      display: block;
       padding: 5px 0; border-bottom: 1px solid #1e293b; font-size: 0.78rem;
     }
     .dc-queue-item:last-child { border-bottom: none; }
@@ -1046,7 +1046,7 @@
     .dc-queue-drag:active { cursor: grabbing; }
     .dc-queue-rm   { background: none; border: none; color: #475569; cursor: pointer; padding: 0 2px; font-size: 0.9rem; line-height: 1; flex-shrink: 0; }
     .dc-queue-rm:hover { color: #f87171; }
-    .dc-queue-grades { display: flex; gap: 6px; flex-wrap: wrap; padding: 2px 0 4px 18px; }
+
     .dc-queue-item.dq-over { border-top: 2px solid #0ea5e9; }
     .dc-queue-item.dq-dragging { opacity: 0.4; }
     /* Queued row indicator in pool */
@@ -4275,18 +4275,18 @@ function dcRenderQueue() {
       ['Reb', player.reb],
       ['Pot', player.pot],
     ].map(([lbl, val]) =>
-      `<span class="${dcGradeClass(val)}" style="font-size:0.68rem;padding:1px 4px;">${lbl}:<b>${val||'—'}</b></span>`
+      `<span class="${dcGradeClass(val)}" style="font-size:0.72rem;white-space:nowrap;">${lbl}:<b>${val||'—'}</b></span>`
     ).join('');
 
     item.innerHTML = `
-      <div style="display:flex;align-items:center;gap:6px;">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
         <span class="dc-queue-drag" title="Drag to reorder">⠿</span>
         <span class="dc-queue-num">${idx + 1}</span>
-        <span class="dc-queue-name" style="cursor:pointer;">${player.name}</span>
+        <span class="dc-queue-name" style="cursor:pointer;flex:none;overflow:visible;white-space:nowrap;">${player.name}</span>
         <span class="dc-queue-pos"><span class="dc-pos-badge">${player.pos}</span></span>
-        <button class="dc-queue-rm" onclick="dcRemoveFromQueue('${id}')" title="Remove from queue">✕</button>
+        ${grades}
+        <button class="dc-queue-rm" onclick="dcRemoveFromQueue('${id}')" title="Remove from queue" style="margin-left:auto;">✕</button>
       </div>
-      <div class="dc-queue-grades">${grades}</div>
     `;
 
     item.querySelector('.dc-queue-name').addEventListener('click', () => dcSelectPlayer(id));
