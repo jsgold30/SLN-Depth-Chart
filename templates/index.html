@@ -1022,6 +1022,33 @@
       flex-shrink: 0;
     }
     .dc-confirm-draft-btn:hover { background: #15803d; }
+    .dc-queue-btn {
+      padding: 7px 14px; border-radius: 6px; border: 1px solid #78350f;
+      background: #431407; color: #fcd34d; font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; transition: background 0.15s; white-space: nowrap; flex-shrink: 0;
+    }
+    .dc-queue-btn:hover { background: #78350f; }
+    .dc-queue-btn.in-queue { background: #78350f; border-color: #d97706; color: #fef3c7; }
+    /* Queue panel */
+    .dc-queue-panel {
+      background: #0a111e; border: 1px solid #1e293b; border-radius: 8px;
+      padding: 8px 10px; margin-bottom: 8px;
+    }
+    .dc-queue-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 0; border-bottom: 1px solid #1e293b; font-size: 0.78rem;
+    }
+    .dc-queue-item:last-child { border-bottom: none; }
+    .dc-queue-num { color: #475569; font-size: 0.65rem; min-width: 14px; text-align: right; flex-shrink: 0; }
+    .dc-queue-name { color: #e2e8f0; flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dc-queue-pos  { color: #64748b; font-size: 0.7rem; flex-shrink: 0; }
+    .dc-queue-mv   { background: none; border: none; color: #475569; cursor: pointer; padding: 0 2px; font-size: 0.75rem; line-height: 1; flex-shrink: 0; }
+    .dc-queue-mv:hover { color: #94a3b8; }
+    .dc-queue-rm   { background: none; border: none; color: #475569; cursor: pointer; padding: 0 2px; font-size: 0.9rem; line-height: 1; flex-shrink: 0; }
+    .dc-queue-rm:hover { color: #f87171; }
+    /* Queued row indicator in pool */
+    .dc-pool-table tr.dc-row-queued td:first-child { color: #fcd34d; }
+    .dc-pool-table tr.dc-row-queued.dc-row-selected td:first-child { color: #fcd34d; }
     .dc-rescind-btn {
       padding: 7px 14px; border-radius: 6px; border: 1px solid #7f1d1d;
       background: #450a0a; color: #fca5a5; font-size: 0.82rem; font-weight: 700;
@@ -1645,6 +1672,16 @@
       <input id="dcSearchInput" type="text" placeholder="Search players…" oninput="dcSearchPool(this.value)"
         style="width:100%;box-sizing:border-box;background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:5px 10px;color:#e2e8f0;font-size:0.8rem;margin-bottom:6px;outline:none;">
       <div id="dcPoolStatus" style="font-size:0.78rem;color:#94a3b8;margin-bottom:8px;min-height:18px;"></div>
+      <!-- My Queue (per-device, not synced) -->
+      <div id="dcQueuePanel" class="dc-queue-panel" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:0.67rem;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:0.07em;">
+            ★ My Queue <span id="dcQueueCount" style="color:#64748b;"></span>
+          </span>
+          <button onclick="dcClearQueue()" style="background:none;border:none;color:#475569;font-size:0.7rem;cursor:pointer;padding:0;">Clear all</button>
+        </div>
+        <div id="dcQueueList"></div>
+      </div>
       <div class="dc-pool-wrap">
         <table class="dc-pool-table" id="dcPoolTable">
           <thead>
@@ -1676,6 +1713,7 @@
         <div class="dc-selected-meta" id="dcSelectedMeta"></div>
       </div>
       <button class="dc-confirm-draft-btn" onclick="dcConfirmDraft()">Draft</button>
+      <button class="dc-queue-btn" id="dcQueueAddBtn" onclick="dcToggleQueue()">+ Queue</button>
       <button class="dc-selected-clear" onclick="dcClearSelection()" title="Clear selection">✕</button>
     </div>
     <!-- Scout Notes Panel -->
@@ -4132,6 +4170,131 @@ let dcSearchQuery  = '';
 let dcSelectedId   = null; // id of player currently selected for drafting
 const DC_LS_KEY    = 'draftCenter_v3';
 let dcServerReached = false; // set to true once we get any response from /load_draft
+// ── Draft Queue (per-device, per-team — never synced to server) ──────────
+let dcQueue = []; // ordered array of player IDs
+
+function dcQueueKey() { return 'sln_queue_' + (myTeam ? myTeam.abbr : '_'); }
+
+function dcSaveQueue() {
+  try { localStorage.setItem(dcQueueKey(), JSON.stringify(dcQueue)); } catch {}
+}
+
+function dcLoadQueue() {
+  try {
+    const raw = localStorage.getItem(dcQueueKey());
+    dcQueue = raw ? JSON.parse(raw) : [];
+  } catch { dcQueue = []; }
+  // Remove any players no longer in the pool
+  if (dcAllPlayers.length > 0) {
+    dcQueue = dcQueue.filter(id => dcPool.find(p => p.id === id));
+    dcSaveQueue();
+  }
+}
+
+function dcToggleQueue() {
+  if (!dcSelectedId) return;
+  if (dcQueue.includes(dcSelectedId)) {
+    dcRemoveFromQueue(dcSelectedId);
+  } else {
+    dcAddToQueue(dcSelectedId);
+  }
+}
+
+function dcAddToQueue(playerId) {
+  if (!playerId || dcQueue.includes(playerId)) return;
+  dcQueue.push(playerId);
+  dcSaveQueue();
+  dcRenderQueue();
+  dcUpdateQueueBtn();
+  // Highlight row in pool
+  const row = document.getElementById('dcRow_' + playerId);
+  if (row) row.classList.add('dc-row-queued');
+}
+
+function dcRemoveFromQueue(playerId) {
+  dcQueue = dcQueue.filter(id => id !== playerId);
+  dcSaveQueue();
+  dcRenderQueue();
+  dcUpdateQueueBtn();
+  const row = document.getElementById('dcRow_' + playerId);
+  if (row) row.classList.remove('dc-row-queued');
+}
+
+function dcMoveInQueue(idx, dir) {
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= dcQueue.length) return;
+  const tmp = dcQueue[idx];
+  dcQueue[idx] = dcQueue[newIdx];
+  dcQueue[newIdx] = tmp;
+  dcSaveQueue();
+  dcRenderQueue();
+}
+
+function dcClearQueue() {
+  dcQueue.forEach(id => {
+    const row = document.getElementById('dcRow_' + id);
+    if (row) row.classList.remove('dc-row-queued');
+  });
+  dcQueue = [];
+  dcSaveQueue();
+  dcRenderQueue();
+  dcUpdateQueueBtn();
+}
+
+function dcUpdateQueueBtn() {
+  const btn = document.getElementById('dcQueueAddBtn');
+  if (!btn || !dcSelectedId) return;
+  const inQueue = dcQueue.includes(dcSelectedId);
+  btn.textContent = inQueue ? '★ Queued' : '+ Queue';
+  btn.classList.toggle('in-queue', inQueue);
+}
+
+function dcRenderQueue() {
+  const panel    = document.getElementById('dcQueuePanel');
+  const list     = document.getElementById('dcQueueList');
+  const countEl  = document.getElementById('dcQueueCount');
+  if (!panel || !list) return;
+
+  if (dcQueue.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = '';
+  countEl.textContent = `(${dcQueue.length})`;
+
+  list.innerHTML = '';
+  dcQueue.forEach((id, idx) => {
+    const player = dcPool.find(p => p.id === id) || dcAllPlayers.find(p => p.id === id);
+    if (!player) return;
+    const item = document.createElement('div');
+    item.className = 'dc-queue-item';
+    item.innerHTML = `
+      <span class="dc-queue-num">${idx + 1}</span>
+      <span class="dc-queue-name">${player.name}</span>
+      <span class="dc-queue-pos"><span class="dc-pos-badge">${player.pos}</span></span>
+      <span class="dc-queue-pos ${dcGradeClass(player.pot)}" style="min-width:28px;text-align:center;">${player.pot}</span>
+      <button class="dc-queue-mv" onclick="dcMoveInQueue(${idx},-1)" title="Move up" ${idx === 0 ? 'style="opacity:0.2;pointer-events:none;"' : ''}>↑</button>
+      <button class="dc-queue-mv" onclick="dcMoveInQueue(${idx},1)" title="Move down" ${idx === dcQueue.length - 1 ? 'style="opacity:0.2;pointer-events:none;"' : ''}>↓</button>
+      <button class="dc-queue-rm" onclick="dcRemoveFromQueue('${id}')" title="Remove from queue">✕</button>
+    `;
+    // Click name to select the player
+    item.querySelector('.dc-queue-name').style.cursor = 'pointer';
+    item.querySelector('.dc-queue-name').addEventListener('click', () => dcSelectPlayer(id));
+    list.appendChild(item);
+  });
+}
+
+// Auto-select the first queued player when it's the user's turn
+function dcAutoSelectFromQueue() {
+  if (!dcIsMyPick() || dcSelectedId) return;
+  for (const id of dcQueue) {
+    if (dcPool.find(p => p.id === id)) {
+      dcSelectPlayer(id);
+      break;
+    }
+  }
+}
+
 // ── My Team (per-device) ─────────────────────────────────────────────────
 let myTeam = null; // { name, abbr, url, c1, c2 } — stored in localStorage
 const MY_TEAM_KEY = 'sln_myTeam';
@@ -4198,8 +4361,10 @@ function applyMyTeam() {
     loadRoster(); // force load if chart is empty
   }
 
-  // Refresh draft button state
+  // Refresh draft button state + load this team's private queue
   dcUpdateDraftBtn();
+  dcLoadQueue();
+  dcRenderQueue();
 }
 
 // ── Grade colour helper ──────────────────────────────────────────────────
@@ -4377,8 +4542,9 @@ function dcRenderPool() {
 
     const tr = document.createElement('tr');
     tr.id = 'dcRow_' + p.id;
-    if (dcSelectedId === p.id) tr.classList.add('dc-row-selected');
-    if (!show) tr.classList.add('dc-hidden');
+    if (dcSelectedId === p.id)       tr.classList.add('dc-row-selected');
+    if (dcQueue.includes(p.id))      tr.classList.add('dc-row-queued');
+    if (!show)                        tr.classList.add('dc-hidden');
 
     tr.innerHTML = `
       <td style="white-space:nowrap;cursor:pointer;color:#e2e8f0;" onclick="dcSelectPlayer('${p.id}')" title="Select ${p.name}">${p.name}</td>
@@ -4449,6 +4615,7 @@ function dcSelectPlayer(playerId) {
 
   dcRefreshNotesPanel();
   dcUpdateDraftBtn();
+  dcUpdateQueueBtn();
 
   // Scroll panel into view
   document.getElementById('dcSelectedPanel').classList.add('visible');
@@ -4640,6 +4807,12 @@ function dcDraftPlayer(playerId) {
   // Remove from pool
   dcPool.splice(playerIdx, 1);
 
+  // Remove from queue if present, then save queue
+  if (dcQueue.includes(player.id)) {
+    dcQueue = dcQueue.filter(id => id !== player.id);
+    dcSaveQueue();
+  }
+
   // Advance pick (skip any pre-rescinded slots)
   dcCurrentPick++;
   dcAdvancePastRescinded();
@@ -4649,6 +4822,9 @@ function dcDraftPlayer(playerId) {
   dcRenderPool();
   dcRenderOrder();
   dcRenderLog();
+  dcRenderQueue();
+  // Auto-select top queued player if it's now the user's turn
+  dcAutoSelectFromQueue();
 
   // Scroll to new on-clock team in the order list
   const onClockEl = document.querySelector('.dc-order-row.on-clock');
