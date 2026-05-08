@@ -9,6 +9,7 @@ import threading
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(days=7)
 
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 DB_PATH = os.environ.get('DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'depth_charts.db'))
@@ -72,6 +73,9 @@ def get_db():
                          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
         conn.execute('''CREATE TABLE IF NOT EXISTS settings
                         (key TEXT PRIMARY KEY, value TEXT)''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS roster_cache
+                        (team_url TEXT PRIMARY KEY, data TEXT,
+                         fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
         conn.commit()
         return conn
     else:
@@ -91,6 +95,9 @@ def get_db():
                          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
         conn.execute('''CREATE TABLE IF NOT EXISTS settings
                         (key TEXT PRIMARY KEY, value TEXT)''')
+        conn.execute('''CREATE TABLE IF NOT EXISTS roster_cache
+                        (team_url TEXT PRIMARY KEY, data TEXT,
+                         fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
         conn.commit()
         return conn
 
@@ -277,6 +284,22 @@ def fetch_roster():
         return jsonify({'error': 'No URL provided'}), 400
 
     try:
+        # Check server-side cache (30-minute TTL) to avoid hammering simleaguenirvana.com
+        try:
+            conn = get_db()
+            cache_row = conn.execute(
+                "SELECT data, fetched_at FROM roster_cache WHERE team_url = ?", (url,)
+            ).fetchone()
+            conn.close()
+            if cache_row:
+                fetched_at = cache_row[1]
+                if isinstance(fetched_at, str):
+                    fetched_at = datetime.fromisoformat(fetched_at)
+                if datetime.utcnow() - fetched_at < timedelta(minutes=30):
+                    return jsonify(json.loads(cache_row[0]))
+        except Exception:
+            pass
+
         headers = {
             'User-Agent': (
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
@@ -414,7 +437,29 @@ def fetch_roster():
         pos_order = {'PG': 0, 'SG': 1, 'SF': 2, 'PF': 3, 'C': 4}
         players.sort(key=lambda p: (pos_order.get(p['pos'], 5), p['name']))
 
-        return jsonify({'players': players, 'team_name': team_name})
+        result = {'players': players, 'team_name': team_name}
+
+        # Save to cache
+        try:
+            conn = get_db()
+            now = datetime.utcnow().isoformat()
+            if USE_POSTGRES:
+                conn.execute(
+                    "INSERT INTO roster_cache (team_url, data, fetched_at) VALUES (?, ?, ?) "
+                    "ON CONFLICT (team_url) DO UPDATE SET data = EXCLUDED.data, fetched_at = EXCLUDED.fetched_at",
+                    (url, json.dumps(result), now)
+                )
+            else:
+                conn.execute(
+                    "INSERT OR REPLACE INTO roster_cache (team_url, data, fetched_at) VALUES (?, ?, ?)",
+                    (url, json.dumps(result), now)
+                )
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+
+        return jsonify(result)
 
     except requests.exceptions.Timeout:
         return jsonify({'error': 'Request timed out. Please check the URL.'}), 400
