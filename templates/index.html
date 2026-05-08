@@ -4511,6 +4511,10 @@ async function dcFetchPlayers() {
     }
 
     dcRenderPool();
+    // Re-load queue now that pool is populated (queue loaded before players were ready)
+    dcLoadQueue();
+    dcRenderQueue();
+    dcAutoSelectFromQueue();
     if (restored) {
       dcRenderOrder();
       dcRenderLog();
