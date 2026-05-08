@@ -1699,11 +1699,6 @@
           <button class="dc-add-round-btn" id="dcModLockBtn" onclick="dcShowModPin()" style="display:flex;align-items:center;gap:5px;">
             🔒 <span>Draft Mod</span>
           </button>
-          <button id="dcDraftAnyBtn" onclick="dcToggleDraftAny()"
-            style="display:none;padding:7px 14px;border-radius:6px;border:1px solid #334155;
-                   background:#1e293b;color:#94a3b8;font-size:0.82rem;font-weight:700;cursor:pointer;">
-            Draft Any Team
-          </button>
           <button class="dc-rescind-btn" id="dcRescindBtn" onclick="dcRescindPick()" disabled style="opacity:0.4;">Rescind Pick</button>
           <!-- Unlocked controls (hidden until correct PIN) -->
           <div id="dcModControls" style="display:none;display:none;flex-wrap:wrap;gap:8px;align-items:center;">
@@ -4135,25 +4130,6 @@ let dcSearchQuery  = '';
 let dcSelectedId   = null; // id of player currently selected for drafting
 const DC_LS_KEY    = 'draftCenter_v3';
 let dcServerReached = false; // set to true once we get any response from /load_draft
-let dcDraftAnyMode  = false; // when true (mod only), Draft button works for any on-clock team
-
-function dcToggleDraftAny() {
-  dcDraftAnyMode = !dcDraftAnyMode;
-  const btn = document.getElementById('dcDraftAnyBtn');
-  if (dcDraftAnyMode) {
-    btn.style.background  = '#0ea5e9';
-    btn.style.borderColor = '#0ea5e9';
-    btn.style.color       = '#fff';
-    btn.textContent       = '✓ Draft Any Team';
-  } else {
-    btn.style.background  = '#1e293b';
-    btn.style.borderColor = '#334155';
-    btn.style.color       = '#94a3b8';
-    btn.textContent       = 'Draft Any Team';
-  }
-  dcUpdateDraftBtn();
-}
-
 // ── My Team (per-device) ─────────────────────────────────────────────────
 let myTeam = null; // { name, abbr, url, c1, c2 } — stored in localStorage
 const MY_TEAM_KEY = 'sln_myTeam';
@@ -4494,7 +4470,7 @@ function dcIsMyPick() {
 function dcUpdateDraftBtn() {
   const btn = document.querySelector('.dc-confirm-draft-btn');
   if (!btn) return;
-  const canDraft = dcModUnlocked || dcDraftAnyMode || !myTeam || dcIsMyPick();
+  const canDraft = dcModUnlocked || !myTeam || dcIsMyPick();
   btn.disabled         = !canDraft;
   btn.style.opacity    = canDraft ? '' : '0.4';
   btn.style.cursor     = canDraft ? '' : 'not-allowed';
@@ -4510,8 +4486,8 @@ function dcUpdateDraftBtn() {
 
 function dcConfirmDraft() {
   if (!dcSelectedId) return;
-  // Block if it's not the user's pick and neither mod nor draft-any-mode is active
-  if (!dcModUnlocked && !dcDraftAnyMode && myTeam && !dcIsMyPick()) return;
+  // Block if it's not the user's pick and Draft Mod is locked
+  if (!dcModUnlocked && myTeam && !dcIsMyPick()) return;
   dcDraftPlayer(dcSelectedId);
 }
 
@@ -4948,7 +4924,6 @@ function dcConfirmModPin() {
     document.getElementById('dcModControls').style.display = 'flex';
     document.getElementById('dcExportBtn').style.display      = '';
     document.getElementById('dcForumCopyBtn').style.display   = '';
-    document.getElementById('dcDraftAnyBtn').style.display    = '';
     dcRenderOrder();
     dcRefreshNotesPanel();
     dcUpdateDraftBtn();
@@ -4965,8 +4940,6 @@ function dcLockMod() {
   document.getElementById('dcModLockBtn').style.display  = '';
   document.getElementById('dcExportBtn').style.display      = 'none';
   document.getElementById('dcForumCopyBtn').style.display   = 'none';
-  document.getElementById('dcDraftAnyBtn').style.display    = 'none';
-  dcDraftAnyMode = false;
   dcRenderOrder();
   dcRefreshNotesPanel();
   dcUpdateDraftBtn();
