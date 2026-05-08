@@ -4274,7 +4274,7 @@ function dcRenderQueue() {
       ['Reb', player.reb],
       ['Pot', player.pot],
     ].map(([lbl, val]) =>
-      `<span class="${dcGradeClass(val)}" style="font-size:0.72rem;white-space:nowrap;">${lbl}:<b>${val||'—'}</b></span>`
+      `<span style="font-size:0.72rem;white-space:nowrap;color:#e2e8f0;">${lbl}:<b>${val||'—'}</b></span>`
     ).join('');
 
     item.innerHTML = `
