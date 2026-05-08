@@ -1035,17 +1035,20 @@
       padding: 8px 10px; margin-bottom: 8px;
     }
     .dc-queue-item {
-      display: flex; align-items: center; gap: 6px;
+      display: flex; flex-direction: column; align-items: stretch; gap: 0;
       padding: 5px 0; border-bottom: 1px solid #1e293b; font-size: 0.78rem;
     }
     .dc-queue-item:last-child { border-bottom: none; }
     .dc-queue-num { color: #475569; font-size: 0.65rem; min-width: 14px; text-align: right; flex-shrink: 0; }
     .dc-queue-name { color: #e2e8f0; flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .dc-queue-pos  { color: #64748b; font-size: 0.7rem; flex-shrink: 0; }
-    .dc-queue-mv   { background: none; border: none; color: #475569; cursor: pointer; padding: 0 2px; font-size: 0.75rem; line-height: 1; flex-shrink: 0; }
-    .dc-queue-mv:hover { color: #94a3b8; }
+    .dc-queue-drag { color: #334155; cursor: grab; padding: 0 3px; font-size: 1rem; line-height: 1; flex-shrink: 0; user-select: none; }
+    .dc-queue-drag:active { cursor: grabbing; }
     .dc-queue-rm   { background: none; border: none; color: #475569; cursor: pointer; padding: 0 2px; font-size: 0.9rem; line-height: 1; flex-shrink: 0; }
     .dc-queue-rm:hover { color: #f87171; }
+    .dc-queue-grades { display: flex; gap: 6px; flex-wrap: wrap; padding: 2px 0 4px 18px; }
+    .dc-queue-item.dq-over { border-top: 2px solid #0ea5e9; }
+    .dc-queue-item.dq-dragging { opacity: 0.4; }
     /* Queued row indicator in pool */
     .dc-pool-table tr.dc-row-queued td:first-child { color: #fcd34d; }
     .dc-pool-table tr.dc-row-queued.dc-row-selected td:first-child { color: #fcd34d; }
@@ -4220,16 +4223,6 @@ function dcRemoveFromQueue(playerId) {
   if (row) row.classList.remove('dc-row-queued');
 }
 
-function dcMoveInQueue(idx, dir) {
-  const newIdx = idx + dir;
-  if (newIdx < 0 || newIdx >= dcQueue.length) return;
-  const tmp = dcQueue[idx];
-  dcQueue[idx] = dcQueue[newIdx];
-  dcQueue[newIdx] = tmp;
-  dcSaveQueue();
-  dcRenderQueue();
-}
-
 function dcClearQueue() {
   dcQueue.forEach(id => {
     const row = document.getElementById('dcRow_' + id);
@@ -4249,10 +4242,12 @@ function dcUpdateQueueBtn() {
   btn.classList.toggle('in-queue', inQueue);
 }
 
+let dcQueueDragIdx = null;
+
 function dcRenderQueue() {
-  const panel    = document.getElementById('dcQueuePanel');
-  const list     = document.getElementById('dcQueueList');
-  const countEl  = document.getElementById('dcQueueCount');
+  const panel   = document.getElementById('dcQueuePanel');
+  const list    = document.getElementById('dcQueueList');
+  const countEl = document.getElementById('dcQueueCount');
   if (!panel || !list) return;
 
   if (dcQueue.length === 0) {
@@ -4266,20 +4261,62 @@ function dcRenderQueue() {
   dcQueue.forEach((id, idx) => {
     const player = dcPool.find(p => p.id === id) || dcAllPlayers.find(p => p.id === id);
     if (!player) return;
+
     const item = document.createElement('div');
     item.className = 'dc-queue-item';
+    item.draggable = true;
+    item.dataset.idx = idx;
+
+    const grades = [
+      ['In',  player.in_rat],
+      ['Out', player.out],
+      ['Hn',  player.hn],
+      ['Df',  player.df],
+      ['Reb', player.reb],
+      ['Pot', player.pot],
+    ].map(([lbl, val]) =>
+      `<span class="${dcGradeClass(val)}" style="font-size:0.68rem;padding:1px 4px;">${lbl}:<b>${val||'—'}</b></span>`
+    ).join('');
+
     item.innerHTML = `
-      <span class="dc-queue-num">${idx + 1}</span>
-      <span class="dc-queue-name">${player.name}</span>
-      <span class="dc-queue-pos"><span class="dc-pos-badge">${player.pos}</span></span>
-      <span class="dc-queue-pos ${dcGradeClass(player.pot)}" style="min-width:28px;text-align:center;">${player.pot}</span>
-      <button class="dc-queue-mv" onclick="dcMoveInQueue(${idx},-1)" title="Move up" ${idx === 0 ? 'style="opacity:0.2;pointer-events:none;"' : ''}>↑</button>
-      <button class="dc-queue-mv" onclick="dcMoveInQueue(${idx},1)" title="Move down" ${idx === dcQueue.length - 1 ? 'style="opacity:0.2;pointer-events:none;"' : ''}>↓</button>
-      <button class="dc-queue-rm" onclick="dcRemoveFromQueue('${id}')" title="Remove from queue">✕</button>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="dc-queue-drag" title="Drag to reorder">⠿</span>
+        <span class="dc-queue-num">${idx + 1}</span>
+        <span class="dc-queue-name" style="cursor:pointer;">${player.name}</span>
+        <span class="dc-queue-pos"><span class="dc-pos-badge">${player.pos}</span></span>
+        <button class="dc-queue-rm" onclick="dcRemoveFromQueue('${id}')" title="Remove from queue">✕</button>
+      </div>
+      <div class="dc-queue-grades">${grades}</div>
     `;
-    // Click name to select the player
-    item.querySelector('.dc-queue-name').style.cursor = 'pointer';
+
     item.querySelector('.dc-queue-name').addEventListener('click', () => dcSelectPlayer(id));
+
+    // Drag-and-drop handlers
+    item.addEventListener('dragstart', e => {
+      dcQueueDragIdx = idx;
+      item.classList.add('dq-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dq-dragging');
+      list.querySelectorAll('.dc-queue-item').forEach(el => el.classList.remove('dq-over'));
+    });
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      list.querySelectorAll('.dc-queue-item').forEach(el => el.classList.remove('dq-over'));
+      if (dcQueueDragIdx !== idx) item.classList.add('dq-over');
+    });
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dcQueueDragIdx === null || dcQueueDragIdx === idx) return;
+      const moved = dcQueue.splice(dcQueueDragIdx, 1)[0];
+      dcQueue.splice(idx, 0, moved);
+      dcQueueDragIdx = null;
+      dcSaveQueue();
+      dcRenderQueue();
+    });
+
     list.appendChild(item);
   });
 }
