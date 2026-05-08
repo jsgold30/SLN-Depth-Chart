@@ -5561,8 +5561,14 @@ async function dcPollServer() {
       dcPool = s.pool || [];
     }
     dcRenderPool();
+    // Remove any drafted players from the local queue
+    const prevQueueLen = dcQueue.length;
+    dcQueue = dcQueue.filter(id => dcPool.find(p => p.id === id));
+    if (dcQueue.length !== prevQueueLen) dcSaveQueue();
     dcRenderOrder();
     dcRenderLog();
+    dcRenderQueue();
+    dcAutoSelectFromQueue();
   } catch(e) {}
 }
 </script>
