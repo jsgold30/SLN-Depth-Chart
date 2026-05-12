@@ -307,6 +307,15 @@ def fetch_roster():
                 'Chrome/120.0.0.0 Safari/537.36'
             )
         }
+        try:
+            conn = get_db()
+            cookie_row = conn.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
+            conn.close()
+            cookie = (cookie_row[0] if cookie_row else None) or os.environ.get('SLN_COOKIE', '')
+            if cookie:
+                headers['Cookie'] = cookie
+        except Exception:
+            pass
         resp = requests.get(url, timeout=15, headers=headers)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
@@ -1046,12 +1055,13 @@ def _execute_picks_sync():
     errors = []
     seen = set()
     pub_headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
+    auth_headers = {**pub_headers, 'Cookie': cookie} if cookie else pub_headers
 
     # ── Step 1: Roster pages for years 2036-2037 ─────────────────────────────
     owned_map = {}
     for roster_file, owner_abbr in ROSTER_MAP.items():
         try:
-            resp = requests.get(ROSTER_BASE + roster_file, headers=pub_headers, timeout=10)
+            resp = requests.get(ROSTER_BASE + roster_file, headers=auth_headers, timeout=10)
             if resp.status_code == 200:
                 picks = parse_roster_draft_picks(resp.text, owner_abbr, ROSTER_PICK_YEARS)
                 owned_map[owner_abbr] = picks
