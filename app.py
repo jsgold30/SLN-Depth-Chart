@@ -501,14 +501,7 @@ def fetch_roster():
 def fetch_free_agents():
     url = 'https://www.simleaguenirvana.com/fa/fa-pos.htm'
     try:
-        headers = {
-            'User-Agent': (
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                'AppleWebKit/537.36 (KHTML, like Gecko) '
-                'Chrome/120.0.0.0 Safari/537.36'
-            )
-        }
-        resp = requests.get(url, timeout=15, headers=headers)
+        resp = _scraper.get(url, timeout=20)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
 
@@ -616,14 +609,7 @@ def fetch_salary_roster():
         return jsonify({'error': 'No URL provided'}), 400
 
     try:
-        headers = {
-            'User-Agent': (
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                'AppleWebKit/537.36 (KHTML, like Gecko) '
-                'Chrome/120.0.0.0 Safari/537.36'
-            )
-        }
-        resp = requests.get(url, timeout=15, headers=headers)
+        resp = _scraper.get(url, timeout=20)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
 
