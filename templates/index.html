@@ -1498,15 +1498,26 @@
     <!-- Admin sync panel (unlocked) -->
     <div id="tmAdminPanel" style="display:none;padding:10px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;margin-bottom:12px;flex-direction:column;gap:8px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <span style="color:#94a3b8;font-size:0.75rem;font-weight:600;">Sync Owed Picks (years 2038+)</span>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <a href="https://simleaguenirvana.com/viewtopic.php?t=18" target="_blank"
-            style="font-size:0.72rem;color:#7dd3fc;text-decoration:none;">Open SLN Picks Page ↗</a>
-          <button onclick="tmCloseAdmin()" style="font-size:0.7rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
-        </div>
+        <span style="color:#94a3b8;font-size:0.75rem;font-weight:600;">SLN Settings</span>
+        <button onclick="tmCloseAdmin()" style="font-size:0.7rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
       </div>
+      <!-- SLN Login -->
+      <div style="border:1px solid #334155;border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:6px;">
+        <div style="color:#94a3b8;font-size:0.72rem;font-weight:600;">🔐 SLN Login (required for roster &amp; picks access)</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <input id="slnLoginUser" type="text" placeholder="SLN username"
+            style="flex:1;min-width:100px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:5px;padding:4px 8px;font-size:0.75rem;">
+          <input id="slnLoginPass" type="password" placeholder="Password"
+            onkeydown="if(event.key==='Enter')tmSLNLogin()"
+            style="flex:1;min-width:100px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:5px;padding:4px 8px;font-size:0.75rem;">
+          <button class="btn btn-green" style="padding:4px 12px;font-size:0.74rem;" onclick="tmSLNLogin()">Login</button>
+        </div>
+        <span id="slnLoginStatus" style="font-size:0.72rem;color:#94a3b8;"></span>
+      </div>
+      <!-- Owed Picks paste -->
+      <div style="color:#94a3b8;font-size:0.72rem;font-weight:600;">Sync Owed Picks (years 2038+)</div>
       <p style="color:#64748b;font-size:0.72rem;margin:0;">
-        Log into SLN, open the owed picks page, select all text (Ctrl+A), copy (Ctrl+C), then paste below.
+        Log into SLN, open the <a href="https://simleaguenirvana.com/viewtopic.php?t=18" target="_blank" style="color:#7dd3fc;">owed picks page ↗</a>, select all text (Ctrl+A), copy (Ctrl+C), then paste below.
       </p>
       <textarea id="tmAdminPasteText" rows="6" placeholder="Paste the owed picks post content here…"
         style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:8px;border-radius:6px;font-size:0.72rem;resize:vertical;width:100%;box-sizing:border-box;"></textarea>
@@ -5200,6 +5211,21 @@ function tmCheckAdminPin() {
 function tmCloseAdmin() {
   document.getElementById('tmAdminPanel').style.display = 'none';
   tmAdminUnlocked = false;
+}
+
+async function tmSLNLogin() {
+  const user = document.getElementById('slnLoginUser').value.trim();
+  const pass = document.getElementById('slnLoginPass').value.trim();
+  const status = document.getElementById('slnLoginStatus');
+  if (\!user || \!pass) { status.style.color='#f87171'; status.textContent='Enter username and password.'; return; }
+  status.style.color='#94a3b8'; status.textContent='Logging in…';
+  try {
+    const res = await fetch('/api/picks/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pass})});
+    const data = await res.json();
+    if (\!res.ok) { status.style.color='#f87171'; status.textContent=data.error||'Login failed.'; return; }
+    status.style.color='#4ade80'; status.textContent='✓ Logged in — rosters will now load correctly.';
+    document.getElementById('slnLoginPass').value='';
+  } catch(e) { status.style.color='#f87171'; status.textContent='Network error.'; }
 }
 
 async function tmSubmitPicksPaste() {
