@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, jsonify, make_response
 import os
 import requests
+import cloudscraper
+_scraper = cloudscraper.create_scraper()
 from bs4 import BeautifulSoup
 import re
 import sqlite3
@@ -460,35 +462,7 @@ def fetch_roster():
         except Exception:
             pass
 
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1',
-            'Cache-Control': 'max-age=0',
-        }
-        try:
-            conn = get_db()
-            cookie_row = conn.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
-            conn.close()
-            cookie = (cookie_row[0] if cookie_row else None) or os.environ.get('SLN_COOKIE', '')
-            if cookie:
-                headers['Cookie'] = cookie
-        except Exception:
-            pass
-        resp = requests.get(url, timeout=15, headers=headers)
-        if resp.status_code == 403:
-            # Try auto-login with stored credentials, then retry
-            new_cookie = _sln_auto_login()
-            if new_cookie:
-                headers['Cookie'] = new_cookie
-                resp = requests.get(url, timeout=15, headers=headers)
+        resp = _scraper.get(url, timeout=20)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
         result = _parse_roster_from_soup(soup)
