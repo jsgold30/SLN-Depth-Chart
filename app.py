@@ -277,6 +277,166 @@ def mockup_team_select():
     return render_template('mockup_team_select.html')
 
 
+def _sln_auto_login():
+    """Login to SLN using SLN_USERNAME/SLN_PASSWORD env vars. Returns cookie string or None."""
+    username = os.environ.get('SLN_USERNAME', '').strip()
+    password = os.environ.get('SLN_PASSWORD', '').strip()
+    if not username or not password:
+        return None
+    base_url  = 'https://simleaguenirvana.com'
+    login_url = f'{base_url}/ucp.php?mode=login'
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        'Referer': login_url,
+    }
+    try:
+        session = requests.Session()
+        get_resp = session.get(login_url, headers=headers, timeout=10)
+        soup = BeautifulSoup(get_resp.text, 'html.parser')
+        form = soup.find('form', id='login') or soup.find('form')
+        hidden = {}
+        if form:
+            for inp in form.find_all('input', type='hidden'):
+                if inp.get('name'):
+                    hidden[inp['name']] = inp.get('value', '')
+        action = (form.get('action') or 'ucp.php?mode=login') if form else 'ucp.php?mode=login'
+        if action.startswith('./'):
+            action = action[2:]
+        post_url = f'{base_url}/{action}'
+        payload = {**hidden, 'username': username, 'password': password, 'autologin': 'on', 'login': 'Login'}
+        session.post(post_url, data=payload, headers=headers, timeout=10, allow_redirects=True)
+        cookies = {c.name: c.value for c in session.cookies}
+        uid_key = next((k for k in cookies if k.endswith('_u')), None)
+        if not uid_key or cookies.get(uid_key, '1') == '1':
+            return None
+        cookie_str = '; '.join(f'{k}={v}' for k, v in cookies.items())
+        db = get_db()
+        db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
+        db.commit()
+        db.close()
+        return cookie_str
+    except Exception:
+        return None
+
+
+def _parse_roster_from_soup(soup):
+    """Parse players and stats from a BeautifulSoup object of a roster page.
+    Returns {'players': [...], 'team_name': str} or raises ValueError on failure."""
+    team_name = ''
+    title_tag = soup.find('title')
+    if title_tag:
+        team_name = title_tag.get_text(strip=True)
+    if not team_name:
+        h1 = soup.find('h1')
+        if h1:
+            team_name = h1.get_text(strip=True)
+
+    players = []
+    valid_positions = {'PG', 'SG', 'SF', 'PF', 'C'}
+
+    for table in soup.find_all('table'):
+        all_rows = table.find_all('tr')
+        if not all_rows:
+            continue
+        header_row_index = None
+        col_names = []
+        for i, row in enumerate(all_rows):
+            candidate = [c.get_text(strip=True).lower() for c in row.find_all(['th', 'td'])]
+            if 'pos' in candidate and 'reb' in candidate and 'hn' in candidate:
+                col_names = candidate
+                header_row_index = i
+                break
+        if header_row_index is None:
+            continue
+        rows = all_rows[header_row_index + 1:]
+        for row in rows:
+            cells = [td.get_text(strip=True) for td in row.find_all('td')]
+            if len(cells) < len(col_names):
+                continue
+            d = dict(zip(col_names, cells))
+            name = d.get('name', '').strip()
+            pos = d.get('pos', '').strip().upper()
+            if not name or pos not in valid_positions:
+                continue
+            height_str = d.get('height', '')
+            height_inches = parse_height_inches(height_str)
+            wt_match = re.search(r'(\d+)', str(d.get('weight', '0')))
+            weight = int(wt_match.group(1)) if wt_match else 0
+            player = {
+                'name': name, 'pos': pos, 'age': d.get('age', ''),
+                'height': height_str, 'height_inches': height_inches, 'weight': weight,
+                'in_rating': d.get('in', ''), 'out': d.get('out', ''),
+                'hn': d.get('hn', ''), 'df': d.get('df', ''),
+                'reb': d.get('reb', ''), 'pot': d.get('pot', ''),
+            }
+            elig = compute_eligibility(player)
+            player['eligible_starter'] = elig['starter']
+            player['eligible_backup'] = elig['backup']
+            players.append(player)
+        if players:
+            break
+
+    if not players:
+        raise ValueError('Could not find a player abilities table on this page.')
+
+    stat_cols = ['ppg', 'rpg', 'apg', 'spg', 'bpg', 'tpg', 'fg%', 'ft%', '3p%']
+    stats_map = {}
+    for table in soup.find_all('table'):
+        all_rows = table.find_all('tr')
+        header_row_index = None
+        col_names = []
+        for i, row in enumerate(all_rows):
+            candidate = [c.get_text(strip=True).lower() for c in row.find_all(['th', 'td'])]
+            if 'ppg' in candidate and 'rpg' in candidate:
+                col_names = candidate
+                header_row_index = i
+                break
+        if header_row_index is None:
+            continue
+        for row in all_rows[header_row_index + 1:]:
+            name_tag = row.find('a')
+            cells = [td.get_text(strip=True) for td in row.find_all('td')]
+            if not name_tag or len(cells) < len(col_names):
+                continue
+            pname = name_tag.get_text(strip=True)
+            d = dict(zip(col_names, cells))
+            stats_map[pname] = {k: d.get(k, '') for k in stat_cols}
+        if stats_map:
+            break
+
+    for p in players:
+        s = stats_map.get(p['name'], {})
+        p['ppg'] = s.get('ppg', '')
+        p['rpg'] = s.get('rpg', '')
+        p['apg'] = s.get('apg', '')
+        p['spg'] = s.get('spg', '')
+        p['bpg'] = s.get('bpg', '')
+        p['tpg'] = s.get('tpg', '')
+        p['fg_pct'] = s.get('fg%', '')
+        p['ft_pct'] = s.get('ft%', '')
+        p['three_pct'] = s.get('3p%', '')
+
+    pos_order = {'PG': 0, 'SG': 1, 'SF': 2, 'PF': 3, 'C': 4}
+    players.sort(key=lambda p: (pos_order.get(p['pos'], 5), p['name']))
+    return {'players': players, 'team_name': team_name}
+
+
+@app.route('/parse_roster_html', methods=['POST'])
+def parse_roster_html():
+    """Parse a roster page from raw HTML pasted by the user's browser."""
+    html = (request.json or {}).get('html', '').strip()
+    if not html:
+        return jsonify({'error': 'No HTML provided'}), 400
+    try:
+        soup = BeautifulSoup(html, 'html.parser')
+        result = _parse_roster_from_soup(soup)
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Error parsing roster: {str(e)}'}), 500
+
+
 @app.route('/fetch_roster', methods=['POST'])
 def fetch_roster():
     url = request.json.get('url', '').strip()
@@ -317,136 +477,15 @@ def fetch_roster():
         except Exception:
             pass
         resp = requests.get(url, timeout=15, headers=headers)
+        if resp.status_code == 403:
+            # Try auto-login with stored credentials, then retry
+            new_cookie = _sln_auto_login()
+            if new_cookie:
+                headers['Cookie'] = new_cookie
+                resp = requests.get(url, timeout=15, headers=headers)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
-
-        # Try to get team name from page title or heading
-        team_name = ''
-        title_tag = soup.find('title')
-        if title_tag:
-            team_name = title_tag.get_text(strip=True)
-        if not team_name:
-            h1 = soup.find('h1')
-            if h1:
-                team_name = h1.get_text(strip=True)
-
-        players = []
-        valid_positions = {'PG', 'SG', 'SF', 'PF', 'C'}
-
-        for table in soup.find_all('table'):
-            all_rows = table.find_all('tr')
-            if not all_rows:
-                continue
-
-            # Scan through rows to find the actual column header row
-            header_row_index = None
-            col_names = []
-            for i, row in enumerate(all_rows):
-                candidate = [
-                    c.get_text(strip=True).lower()
-                    for c in row.find_all(['th', 'td'])
-                ]
-                if 'pos' in candidate and 'reb' in candidate and 'hn' in candidate:
-                    col_names = candidate
-                    header_row_index = i
-                    break
-
-            # Identify the abilities table by required columns
-            if header_row_index is None:
-                continue
-
-            rows = all_rows[header_row_index + 1:]
-            for row in rows:
-                cells = [td.get_text(strip=True) for td in row.find_all('td')]
-                if len(cells) < len(col_names):
-                    continue
-
-                d = dict(zip(col_names, cells))
-                name = d.get('name', '').strip()
-                pos = d.get('pos', '').strip().upper()
-
-                if not name or pos not in valid_positions:
-                    continue
-
-                height_str = d.get('height', '')
-                height_inches = parse_height_inches(height_str)
-
-                wt_match = re.search(r'(\d+)', str(d.get('weight', '0')))
-                weight = int(wt_match.group(1)) if wt_match else 0
-
-                player = {
-                    'name': name,
-                    'pos': pos,
-                    'age': d.get('age', ''),
-                    'height': height_str,
-                    'height_inches': height_inches,
-                    'weight': weight,
-                    'in_rating': d.get('in', ''),
-                    'out': d.get('out', ''),
-                    'hn': d.get('hn', ''),
-                    'df': d.get('df', ''),
-                    'reb': d.get('reb', ''),
-                    'pot': d.get('pot', ''),
-                }
-
-                elig = compute_eligibility(player)
-                player['eligible_starter'] = elig['starter']
-                player['eligible_backup'] = elig['backup']
-
-                players.append(player)
-
-            if players:
-                break
-
-        if not players:
-            return jsonify({
-                'error': 'Could not find a player abilities table on this page. '
-                         'Check the URL and make sure the page is accessible.'
-            }), 400
-
-        # Scrape Player Statistics table (PPG, RPG, APG, SPG, BPG, TPG, FG%, FT%, 3P%)
-        stat_cols = ['ppg', 'rpg', 'apg', 'spg', 'bpg', 'tpg', 'fg%', 'ft%', '3p%']
-        stats_map = {}
-        for table in soup.find_all('table'):
-            all_rows = table.find_all('tr')
-            header_row_index = None
-            col_names = []
-            for i, row in enumerate(all_rows):
-                candidate = [c.get_text(strip=True).lower() for c in row.find_all(['th', 'td'])]
-                if 'ppg' in candidate and 'rpg' in candidate:
-                    col_names = candidate
-                    header_row_index = i
-                    break
-            if header_row_index is None:
-                continue
-            for row in all_rows[header_row_index + 1:]:
-                name_tag = row.find('a')
-                cells = [td.get_text(strip=True) for td in row.find_all('td')]
-                if not name_tag or len(cells) < len(col_names):
-                    continue
-                pname = name_tag.get_text(strip=True)
-                d = dict(zip(col_names, cells))
-                stats_map[pname] = {k: d.get(k, '') for k in stat_cols}
-            if stats_map:
-                break
-
-        for p in players:
-            s = stats_map.get(p['name'], {})
-            p['ppg'] = s.get('ppg', '')
-            p['rpg'] = s.get('rpg', '')
-            p['apg'] = s.get('apg', '')
-            p['spg'] = s.get('spg', '')
-            p['bpg'] = s.get('bpg', '')
-            p['tpg'] = s.get('tpg', '')
-            p['fg_pct'] = s.get('fg%', '')
-            p['ft_pct'] = s.get('ft%', '')
-            p['three_pct'] = s.get('3p%', '')
-
-        # Sort by position order then name
-        pos_order = {'PG': 0, 'SG': 1, 'SF': 2, 'PF': 3, 'C': 4}
-        players.sort(key=lambda p: (pos_order.get(p['pos'], 5), p['name']))
-
-        result = {'players': players, 'team_name': team_name}
+        result = _parse_roster_from_soup(soup)
 
         # Save to cache
         try:
