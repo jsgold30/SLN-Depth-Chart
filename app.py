@@ -1296,18 +1296,11 @@ def picks_from_paste():
     row = db.execute('SELECT data FROM owed_picks WHERE id = 1').fetchone()
     existing = json.loads(row[0]) if row else []
 
-    # Keep roster-page picks (years 2036-2037), replace forum-year picks with new paste
+    # Keep roster-page picks (years 2036-2037), fully replace forum-year picks with new paste
     kept = [p for p in existing if p.get('year') in ROSTER_PICK_YEARS]
-    seen = {(p['from_abbr'], p['year'], p['round'], p['to_abbr']) for p in kept}
-
-    added = 0
-    for p in forum_picks:
-        if p['year'] in FORUM_PICK_YEARS:
-            key = (p['from_abbr'], p['year'], p['round'], p['to_abbr'])
-            if key not in seen:
-                seen.add(key)
-                kept.append(p)
-                added += 1
+    forum_to_add = [p for p in forum_picks if p['year'] in FORUM_PICK_YEARS]
+    kept.extend(forum_to_add)
+    added = len(forum_to_add)
 
     db.execute(
         '''INSERT INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)
