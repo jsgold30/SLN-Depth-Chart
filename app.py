@@ -154,6 +154,7 @@ PG_STARTER_EXCEPTIONS = {
     'dyson daniels',
     'egor demin',
     'isaac bonga',
+    'jalen haralson',
 }
 
 # Grade scale: index 0 = worst, 12 = best
