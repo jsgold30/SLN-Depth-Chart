@@ -811,7 +811,7 @@ SLN_THREAD_URL = 'https://simleaguenirvana.com/viewtopic.php?t=18'
 
 LEAGUE_YEAR = 2035
 ROSTER_PICK_YEARS = [LEAGUE_YEAR + 1, LEAGUE_YEAR + 2]   # 2036, 2037
-FORUM_PICK_YEARS  = list(range(LEAGUE_YEAR + 3, LEAGUE_YEAR + 7))  # 2038-2041
+FORUM_PICK_YEARS  = list(range(LEAGUE_YEAR + 3, LEAGUE_YEAR + 8))  # 2038-2042
 
 ROSTER_MAP = {
     'roster1.htm': 'BOS', 'roster2.htm': 'MIA', 'roster3.htm': 'NJN',
