@@ -824,7 +824,7 @@ def get_league_year():
 
 def get_roster_pick_years():
     y = get_league_year()
-    return [y, y + 1]
+    return [y + 1]
 
 def get_forum_pick_years():
     y = get_league_year()
