@@ -1876,6 +1876,13 @@ function switchTab(tab) {
     buildTMLogoGrids();
     tmLogoGridsBuilt = true;
     tmLoadOwedPicks();
+    // Auto-select myTeam as side A on first open
+    if (myTeam) {
+      const url = TM_BASE + myTeam.url;
+      document.getElementById('tmSelectA').value = url;
+      highlightLogoGrid('tmLogoGridA', url);
+      loadTMTeam('A');
+    }
   }
   // Load draft players lazily on first visit; start/stop polling with tab
   if (tab === 'draft') {
