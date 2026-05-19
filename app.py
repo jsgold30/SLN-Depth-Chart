@@ -1084,9 +1084,9 @@ def _execute_picks_sync():
     owned_map = {}
     for roster_file, owner_abbr in ROSTER_MAP.items():
         try:
-            resp = requests.get(ROSTER_BASE + roster_file, headers=auth_headers, timeout=10)
+            resp = _scraper.get(ROSTER_BASE + roster_file, timeout=15)
             if resp.status_code == 200:
-                picks = parse_roster_draft_picks(resp.text, owner_abbr, ROSTER_PICK_YEARS)
+                picks = parse_roster_draft_picks(resp.text, owner_abbr, get_roster_pick_years())
                 owned_map[owner_abbr] = picks
         except Exception as e:
             errors.append(f'Roster {roster_file}: {e}')
@@ -1120,7 +1120,7 @@ def _execute_picks_sync():
     if cookie:
         try:
             auth_headers = {**pub_headers, 'Cookie': cookie}
-            resp = requests.get(SLN_THREAD_URL, headers=auth_headers, timeout=15)
+            resp = _scraper.get(SLN_THREAD_URL, timeout=15)
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 post_el = (soup.find('div', class_='content') or
