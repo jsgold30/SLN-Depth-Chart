@@ -266,7 +266,7 @@ def get_version():
 
 @app.route('/')
 def index():
-    resp = make_response(render_template('index.html', version=get_version()))
+    resp = make_response(render_template('index.html', version=get_version(), league_year=get_league_year()))
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     resp.headers['Pragma'] = 'no-cache'
     return resp
@@ -809,9 +809,26 @@ def load_draft():
 
 SLN_THREAD_URL = 'https://simleaguenirvana.com/viewtopic.php?t=18'
 
-LEAGUE_YEAR = 2035
-ROSTER_PICK_YEARS = [LEAGUE_YEAR + 1, LEAGUE_YEAR + 2]   # 2036, 2037
-FORUM_PICK_YEARS  = list(range(LEAGUE_YEAR + 3, LEAGUE_YEAR + 8))  # 2038-2042
+LEAGUE_YEAR_DEFAULT = 2035
+
+def get_league_year():
+    try:
+        db = get_db()
+        row = db.execute("SELECT value FROM settings WHERE key='league_year'").fetchone()
+        db.close()
+        if row:
+            return int(row[0])
+    except Exception:
+        pass
+    return LEAGUE_YEAR_DEFAULT
+
+def get_roster_pick_years():
+    y = get_league_year()
+    return [y + 1, y + 2]
+
+def get_forum_pick_years():
+    y = get_league_year()
+    return list(range(y + 3, y + 8))
 
 ROSTER_MAP = {
     'roster1.htm': 'BOS', 'roster2.htm': 'MIA', 'roster3.htm': 'NJN',
@@ -1091,7 +1108,7 @@ def _execute_picks_sync():
                     owed.append({'from_abbr': orig, 'year': year, 'round': rnd, 'to_abbr': owner_abbr})
 
     for abbr in owned_map:
-        for year in ROSTER_PICK_YEARS:
+        for year in get_roster_pick_years():
             for rnd in (1, 2):
                 if (year, rnd, abbr) not in all_owned:
                     key = (abbr, year, rnd, 'EXT')
@@ -1112,7 +1129,7 @@ def _execute_picks_sync():
                 if post_el:
                     forum_picks = parse_owed_picks_from_thread(post_el.get_text(separator='\n'))
                     for o in forum_picks:
-                        if o['year'] in FORUM_PICK_YEARS:
+                        if o['year'] in get_forum_pick_years():
                             key = (o['from_abbr'], o['year'], o['round'], o['to_abbr'])
                             if key not in seen:
                                 seen.add(key)
@@ -1297,8 +1314,8 @@ def picks_from_paste():
     existing = json.loads(row[0]) if row else []
 
     # Keep roster-page picks (years 2036-2037), fully replace forum-year picks with new paste
-    kept = [p for p in existing if p.get('year') in ROSTER_PICK_YEARS]
-    forum_to_add = [p for p in forum_picks if p['year'] in FORUM_PICK_YEARS]
+    kept = [p for p in existing if p.get('year') in get_roster_pick_years()]
+    forum_to_add = [p for p in forum_picks if p['year'] in get_forum_pick_years()]
     kept.extend(forum_to_add)
     added = len(forum_to_add)
 
@@ -1327,6 +1344,21 @@ def update_picks():
     db.commit()
     db.close()
     return jsonify({'ok': True, 'count': len(owed)})
+
+
+@app.route('/api/settings/league-year', methods=['GET', 'POST'])
+def settings_league_year():
+    if request.method == 'GET':
+        return jsonify({'league_year': get_league_year()})
+    body = request.get_json() or {}
+    year = body.get('year')
+    if not isinstance(year, int) or year < 2020 or year > 2060:
+        return jsonify({'error': 'Invalid year'}), 400
+    db = get_db()
+    db.execute("INSERT INTO settings (key, value) VALUES ('league_year', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (str(year),))
+    db.commit()
+    db.close()
+    return jsonify({'ok': True, 'league_year': year})
 
 
 if __name__ == '__main__':
