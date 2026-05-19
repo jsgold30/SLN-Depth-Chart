@@ -809,7 +809,7 @@ def load_draft():
 
 SLN_THREAD_URL = 'https://simleaguenirvana.com/viewtopic.php?t=18'
 
-LEAGUE_YEAR_DEFAULT = 2035
+LEAGUE_YEAR_DEFAULT = 2036
 
 def get_league_year():
     try:
@@ -824,11 +824,11 @@ def get_league_year():
 
 def get_roster_pick_years():
     y = get_league_year()
-    return [y + 1, y + 2]
+    return [y, y + 1]
 
 def get_forum_pick_years():
     y = get_league_year()
-    return list(range(y + 3, y + 8))
+    return list(range(y + 2, y + 7))
 
 ROSTER_MAP = {
     'roster1.htm': 'BOS', 'roster2.htm': 'MIA', 'roster3.htm': 'NJN',
