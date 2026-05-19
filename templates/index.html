@@ -1499,12 +1499,23 @@
     <!-- Admin sync panel (unlocked) -->
     <div id="tmAdminPanel" style="display:none;padding:10px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;margin-bottom:12px;flex-direction:column;gap:8px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <span style="color:#94a3b8;font-size:0.75rem;font-weight:600;">Sync Owed Picks (years 2038+)</span>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <a href="https://simleaguenirvana.com/viewtopic.php?t=18" target="_blank"
-            style="font-size:0.72rem;color:#7dd3fc;text-decoration:none;">Open SLN Picks Page ↗</a>
-          <button onclick="tmCloseAdmin()" style="font-size:0.7rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
-        </div>
+        <span style="color:#94a3b8;font-size:0.75rem;font-weight:600;">Admin Settings</span>
+        <button onclick="tmCloseAdmin()" style="font-size:0.7rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
+      </div>
+      <!-- League Year -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="color:#94a3b8;font-size:0.72rem;font-weight:600;">Current League Year:</span>
+        <input id="tmLeagueYearInput" type="number" min="2020" max="2060" value="{{ league_year }}"
+          style="width:80px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:5px;padding:3px 8px;font-size:0.75rem;">
+        <button class="btn btn-green" style="padding:3px 10px;font-size:0.73rem;" onclick="tmSaveLeagueYear()">Save</button>
+        <span id="tmLeagueYearStatus" style="font-size:0.72rem;color:#94a3b8;"></span>
+      </div>
+      <hr style="border-color:#334155;margin:2px 0;">
+      <!-- Owed Picks Paste -->
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <span style="color:#94a3b8;font-size:0.72rem;font-weight:600;">Sync Owed Picks</span>
+        <a href="https://simleaguenirvana.com/viewtopic.php?t=18" target="_blank"
+          style="font-size:0.72rem;color:#7dd3fc;text-decoration:none;">Open SLN Picks Page ↗</a>
       </div>
       <p style="color:#64748b;font-size:0.72rem;margin:0;">
         Log into SLN, open the owed picks page, select all text (Ctrl+A), copy (Ctrl+C), then paste below.
@@ -3562,7 +3573,7 @@ function fmtSal(n) {
 }
 
 // ─── Draft Picks in Trade Machine ─────────────────────────────────────────────
-const TM_LEAGUE_YEAR = 2035;
+const TM_LEAGUE_YEAR = {{ league_year }};
 const TM_PICK_YEARS  = Array.from({length: 7}, (_, i) => TM_LEAGUE_YEAR + 1 + i); // 2036-2042
 
 let tmPicksA = [];   // [{year, round, ownerAbbr, originalAbbr, label}]
@@ -5210,6 +5221,22 @@ function tmCloseAdmin() {
   tmAdminUnlocked = false;
 }
 
+
+async function tmSaveLeagueYear() {
+  const year = parseInt(document.getElementById('tmLeagueYearInput').value);
+  const status = document.getElementById('tmLeagueYearStatus');
+  if (!year || year < 2020 || year > 2060) { status.style.color='#f87171'; status.textContent='Invalid year'; return; }
+  status.style.color='#94a3b8'; status.textContent='Saving…';
+  try {
+    const res = await fetch('/api/settings/league-year', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({year})
+    });
+    const data = await res.json();
+    if (!res.ok) { status.style.color='#f87171'; status.textContent=data.error||'Error'; return; }
+    status.style.color='#4ade80'; status.textContent='✓ Saved — reload to apply';
+  } catch(e) { status.style.color='#f87171'; status.textContent='Network error'; }
+}
 
 async function tmSubmitPicksPaste() {
   const text   = document.getElementById('tmAdminPasteText').value.trim();
