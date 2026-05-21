@@ -3979,6 +3979,8 @@ function buildTMPlayerList(side) {
         row.addEventListener('click', e => {
           if (!tfOpen) return;
           e.preventDefault();
+          e.stopPropagation();
+          if (e.target === cb) return; // ignore synthetic checkbox click fired by label
           tfTogglePlayer(playerIdx, {name: p.name, pos: p.pos || '', year1: p.salary}, row);
         }, true);
       }
@@ -5427,7 +5429,7 @@ async function tfRun() {
           if (d.players) {
             tfAllRosters[t.abbr] = d.players.map(p => ({
               name: p.name, pos: p.pos,
-              salary: p.year1 || 0
+              salary: p.salary || 0
             })).filter(p => p.salary > 0);
           }
         }
