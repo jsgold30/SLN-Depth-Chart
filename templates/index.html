@@ -1061,7 +1061,7 @@
     .tf-filter-row { display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:12px; }
     .tf-filter-btn { background:#1e293b; border:1px solid #334155; color:#64748b; font-size:0.67rem; padding:3px 9px; border-radius:5px; cursor:pointer; }
     .tf-filter-btn.active { background:#1e3a5f; border-color:#2563eb; color:#60a5fa; }
-    .tf-results { display:flex; flex-direction:column; gap:8px; max-height:60vh; overflow-y:auto; padding-right:2px; }
+    .tf-results { display:flex; flex-direction:column; gap:8px; }
     .tf-result-card { background:#111827; border:1px solid #1e293b; border-radius:8px; padding:10px 12px; display:flex; align-items:flex-start; gap:12px; cursor:pointer; transition:border-color 0.15s; }
     .tf-result-card:hover { border-color:#334155; }
     .tf-result-card.tf-best { border-color:#16a34a; }
@@ -1574,6 +1574,21 @@
 
       <!-- ── Team A ── -->
       <div class="tm-side">
+        <!-- Trade Finder B results panel (shown in Team A column when Team B TF is active) -->
+        <div id="tfResultsPanelB" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:0.72rem;font-weight:700;color:#60a5fa;">🔍 Trade Finder — Send from your team</span>
+            <button onclick="tfClose()" style="font-size:0.67rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
+          </div>
+          <div id="tfWindowBarB" class="tf-window-bar" style="display:none;">
+            Incoming: <strong id="tfOutTotalB">—</strong>
+            &nbsp;·&nbsp; Send window: <strong id="tfWindowMinB">—</strong>–<strong id="tfWindowMaxB">—</strong>
+          </div>
+          <div style="margin-bottom:8px;"><span id="tfResultCountB" style="font-size:0.67rem;color:#64748b;"></span></div>
+          <div id="tfResultsB" class="tf-results"><div class="tf-empty">Click a player from Team B to find combos from your team.</div></div>
+        </div>
+        <!-- Normal Team A content -->
+        <div id="tfTeamAContent">
         <input type="hidden" id="tmSelectA">
         <div id="tmLogoGridA" class="tm-logo-grid"></div>
         <div id="tmStatusA" style="font-size:0.75rem;color:#94a3b8;margin-bottom:4px;min-height:16px;"></div>
@@ -1623,6 +1638,8 @@
             </div>
           </div>
         </div>
+
+        </div><!-- /tfTeamAContent -->
 
         <div class="tm-total-row">
           <span>Sending:</span>
@@ -1723,19 +1740,6 @@
 
     </div><!-- /tm-columns -->
 
-    <!-- Trade Finder B results (full-width, shown when TF opened from Team B) -->
-    <div id="tfResultsPanelB" style="display:none;margin-top:12px;border-top:1px solid #1e293b;padding-top:12px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <span style="font-size:0.72rem;font-weight:700;color:#60a5fa;">🔍 Trade Finder — Combos from your team</span>
-        <button onclick="tfClose()" style="font-size:0.67rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
-      </div>
-      <div id="tfWindowBarB" class="tf-window-bar" style="display:none;">
-        Incoming: <strong id="tfOutTotalB">—</strong>
-        &nbsp;·&nbsp; Send window: <strong id="tfWindowMinB">—</strong>–<strong id="tfWindowMaxB">—</strong>
-      </div>
-      <div style="margin-bottom:8px;"><span id="tfResultCountB" style="font-size:0.67rem;color:#64748b;"></span></div>
-      <div id="tfResultsB" class="tf-results"></div>
-    </div>
 
     <!-- Validate / Clear buttons -->
     <div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
@@ -5355,9 +5359,10 @@ function tfToggleFromB() {
   tfMode = 'B';
   const btnB = document.getElementById('tfToggleBtnB');
   if (btnB) { btnB.style.background = '#1d4ed8'; btnB.style.borderColor = '#3b82f6'; btnB.style.color = '#fff'; }
-  // Keep Team B content visible — rows become clickable
+  // Show results in Team A column, hide Team A content
+  document.getElementById('tfTeamAContent').style.display = 'none';
   document.getElementById('tfResultsPanelB').style.display = '';
-  document.getElementById('tfResultsPanelB').scrollIntoView({behavior:'smooth', block:'nearest'});
+  // Keep Team B content visible — rows become clickable
   tfInitBResults();
 }
 
@@ -5387,6 +5392,7 @@ function tfClose() {
   if (btnB) { btnB.style.background = ''; btnB.style.borderColor = '#1e3a5f'; btnB.style.color = '#60a5fa'; }
   document.getElementById('tfResultsPanel').style.display = 'none';
   document.getElementById('tfResultsPanelB').style.display = 'none';
+  document.getElementById('tfTeamAContent').style.display = '';
   document.getElementById('tfTeamBContent').style.display = '';
   document.getElementById('tfTeamBTotals').style.display = '';
   document.getElementById('tfTeamBCapRow').style.display = '';
