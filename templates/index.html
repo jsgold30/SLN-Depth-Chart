@@ -516,6 +516,7 @@
     .tm-player-row:hover { background: #1e293b; }
     .tm-player-row input[type="checkbox"] { accent-color: #38bdf8; cursor: pointer; }
     .tm-player-row.selected { background: #0c1a2e; color: #e2e8f0; }
+    .tm-player-row.tf-row-selected { background: #1e3a5f !important; outline: 1px solid #2563eb; }
     .tm-player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tm-salary { font-variant-numeric: tabular-nums; color: #4ade80; font-size: 0.8rem; text-align: right; white-space: nowrap; }
     .tm-total-row {
@@ -1521,10 +1522,7 @@
   <div class="card">
     <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
       Trade Machine
-      <div style="display:flex;gap:6px;align-items:center;">
-        <button id="tfToggleBtn" onclick="tfToggle()" style="font-size:0.68rem;padding:3px 10px;background:#1e293b;color:#60a5fa;border:1px solid #1e3a5f;border-radius:6px;cursor:pointer;font-weight:600;">🔍 Trade Finder</button>
-        <button onclick="tmToggleAdminPin()" style="font-size:0.68rem;padding:3px 10px;background:#1e293b;color:#64748b;border:1px solid #334155;border-radius:6px;cursor:pointer;letter-spacing:0.04em;">Admin</button>
-      </div>
+      <button onclick="tmToggleAdminPin()" style="font-size:0.68rem;padding:3px 10px;background:#1e293b;color:#64748b;border:1px solid #334155;border-radius:6px;cursor:pointer;letter-spacing:0.04em;">Admin</button>
     </div>
     <!-- Admin PIN entry -->
     <div id="tmAdminPinPanel" style="display:none;padding:10px 0 2px;border-bottom:1px solid #1e293b;margin-bottom:10px;">
@@ -1568,42 +1566,6 @@
       </div>
     </div>
 
-    <!-- Trade Finder panel -->
-    <div id="tfPanel" style="display:none;">
-      <div class="tf-panel">
-        <div class="tf-section-label">Players going out
-          <span id="tfTeamLabel" style="color:#94a3b8;font-weight:400;text-transform:none;margin-left:4px;"></span>
-        </div>
-        <div id="tfPlayerList" class="tf-player-list">
-          <span id="tfNoRoster" style="font-size:0.72rem;color:#475569;">Load your team on Side A first.</span>
-        </div>
-        <div id="tfWindowBar" class="tf-window-bar" style="display:none;">
-          Outgoing: <strong id="tfOutTotal">—</strong>
-          &nbsp;·&nbsp; Match window: <strong id="tfWindowMin">—</strong> – <strong id="tfWindowMax">—</strong>
-          &nbsp;·&nbsp;
-          <span style="color:#64748b;">Tolerance</span>
-          <select id="tfTolerance" onchange="tfRun()" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:4px;font-size:0.67rem;padding:2px 5px;">
-            <option value="0.15">±15%</option>
-            <option value="0.20">±20%</option>
-            <option value="0.25" selected>±25%</option>
-            <option value="0.35">±35%</option>
-            <option value="0.50">±50%</option>
-          </select>
-        </div>
-        <div id="tfFilterRow" class="tf-filter-row" style="display:none;">
-          <span style="font-size:0.67rem;color:#64748b;">Position:</span>
-          <button class="tf-filter-btn active" onclick="tfSetPos(this,'ALL')">All</button>
-          <button class="tf-filter-btn" onclick="tfSetPos(this,'PG')">PG</button>
-          <button class="tf-filter-btn" onclick="tfSetPos(this,'SG')">SG</button>
-          <button class="tf-filter-btn" onclick="tfSetPos(this,'SF')">SF</button>
-          <button class="tf-filter-btn" onclick="tfSetPos(this,'PF')">PF</button>
-          <button class="tf-filter-btn" onclick="tfSetPos(this,'C')">C</button>
-          <span id="tfResultCount" style="margin-left:auto;font-size:0.67rem;color:#64748b;"></span>
-        </div>
-        <div id="tfResults" class="tf-results"></div>
-      </div>
-    </div>
-
     <!-- Two-team columns -->
     <div class="tm-columns">
 
@@ -1625,6 +1587,7 @@
             <button class="btn btn-slate tm-vetmin-add" id="tmPickBtnA" onclick="tmAddPickUI('A')" style="display:none;">+ Add Pick</button>
             <button class="btn btn-slate tm-vetmin-add" id="tmRPBtnA" onclick="tmAddRPUI('A')" style="display:none;">+ Add RP</button>
             <button class="btn btn-slate tm-vetmin-add" id="tmFABtnA" onclick="toggleSideFAPanel('A')" style="display:none;">+ Free Agent</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tfToggleBtn" onclick="tfToggle()" style="border-color:#1e3a5f;color:#60a5fa;display:none;">🔍 Trade Finder</button>
           </div>
           <!-- Pick selector -->
           <div id="tmPickSelectorA" class="tm-pick-selector" style="display:none;">
@@ -1668,8 +1631,31 @@
         </div>
       </div>
 
-      <!-- ── Team B ── -->
+      <!-- ── Team B / Trade Finder Results ── -->
       <div class="tm-side">
+        <!-- Trade Finder Results Panel (shown instead of Team B when TF is active) -->
+        <div id="tfResultsPanel" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <span style="font-size:0.72rem;font-weight:700;color:#60a5fa;">🔍 Trade Finder Results</span>
+            <button onclick="tfClose()" style="font-size:0.67rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
+          </div>
+          <div id="tfWindowBar" class="tf-window-bar">
+            Outgoing: <strong id="tfOutTotal">—</strong>
+            &nbsp;·&nbsp; Window: <strong id="tfWindowMin">—</strong>–<strong id="tfWindowMax">—</strong>
+          </div>
+          <div id="tfFilterRow" class="tf-filter-row">
+            <button class="tf-filter-btn active" onclick="tfSetPos(this,'ALL')">All</button>
+            <button class="tf-filter-btn" onclick="tfSetPos(this,'PG')">PG</button>
+            <button class="tf-filter-btn" onclick="tfSetPos(this,'SG')">SG</button>
+            <button class="tf-filter-btn" onclick="tfSetPos(this,'SF')">SF</button>
+            <button class="tf-filter-btn" onclick="tfSetPos(this,'PF')">PF</button>
+            <button class="tf-filter-btn" onclick="tfSetPos(this,'C')">C</button>
+            <span id="tfResultCount" style="margin-left:auto;font-size:0.67rem;color:#64748b;"></span>
+          </div>
+          <div id="tfResults" class="tf-results"></div>
+        </div>
+        <!-- Normal Team B content -->
+        <div id="tfTeamBContent">
         <input type="hidden" id="tmSelectB">
         <div id="tmLogoGridB" class="tm-logo-grid"></div>
         <div id="tmStatusB" style="font-size:0.75rem;color:#94a3b8;margin-bottom:4px;min-height:16px;"></div>
@@ -1719,11 +1705,13 @@
           </div>
         </div>
 
-        <div class="tm-total-row">
+        </div><!-- /tfTeamBContent -->
+
+        <div class="tm-total-row" id="tfTeamBTotals">
           <span>Sending:</span>
           <span id="tmSendingB" style="color:#38bdf8;">$0</span>
         </div>
-        <div class="tm-total-row" style="margin-top:3px;border-top:none;padding-top:0;">
+        <div class="tm-total-row" style="margin-top:3px;border-top:none;padding-top:0;" id="tfTeamBCapRow">
           <span>Cap after trade:</span>
           <span id="tmCapAfterB" style="color:#94a3b8;">—</span>
         </div>
@@ -3905,7 +3893,7 @@ async function loadTMTeam(side) {
     if (data.error) { statusEl.style.display = ''; statusEl.textContent = '⚠ ' + data.error; return; }
 
     const teamName = (data.team_name || (side === 'A' ? 'Team A' : 'Team B')).replace(/\s*Roster$/i, '').trim();
-    if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; }
+    if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; tfShowButton(true); }
     else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; }
 
     const nameEl = document.getElementById(`tmTeamName${side}`);
@@ -3984,6 +3972,17 @@ function buildTMPlayerList(side) {
       row.appendChild(cb);
       row.appendChild(nameSpan);
       row.appendChild(salSpan);
+
+      // Trade Finder: clicking a Side A row toggles player selection when TF is open
+      if (side === 'A') {
+        const playerIdx = roster.indexOf(p);
+        row.addEventListener('click', e => {
+          if (!tfOpen) return;
+          e.preventDefault();
+          tfTogglePlayer(playerIdx, {name: p.name, pos: p.pos || '', year1: p.salary}, row);
+        }, true);
+      }
+
       container.appendChild(row);
     });
 
@@ -5301,78 +5300,79 @@ function tmCloseAdmin() {
 
 // ── Trade Finder ──────────────────────────────────────────────────────────────
 let tfOpen = false;
-let tfSelected = [];      // [{name, salary, pos, year1}]
+let tfSelected = [];      // [{name, salary, pos}]
 let tfAllRosters = {};    // abbr -> [{name,salary,pos}]
 let tfPosFilter = 'ALL';
-let tfLoadingCount = 0;
 
 function tfFmt(n) {
   if (!n) return '—';
   return '$' + (n / 1e6).toFixed(1) + 'M';
 }
 
-function tfToggle() {
-  tfOpen = !tfOpen;
-  document.getElementById('tfPanel').style.display = tfOpen ? '' : 'none';
+function tfShowButton(show) {
   const btn = document.getElementById('tfToggleBtn');
-  btn.style.background = tfOpen ? '#1d4ed8' : '#1e293b';
-  btn.style.borderColor = tfOpen ? '#3b82f6' : '#1e3a5f';
-  if (tfOpen) tfInit();
+  if (btn) btn.style.display = show ? '' : 'none';
 }
 
-function tfInit() {
+function tfToggle() {
+  if (tfOpen) { tfClose(); return; }
+  tfOpen = true;
+  const btn = document.getElementById('tfToggleBtn');
+  btn.style.background = '#1d4ed8';
+  btn.style.borderColor = '#3b82f6';
+  btn.style.color = '#fff';
+  document.getElementById('tfResultsPanel').style.display = '';
+  document.getElementById('tfTeamBContent').style.display = 'none';
+  document.getElementById('tfTeamBTotals').style.display = 'none';
+  document.getElementById('tfTeamBCapRow').style.display = 'none';
+  tfInitPlayers();
+}
+
+function tfClose() {
+  tfOpen = false;
   tfSelected = [];
-  const abbr = tmGetSideAbbr('A');
-  const label = document.getElementById('tfTeamLabel');
-  const listEl = document.getElementById('tfPlayerList');
-  const noRoster = document.getElementById('tfNoRoster');
-
-  if (!abbr || !tmRosterA || !tmRosterA.length) {
-    noRoster.style.display = '';
-    label.textContent = '';
-    document.getElementById('tfWindowBar').style.display = 'none';
-    document.getElementById('tfFilterRow').style.display = 'none';
-    document.getElementById('tfResults').innerHTML = '';
-    return;
-  }
-
-  noRoster.style.display = 'none';
-  label.textContent = '(' + (tmNameA || abbr) + ')';
-
-  // Build player chips from Side A roster
-  listEl.innerHTML = '';
-  tmRosterA.forEach((p, idx) => {
-    const chip = document.createElement('span');
-    chip.className = 'tf-player-chip';
-    chip.dataset.idx = idx;
-    const sal = p.year1 || 0;
-    chip.innerHTML = `<span class="tf-rp-pos">${p.pos||''}</span>${p.name} <span class="tf-chip-salary">${tfFmt(sal)}</span>`;
-    chip.onclick = () => tfTogglePlayer(idx, p, chip);
-    listEl.appendChild(chip);
-  });
-
-  document.getElementById('tfWindowBar').style.display = 'none';
-  document.getElementById('tfFilterRow').style.display = 'none';
-  document.getElementById('tfResults').innerHTML = '';
+  const btn = document.getElementById('tfToggleBtn');
+  btn.style.background = '';
+  btn.style.borderColor = '#1e3a5f';
+  btn.style.color = '#60a5fa';
+  document.getElementById('tfResultsPanel').style.display = 'none';
+  document.getElementById('tfTeamBContent').style.display = '';
+  document.getElementById('tfTeamBTotals').style.display = '';
+  document.getElementById('tfTeamBCapRow').style.display = '';
+  // un-highlight all player rows
+  document.querySelectorAll('#tmPlayerListA .tf-row-selected').forEach(r => r.classList.remove('tf-row-selected'));
 }
 
-function tfTogglePlayer(idx, player, chip) {
+function tfInitPlayers() {
+  // highlight is done via row click — no separate player list needed
+  // just clear prior selection and results
+  tfSelected = [];
+  document.querySelectorAll('#tmPlayerListA .tf-row-selected').forEach(r => r.classList.remove('tf-row-selected'));
+  document.getElementById('tfResults').innerHTML = '<div class="tf-empty">Select players on the left to find matches.</div>';
+  document.getElementById('tfOutTotal').textContent = '—';
+  document.getElementById('tfWindowMin').textContent = '—';
+  document.getElementById('tfWindowMax').textContent = '—';
+  document.getElementById('tfResultCount').textContent = '';
+}
+
+function tfTogglePlayer(idx, player, rowEl) {
+  if (!tfOpen) return;
   const sal = player.year1 || 0;
   if (!sal) return;
   const existing = tfSelected.findIndex(p => p._idx === idx);
   if (existing >= 0) {
     tfSelected.splice(existing, 1);
-    chip.classList.remove('selected');
+    rowEl.classList.remove('tf-row-selected');
   } else {
-    tfSelected.push({...player, _idx: idx, salary: sal});
-    chip.classList.add('selected');
+    tfSelected.push({name: player.name, pos: player.pos, salary: sal, _idx: idx});
+    rowEl.classList.add('tf-row-selected');
   }
   tfUpdateWindow();
 }
 
 function tfUpdateWindow() {
   const total = tfSelected.reduce((s, p) => s + p.salary, 0);
-  const tol = parseFloat(document.getElementById('tfTolerance').value);
+  const tol = 0.25;
   const wb = document.getElementById('tfWindowBar');
   const fr = document.getElementById('tfFilterRow');
   if (!total || tfSelected.length === 0) {
@@ -5401,7 +5401,7 @@ let tfLastResults = [];
 async function tfRun() {
   if (!tfSelected.length) return;
   const outTotal = tfSelected.reduce((s, p) => s + p.salary, 0);
-  const tol = parseFloat(document.getElementById('tfTolerance').value);
+  const tol = 0.25;
   const minIn = outTotal * (1 - tol);
   const maxIn = outTotal * (1 + tol);
   const outAbbr = tmGetSideAbbr('A');
@@ -5492,7 +5492,7 @@ function tfRenderResults(matches) {
   countEl.textContent = filtered.length + ' match' + (filtered.length !== 1 ? 'es' : '') + ' found';
 
   if (!filtered.length) {
-    resultsEl.innerHTML = '<div class="tf-empty">No salary matches found. Try widening the tolerance.</div>';
+    resultsEl.innerHTML = '<div class="tf-empty">No salary matches found within the trade threshold.</div>';
     return;
   }
 
@@ -5532,13 +5532,11 @@ function tfRenderResults(matches) {
 }
 
 async function tfLoadInTM(abbr, teamUrl) {
-  // Set Side B to this team and load
+  tfClose();
   const url = TM_BASE + teamUrl;
   document.getElementById('tmSelectB').value = url;
   highlightLogoGrid('tmLogoGridB', url);
   await loadTMTeam('B');
-  // Scroll to the trade machine columns
-  document.getElementById('tfPanel').scrollIntoView({behavior:'smooth', block:'start'});
 }
 // ── End Trade Finder ──────────────────────────────────────────────────────────
 async function tmSaveLeagueYear() {
