@@ -1643,6 +1643,11 @@
             <button onclick="tfClose()" style="font-size:0.67rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
           </div>
 
+          <!-- Team B player picker (shown when TF opened from Team B side) -->
+          <div id="tfBSection" style="display:none;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #1e293b;">
+            <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.08em;color:#64748b;text-transform:uppercase;margin-bottom:6px;">Select a player to find combos from your team:</div>
+            <div id="tfBPlayerList" style="display:flex;flex-direction:column;gap:3px;max-height:160px;overflow-y:auto;"></div>
+          </div>
           <div id="tfWindowBar" class="tf-window-bar" style="display:none;">
             Outgoing: <strong id="tfOutTotal">—</strong>
             &nbsp;·&nbsp; Window: <strong id="tfWindowMin">—</strong>–<strong id="tfWindowMax">—</strong>
@@ -1650,7 +1655,7 @@
           <div id="tfFilterRow" style="margin-bottom:8px;">
             <span id="tfResultCount" style="font-size:0.67rem;color:#64748b;"></span>
           </div>
-          <div id="tfResults" class="tf-results"><div class="tf-empty">Select players on the left to find matches, or pick from the list above to find what to send.</div></div>
+          <div id="tfResults" class="tf-results"><div class="tf-empty">Select players on the left to find matches.</div></div>
         </div>
         <!-- Normal Team B content -->
         <div id="tfTeamBContent">
@@ -5331,6 +5336,7 @@ function tfToggleFromB() {
   document.getElementById('tfTeamBTotals').style.display = 'none';
   document.getElementById('tfTeamBCapRow').style.display = 'none';
   tfInitPlayers();
+  tfRenderBIncoming();
 }
 
 function tfToggle() {
@@ -5376,10 +5382,12 @@ function tfInitPlayers() {
     if (cb) cb.checked = false;
   });
   document.getElementById('tfWindowBar').style.display = 'none';
+  document.getElementById('tfBSection').style.display = 'none';
   document.getElementById('tfOutTotal').textContent = '—';
   document.getElementById('tfWindowMin').textContent = '—';
   document.getElementById('tfWindowMax').textContent = '—';
   document.getElementById('tfResultCount').textContent = '';
+  document.getElementById('tfResults').innerHTML = '<div class="tf-empty">Select players on the left to find matches.</div>';
 }
 
 function tfTogglePlayer(idx, player, rowEl) {
