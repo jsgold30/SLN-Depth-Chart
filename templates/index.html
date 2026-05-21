@@ -1061,7 +1061,7 @@
     .tf-filter-row { display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:12px; }
     .tf-filter-btn { background:#1e293b; border:1px solid #334155; color:#64748b; font-size:0.67rem; padding:3px 9px; border-radius:5px; cursor:pointer; }
     .tf-filter-btn.active { background:#1e3a5f; border-color:#2563eb; color:#60a5fa; }
-    .tf-results { display:flex; flex-direction:column; gap:8px; }
+    .tf-results { display:flex; flex-direction:column; gap:8px; max-height:60vh; overflow-y:auto; padding-right:2px; }
     .tf-result-card { background:#111827; border:1px solid #1e293b; border-radius:8px; padding:10px 12px; display:flex; align-items:flex-start; gap:12px; cursor:pointer; transition:border-color 0.15s; }
     .tf-result-card:hover { border-color:#334155; }
     .tf-result-card.tf-best { border-color:#16a34a; }
@@ -5505,15 +5505,16 @@ function tfRenderResults(matches) {
     filtered = matches.filter(m => m.players.some(p => p.pos === tfPosFilter));
   }
 
-  countEl.textContent = filtered.length + ' match' + (filtered.length !== 1 ? 'es' : '') + ' found';
-
   if (!filtered.length) {
+    countEl.textContent = '0 matches found';
     resultsEl.innerHTML = '<div class="tf-empty">No salary matches found within the trade threshold.</div>';
     return;
   }
 
-  // Show top 20
   const show = filtered.slice(0, 20);
+  countEl.textContent = filtered.length > 20
+    ? `Top 20 of ${filtered.length} matches`
+    : filtered.length + ' match' + (filtered.length !== 1 ? 'es' : '') + ' found';
   resultsEl.innerHTML = '';
   show.forEach((m, i) => {
     const card = document.createElement('div');
