@@ -1081,6 +1081,9 @@
     .tf-delta { font-size:0.67rem; color:#64748b; }
     .tf-load-btn { margin-left:auto; background:#1d4ed8; border:none; color:#fff; font-size:0.65rem; padding:3px 10px; border-radius:5px; cursor:pointer; white-space:nowrap; font-weight:600; }
     .tf-load-btn:hover { background:#2563eb; }
+    .tf-b-chip { display:flex; justify-content:space-between; align-items:center; background:#1e293b; border:1px solid #334155; color:#e2e8f0; font-size:0.7rem; padding:4px 8px; border-radius:5px; cursor:pointer; text-align:left; width:100%; }
+    .tf-b-chip:hover { border-color:#475569; background:#243447; }
+    .tf-b-chip.selected { background:#1e3a5f; border-color:#2563eb; color:#93c5fd; }
     .tf-empty { font-size:0.75rem; color:#475569; text-align:center; padding:16px 0; }
     .tf-loading { font-size:0.73rem; color:#64748b; padding:10px 0; display:flex; align-items:center; gap:8px; }
     @keyframes tf-spin { to { transform:rotate(360deg); } }
@@ -1639,14 +1642,19 @@
             <span style="font-size:0.72rem;font-weight:700;color:#60a5fa;">🔍 Trade Finder Results</span>
             <button onclick="tfClose()" style="font-size:0.67rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
           </div>
-          <div id="tfWindowBar" class="tf-window-bar">
+          <!-- Team B reverse lookup section -->
+          <div id="tfBSection" style="display:none;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #1e293b;">
+            <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.08em;color:#64748b;text-transform:uppercase;margin-bottom:6px;">Find combos to get:</div>
+            <div id="tfBPlayerList" style="display:flex;flex-direction:column;gap:3px;max-height:160px;overflow-y:auto;"></div>
+          </div>
+          <div id="tfWindowBar" class="tf-window-bar" style="display:none;">
             Outgoing: <strong id="tfOutTotal">—</strong>
             &nbsp;·&nbsp; Window: <strong id="tfWindowMin">—</strong>–<strong id="tfWindowMax">—</strong>
           </div>
           <div id="tfFilterRow" style="margin-bottom:8px;">
             <span id="tfResultCount" style="font-size:0.67rem;color:#64748b;"></span>
           </div>
-          <div id="tfResults" class="tf-results"></div>
+          <div id="tfResults" class="tf-results"><div class="tf-empty">Select players on the left to find matches, or pick from the list above to find what to send.</div></div>
         </div>
         <!-- Normal Team B content -->
         <div id="tfTeamBContent">
@@ -3888,7 +3896,7 @@ async function loadTMTeam(side) {
 
     const teamName = (data.team_name || (side === 'A' ? 'Team A' : 'Team B')).replace(/\s*Roster$/i, '').trim();
     if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; tfShowButton(true); }
-    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; }
+    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; if (tfOpen) tfRenderBIncoming(); }
 
     const nameEl = document.getElementById(`tmTeamName${side}`);
     nameEl.textContent = teamName;
@@ -5322,6 +5330,7 @@ function tfToggle() {
   document.getElementById('tfTeamBTotals').style.display = 'none';
   document.getElementById('tfTeamBCapRow').style.display = 'none';
   tfInitPlayers();
+  tfRenderBIncoming();
 }
 
 function tfClose() {
@@ -5335,16 +5344,22 @@ function tfClose() {
   document.getElementById('tfTeamBContent').style.display = '';
   document.getElementById('tfTeamBTotals').style.display = '';
   document.getElementById('tfTeamBCapRow').style.display = '';
-  // un-highlight all player rows
-  document.querySelectorAll('#tmPlayerListA .tf-row-selected').forEach(r => r.classList.remove('tf-row-selected'));
+  // un-highlight and uncheck all selected rows
+  document.querySelectorAll('#tmPlayerListA .tf-row-selected').forEach(r => {
+    r.classList.remove('tf-row-selected');
+    const cb = r.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = false;
+  });
 }
 
 function tfInitPlayers() {
-  // highlight is done via row click — no separate player list needed
-  // just clear prior selection and results
   tfSelected = [];
-  document.querySelectorAll('#tmPlayerListA .tf-row-selected').forEach(r => r.classList.remove('tf-row-selected'));
-  document.getElementById('tfResults').innerHTML = '<div class="tf-empty">Select players on the left to find matches.</div>';
+  document.querySelectorAll('#tmPlayerListA .tf-row-selected').forEach(r => {
+    r.classList.remove('tf-row-selected');
+    const cb = r.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = false;
+  });
+  document.getElementById('tfWindowBar').style.display = 'none';
   document.getElementById('tfOutTotal').textContent = '—';
   document.getElementById('tfWindowMin').textContent = '—';
   document.getElementById('tfWindowMax').textContent = '—';
@@ -5355,13 +5370,18 @@ function tfTogglePlayer(idx, player, rowEl) {
   if (!tfOpen) return;
   const sal = player.year1 || 0;
   if (!sal) return;
+  // Clear any Team B chip selection
+  document.querySelectorAll('#tfBPlayerList .tf-b-chip.selected').forEach(c => c.classList.remove('selected'));
+  const cb = rowEl.querySelector('input[type="checkbox"]');
   const existing = tfSelected.findIndex(p => p._idx === idx);
   if (existing >= 0) {
     tfSelected.splice(existing, 1);
     rowEl.classList.remove('tf-row-selected');
+    if (cb) cb.checked = false;
   } else {
     tfSelected.push({name: player.name, pos: player.pos, salary: sal, _idx: idx});
     rowEl.classList.add('tf-row-selected');
+    if (cb) cb.checked = true;
   }
   tfUpdateWindow();
 }
@@ -5520,7 +5540,7 @@ function tfRenderResults(matches) {
         <div class="tf-result-meta">
           <span class="tf-match-badge ${badgeClass}">${badgeLabel}</span>
           <span class="tf-delta">${tfFmt(m.total)} incoming</span>
-          <button class="tf-load-btn" onclick="tfLoadInTM('${m.team.abbr}',${JSON.stringify(m.team.url)})">Load in TM →</button>
+          <button class="tf-load-btn" onclick="tfLoadInTM('${m.team.abbr}','${m.team.url}')">Load in TM →</button>
         </div>
       </div>`;
     resultsEl.appendChild(card);
@@ -5528,11 +5548,82 @@ function tfRenderResults(matches) {
 }
 
 async function tfLoadInTM(abbr, teamUrl) {
-  tfClose();
   const url = TM_BASE + teamUrl;
+  // Keep TF open but show Team B content temporarily for the load
+  document.getElementById('tfTeamBContent').style.display = '';
+  document.getElementById('tfTeamBTotals').style.display = '';
+  document.getElementById('tfTeamBCapRow').style.display = '';
+  document.getElementById('tfResultsPanel').style.display = 'none';
+  // Add a "Back to Trade Finder" button in TM header area
+  let backBtn = document.getElementById('tfBackBtn');
+  if (!backBtn) {
+    backBtn = document.createElement('button');
+    backBtn.id = 'tfBackBtn';
+    backBtn.style.cssText = 'font-size:0.67rem;padding:3px 10px;background:#1e293b;color:#60a5fa;border:1px solid #1e3a5f;border-radius:6px;cursor:pointer;margin-bottom:8px;';
+    backBtn.textContent = '← Back to Trade Finder';
+    backBtn.onclick = () => {
+      document.getElementById('tfBackBtn').remove();
+      document.getElementById('tfResultsPanel').style.display = '';
+      document.getElementById('tfTeamBContent').style.display = 'none';
+      document.getElementById('tfTeamBTotals').style.display = 'none';
+      document.getElementById('tfTeamBCapRow').style.display = 'none';
+    };
+    document.getElementById('tfTeamBContent').before(backBtn);
+  }
   document.getElementById('tmSelectB').value = url;
   highlightLogoGrid('tmLogoGridB', url);
   await loadTMTeam('B');
+}
+
+function tfRenderBIncoming() {
+  const section = document.getElementById('tfBSection');
+  const listEl = document.getElementById('tfBPlayerList');
+  if (!tmRosterB || !tmRosterB.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  listEl.innerHTML = '';
+  [...tmRosterB].sort((a, b) => b.salary - a.salary).forEach(p => {
+    if (!p.salary) return;
+    const chip = document.createElement('button');
+    chip.className = 'tf-b-chip';
+    chip.innerHTML = `<span>${p.name}</span><span style="color:#4ade80;margin-left:6px;">${tfFmt(p.salary)}</span>`;
+    chip.onclick = () => tfSelectFromB(p, chip);
+    listEl.appendChild(chip);
+  });
+}
+
+function tfSelectFromB(player, chipEl) {
+  if (!tmRosterA || !tmRosterA.length) return;
+  // Clear Team A selections
+  tfSelected = [];
+  document.querySelectorAll('#tmPlayerListA .tf-row-selected').forEach(r => {
+    r.classList.remove('tf-row-selected');
+    const cb = r.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = false;
+  });
+  // Highlight clicked chip
+  document.querySelectorAll('#tfBPlayerList .tf-b-chip').forEach(c => c.classList.remove('selected'));
+  chipEl.classList.add('selected');
+  // Update window bar
+  const tol = 0.25;
+  const minIn = player.salary * (1 - tol);
+  const maxIn = player.salary * (1 + tol);
+  const wb = document.getElementById('tfWindowBar');
+  wb.style.display = '';
+  document.getElementById('tfOutTotal').textContent = tfFmt(player.salary);
+  document.getElementById('tfWindowMin').textContent = tfFmt(minIn);
+  document.getElementById('tfWindowMax').textContent = tfFmt(maxIn);
+  // Find combos from Team A
+  const aRoster = (tmRosterA || []).map(p => ({name: p.name, pos: '', salary: p.salary || 0})).filter(p => p.salary > 0);
+  const combos = tfFindCombos(aRoster, minIn, maxIn);
+  const inAbbr = tmGetSideAbbr('A');
+  const aTeam = TM_TEAMS.find(t => t.abbr === inAbbr) || {name: tmNameA, abbr: inAbbr || 'YR', url: '', c1: '#1e293b', c2: '#334155'};
+  const matches = combos.map(combo => {
+    const total = combo.reduce((s, p) => s + p.salary, 0);
+    return {team: aTeam, players: combo, total, delta: total - player.salary};
+  }).sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
+  document.getElementById('tfResultCount').textContent = matches.length + ' combo' + (matches.length !== 1 ? 's' : '') + ' found';
+  tfLastResults = matches;
+  tfRenderResults(matches);
 }
 // ── End Trade Finder ──────────────────────────────────────────────────────────
 async function tmSaveLeagueYear() {
