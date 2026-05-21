@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade Finder Mockup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0f1e; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; padding: 20px; }
+
+  h2 { color: #94a3b8; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+
+  .card { background: #111827; border: 1px solid #1e293b; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+
+  /* ── Option A: Inline panel inside existing TM ── */
+  .option-label { font-size: 0.65rem; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; font-weight: 700; }
+
+  .tm-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .tm-title { font-size: 0.75rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.1em; text-transform: uppercase; }
+  .btn-finder { background: #1e3a5f; border: 1px solid #2563eb; color: #60a5fa; font-size: 0.72rem; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+  .btn-finder:hover { background: #1d4ed8; color: #fff; }
+  .btn-finder.active { background: #1d4ed8; border-color: #3b82f6; color: #fff; }
+
+  /* Outgoing selector */
+  .finder-panel { background: #0d1829; border: 1px solid #1e3a5f; border-radius: 10px; padding: 14px; margin-top: 12px; }
+  .finder-section-label { font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .player-chip { display: inline-flex; align-items: center; gap: 6px; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 4px 10px; margin: 3px; font-size: 0.74rem; }
+  .player-chip .salary { color: #4ade80; font-size: 0.68rem; }
+  .player-chip .rm { color: #64748b; cursor: pointer; margin-left: 4px; }
+  .player-chip.selected { border-color: #2563eb; background: #1e3a5f; }
+
+  .salary-range { display: flex; align-items: center; gap: 8px; margin: 10px 0 14px; font-size: 0.72rem; color: #94a3b8; }
+  .salary-range strong { color: #fbbf24; }
+
+  /* Results */
+  .results-grid { display: flex; flex-direction: column; gap: 10px; }
+  .result-card { background: #111827; border: 1px solid #1e293b; border-radius: 8px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 14px; cursor: pointer; transition: border-color 0.15s; }
+  .result-card:hover { border-color: #2563eb; }
+  .result-card.best { border-color: #16a34a; }
+  .team-logo-sm { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #1d4ed8, #7c3aed); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; font-weight: 800; color: #fff; }
+  .result-body { flex: 1; min-width: 0; }
+  .result-team { font-size: 0.8rem; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+  .result-players { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+  .rp-chip { background: #1e293b; border-radius: 4px; padding: 2px 7px; font-size: 0.68rem; color: #cbd5e1; }
+  .rp-chip .pos { color: #38bdf8; margin-right: 3px; font-size: 0.62rem; font-weight: 700; }
+  .result-meta { display: flex; align-items: center; gap: 10px; }
+  .match-badge { font-size: 0.64rem; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+  .match-badge.exact { background: #14532d; color: #4ade80; }
+  .match-badge.close { background: #451a03; color: #fb923c; }
+  .match-badge.over { background: #3b0764; color: #c084fc; }
+  .salary-delta { font-size: 0.68rem; color: #94a3b8; }
+  .result-total { font-size: 0.72rem; color: #4ade80; font-weight: 600; margin-left: auto; white-space: nowrap; }
+  .best-tag { font-size: 0.6rem; background: #14532d; color: #4ade80; border-radius: 3px; padding: 1px 5px; font-weight: 700; }
+
+  .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .filter-btn { background: #1e293b; border: 1px solid #334155; color: #94a3b8; font-size: 0.68rem; padding: 3px 10px; border-radius: 5px; cursor: pointer; }
+  .filter-btn.active { background: #1e3a5f; border-color: #2563eb; color: #60a5fa; }
+  .results-count { font-size: 0.7rem; color: #64748b; margin-left: auto; }
+
+  /* ── Option B: Modal / Drawer ── */
+  .modal-bg { background: #0a0f1e; border: 2px solid #1e293b; border-radius: 14px; padding: 0; overflow: hidden; }
+  .modal-header { background: #111827; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1e293b; }
+  .modal-title { font-size: 0.85rem; font-weight: 700; color: #f1f5f9; }
+  .modal-close { color: #64748b; font-size: 0.75rem; cursor: pointer; background: none; border: none; }
+  .modal-body { padding: 16px 18px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .col-label { font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .outgoing-list { min-height: 60px; background: #0d1829; border: 1px dashed #334155; border-radius: 7px; padding: 8px; }
+  .outgoing-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 6px; border-radius: 5px; }
+  .outgoing-row:hover { background: #1e293b; }
+  .out-name { font-size: 0.76rem; font-weight: 600; }
+  .out-salary { font-size: 0.7rem; color: #4ade80; }
+  .out-rm { color: #475569; cursor: pointer; font-size: 0.72rem; }
+  .cap-summary { background: #0d1829; border-radius: 7px; padding: 8px 10px; margin-top: 10px; display: flex; gap: 16px; }
+  .cap-item { font-size: 0.7rem; }
+  .cap-item span { color: #94a3b8; }
+  .cap-item strong { color: #fbbf24; display: block; font-size: 0.82rem; }
+
+  .divider { border: none; border-top: 1px solid #1e293b; margin: 14px 0; }
+
+  /* ── Option C: Side-by-side with team column ── */
+  .finder-col-layout { display: grid; grid-template-columns: 200px 1fr; gap: 0; border: 1px solid #1e293b; border-radius: 10px; overflow: hidden; }
+  .team-col { background: #0d1829; border-right: 1px solid #1e293b; padding: 10px; }
+  .team-col-title { font-size: 0.62rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .team-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 0.74rem; }
+  .team-row:hover { background: #1e293b; }
+  .team-row.has-match { color: #f1f5f9; }
+  .team-row.no-match { color: #475569; }
+  .team-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .team-dot.green { background: #4ade80; }
+  .team-dot.yellow { background: #fbbf24; }
+  .team-dot.gray { background: #334155; }
+  .matches-col { padding: 10px 14px; background: #111827; }
+  .match-row { padding: 8px 0; border-bottom: 1px solid #1e293b; display: flex; align-items: center; gap: 10px; }
+  .match-row:last-child { border-bottom: none; }
+
+  .spacer { height: 24px; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- OPTION A: Inline panel that slides open in the TM card  -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="card">
+  <div class="option-label">Option A — Inline Finder Panel (inside Trade Machine)</div>
+  <div class="tm-header">
+    <span class="tm-title">Trade Machine</span>
+    <button class="btn-finder active">🔍 Trade Finder</button>
+  </div>
+
+  <div class="finder-panel">
+    <div class="finder-section-label">Sending out (SAS)</div>
+    <div style="margin-bottom:10px;">
+      <span class="player-chip selected">Victor Wembanyama <span class="salary">$14.2M</span><span class="rm">✕</span></span>
+      <span class="player-chip selected">Keldon Johnson <span class="salary">$10.1M</span><span class="rm">✕</span></span>
+      <span style="font-size:0.68rem;color:#475569;margin-left:6px;">+ Add player</span>
+    </div>
+
+    <div class="salary-range">
+      Outgoing total: <strong>$24.3M</strong>
+      &nbsp;·&nbsp; Match window: <strong>$20.7M – $30.5M</strong>
+    </div>
+
+    <div class="filter-row">
+      <span style="font-size:0.68rem;color:#64748b;">Show:</span>
+      <button class="filter-btn active">All</button>
+      <button class="filter-btn">Exact match</button>
+      <button class="filter-btn">Under cap</button>
+      <button class="filter-btn">PG</button>
+      <button class="filter-btn">SG</button>
+      <button class="filter-btn">SF</button>
+      <span class="results-count">12 matches found</span>
+    </div>
+
+    <div class="finder-section-label">Matching teams</div>
+    <div class="results-grid">
+
+      <div class="result-card best">
+        <div class="team-logo-sm">LAL</div>
+        <div class="result-body">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <span class="result-team">Los Angeles Lakers</span>
+            <span class="best-tag">BEST MATCH</span>
+          </div>
+          <div class="result-players">
+            <span class="rp-chip"><span class="pos">PG</span>D'Angelo Russell $17.6M</span>
+            <span class="rp-chip"><span class="pos">SF</span>Jarred Vanderbilt $6.7M</span>
+          </div>
+          <div class="result-meta">
+            <span class="match-badge exact">Exact</span>
+            <span class="salary-delta">Incoming $24.3M · Δ $0</span>
+            <span class="result-total">$24.3M</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="team-logo-sm">GSW</div>
+        <div class="result-body">
+          <div class="result-team" style="margin-bottom:4px;">Golden State Warriors</div>
+          <div class="result-players">
+            <span class="rp-chip"><span class="pos">SG</span>Klay Thompson $21.9M</span>
+          </div>
+          <div class="result-meta">
+            <span class="match-badge close">–$2.4M</span>
+            <span class="salary-delta">Incoming $21.9M · Δ –$2.4M</span>
+            <span class="result-total">$21.9M</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="team-logo-sm">MIA</div>
+        <div class="result-body">
+          <div class="result-team" style="margin-bottom:4px;">Miami Heat</div>
+          <div class="result-players">
+            <span class="rp-chip"><span class="pos">PF</span>Jimmy Butler $28.0M</span>
+          </div>
+          <div class="result-meta">
+            <span class="match-badge over">+$3.7M</span>
+            <span class="salary-delta">Incoming $28.0M · Δ +$3.7M</span>
+            <span class="result-total">$28.0M</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="team-logo-sm">CHI</div>
+        <div class="result-body">
+          <div class="result-team" style="margin-bottom:4px;">Chicago Bulls</div>
+          <div class="result-players">
+            <span class="rp-chip"><span class="pos">PG</span>Zach LaVine $19.5M</span>
+            <span class="rp-chip"><span class="pos">C</span>Nikola Vucevic $7.0M</span>
+          </div>
+          <div class="result-meta">
+            <span class="match-badge close">–$1.8M</span>
+            <span class="salary-delta">Incoming $26.5M · Δ +$2.2M</span>
+            <span class="result-total">$26.5M</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="spacer"></div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- OPTION B: Modal / drawer overlay                        -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="card">
+  <div class="option-label">Option B — Modal / Drawer Overlay</div>
+
+  <div class="modal-bg">
+    <div class="modal-header">
+      <span class="modal-title">🔍 Trade Finder</span>
+      <button class="modal-close">✕ Close</button>
+    </div>
+    <div class="modal-body">
+      <div class="two-col">
+        <div>
+          <div class="col-label">Players going out (SAS)</div>
+          <div class="outgoing-list">
+            <div class="outgoing-row">
+              <div>
+                <span class="out-name">Victor Wembanyama</span>
+                <span style="font-size:0.62rem;color:#38bdf8;margin-left:5px;">C</span>
+              </div>
+              <span class="out-salary">$14.2M <span class="out-rm">✕</span></span>
+            </div>
+            <div class="outgoing-row">
+              <div>
+                <span class="out-name">Keldon Johnson</span>
+                <span style="font-size:0.62rem;color:#38bdf8;margin-left:5px;">SF</span>
+              </div>
+              <span class="out-salary">$10.1M <span class="out-rm">✕</span></span>
+            </div>
+          </div>
+          <div class="cap-summary" style="margin-top:8px;">
+            <div class="cap-item"><span>Outgoing</span><strong>$24.3M</strong></div>
+            <div class="cap-item"><span>Min. return</span><strong>$20.7M</strong></div>
+            <div class="cap-item"><span>Max. return</span><strong>$30.5M</strong></div>
+          </div>
+        </div>
+        <div>
+          <div class="col-label">Tolerance</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <label style="font-size:0.72rem;color:#94a3b8;">Match window <span style="color:#fbbf24;">± 25%</span></label>
+            <input type="range" min="0" max="50" value="25" style="width:100%;accent-color:#2563eb;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="filter-btn active">Any position</button>
+              <button class="filter-btn">PG/SG</button>
+              <button class="filter-btn">Wings</button>
+              <button class="filter-btn">Bigs</button>
+            </div>
+            <button style="background:#1d4ed8;border:none;color:#fff;padding:7px 16px;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;margin-top:4px;">Find Trades →</button>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div style="font-size:0.65rem;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">Results — 12 matching combinations</div>
+      <div class="results-grid">
+        <div class="result-card best">
+          <div class="team-logo-sm">LAL</div>
+          <div class="result-body">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+              <span class="result-team">Los Angeles Lakers</span>
+              <span class="best-tag">BEST MATCH</span>
+            </div>
+            <div class="result-players">
+              <span class="rp-chip"><span class="pos">PG</span>D'Angelo Russell $17.6M</span>
+              <span class="rp-chip"><span class="pos">SF</span>Jarred Vanderbilt $6.7M</span>
+            </div>
+            <div class="result-meta">
+              <span class="match-badge exact">Exact</span>
+              <span class="salary-delta">$24.3M incoming · Δ $0</span>
+              <button style="margin-left:auto;background:#1d4ed8;border:none;color:#fff;font-size:0.66rem;padding:3px 10px;border-radius:4px;cursor:pointer;">Load in TM →</button>
+            </div>
+          </div>
+        </div>
+        <div class="result-card">
+          <div class="team-logo-sm">GSW</div>
+          <div class="result-body">
+            <div class="result-team" style="margin-bottom:4px;">Golden State Warriors</div>
+            <div class="result-players">
+              <span class="rp-chip"><span class="pos">SG</span>Klay Thompson $21.9M</span>
+            </div>
+            <div class="result-meta">
+              <span class="match-badge close">–$2.4M</span>
+              <span class="salary-delta">$21.9M incoming</span>
+              <button style="margin-left:auto;background:#1e293b;border:1px solid #334155;color:#94a3b8;font-size:0.66rem;padding:3px 10px;border-radius:4px;cursor:pointer;">Load in TM →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="spacer"></div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- OPTION C: Team sidebar + results column                 -->
+<!-- ════════════════════════════════════════════════════════ -->
+<div class="card">
+  <div class="option-label">Option C — Team List Sidebar + Match Details</div>
+  <div style="font-size:0.72rem;color:#94a3b8;margin-bottom:12px;">
+    Sending: <strong style="color:#fff;">Wembanyama $14.2M + Keldon $10.1M = $24.3M</strong>
+    &nbsp;·&nbsp; Window: $20.7M – $30.5M
+  </div>
+  <div class="finder-col-layout">
+    <div class="team-col">
+      <div class="team-col-title">Teams (29)</div>
+      <div class="team-row has-match" style="background:#1e3a5f;">
+        <div class="team-dot green"></div>LAL <span style="margin-left:auto;font-size:0.62rem;color:#4ade80;">$24.3M</span>
+      </div>
+      <div class="team-row has-match">
+        <div class="team-dot green"></div>CHI <span style="margin-left:auto;font-size:0.62rem;color:#4ade80;">$26.5M</span>
+      </div>
+      <div class="team-row has-match">
+        <div class="team-dot yellow"></div>MIA <span style="margin-left:auto;font-size:0.62rem;color:#fbbf24;">$28.0M</span>
+      </div>
+      <div class="team-row has-match">
+        <div class="team-dot yellow"></div>GSW <span style="margin-left:auto;font-size:0.62rem;color:#fbbf24;">$21.9M</span>
+      </div>
+      <div class="team-row no-match">
+        <div class="team-dot gray"></div>BOS
+      </div>
+      <div class="team-row no-match">
+        <div class="team-dot gray"></div>DEN
+      </div>
+      <div class="team-row no-match">
+        <div class="team-dot gray"></div>PHX
+      </div>
+      <div style="font-size:0.6rem;color:#475569;padding:6px 8px;">+22 no match</div>
+    </div>
+    <div class="matches-col">
+      <div style="font-size:0.78rem;font-weight:700;margin-bottom:10px;">Los Angeles Lakers <span class="best-tag" style="margin-left:6px;">BEST</span></div>
+      <div class="match-row">
+        <div style="flex:1;">
+          <div style="font-size:0.72rem;font-weight:600;">D'Angelo Russell</div>
+          <div style="font-size:0.65rem;color:#64748b;">PG · $17.6M</div>
+        </div>
+        <div style="font-size:0.65rem;color:#94a3b8;"></div>
+      </div>
+      <div class="match-row">
+        <div style="flex:1;">
+          <div style="font-size:0.72rem;font-weight:600;">Jarred Vanderbilt</div>
+          <div style="font-size:0.65rem;color:#64748b;">SF · $6.7M</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:0.72rem;color:#4ade80;font-weight:700;">Total: $24.3M</span>
+        <span class="match-badge exact">Exact match</span>
+        <button style="margin-left:auto;background:#1d4ed8;border:none;color:#fff;font-size:0.7rem;padding:5px 14px;border-radius:6px;cursor:pointer;font-weight:600;">Load in TM →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

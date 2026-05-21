@@ -1047,6 +1047,44 @@
     .dc-queue-rm   { background: none; border: none; color: #475569; cursor: pointer; padding: 0 2px; font-size: 0.9rem; line-height: 1; flex-shrink: 0; }
     .dc-queue-rm:hover { color: #f87171; }
     .dc-queue-item.dq-over { border-top: 2px solid #0ea5e9; }
+    /* ── Trade Finder ─────────────────────────────────────────────────────── */
+    .tf-panel { background:#0a111e; border:1px solid #1e3a5f; border-radius:10px; padding:14px; margin-bottom:14px; }
+    .tf-section-label { font-size:0.63rem; color:#64748b; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:7px; font-weight:600; }
+    .tf-player-list { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px; min-height:28px; }
+    .tf-player-chip { display:inline-flex; align-items:center; gap:5px; background:#1e293b; border:1px solid #334155; border-radius:6px; padding:4px 9px; font-size:0.72rem; cursor:pointer; user-select:none; }
+    .tf-player-chip.selected { background:#1e3a5f; border-color:#2563eb; color:#93c5fd; }
+    .tf-player-chip .tf-chip-salary { color:#4ade80; font-size:0.67rem; }
+    .tf-player-chip .tf-chip-rm { color:#475569; margin-left:3px; font-size:0.8rem; }
+    .tf-window-bar { display:flex; align-items:center; gap:8px; font-size:0.71rem; color:#94a3b8; margin:8px 0 12px; flex-wrap:wrap; }
+    .tf-window-bar strong { color:#fbbf24; }
+    .tf-filter-row { display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:12px; }
+    .tf-filter-btn { background:#1e293b; border:1px solid #334155; color:#64748b; font-size:0.67rem; padding:3px 9px; border-radius:5px; cursor:pointer; }
+    .tf-filter-btn.active { background:#1e3a5f; border-color:#2563eb; color:#60a5fa; }
+    .tf-results { display:flex; flex-direction:column; gap:8px; }
+    .tf-result-card { background:#111827; border:1px solid #1e293b; border-radius:8px; padding:10px 12px; display:flex; align-items:flex-start; gap:12px; cursor:pointer; transition:border-color 0.15s; }
+    .tf-result-card:hover { border-color:#334155; }
+    .tf-result-card.tf-best { border-color:#16a34a; }
+    .tf-result-logo { width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.52rem; font-weight:800; color:#fff; overflow:hidden; }
+    .tf-result-logo img { width:100%; height:100%; object-fit:contain; }
+    .tf-result-body { flex:1; min-width:0; }
+    .tf-result-team { font-size:0.78rem; font-weight:700; color:#f1f5f9; margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+    .tf-best-tag { font-size:0.58rem; background:#14532d; color:#4ade80; border-radius:3px; padding:1px 5px; font-weight:700; }
+    .tf-result-players { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:5px; }
+    .tf-rp-chip { background:#1e293b; border-radius:4px; padding:2px 7px; font-size:0.67rem; color:#cbd5e1; }
+    .tf-rp-pos { color:#38bdf8; margin-right:3px; font-size:0.6rem; font-weight:700; }
+    .tf-result-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .tf-match-badge { font-size:0.62rem; padding:2px 6px; border-radius:4px; font-weight:600; }
+    .tf-match-exact { background:#14532d; color:#4ade80; }
+    .tf-match-under { background:#1c1917; color:#fb923c; }
+    .tf-match-over  { background:#2e1065; color:#c084fc; }
+    .tf-delta { font-size:0.67rem; color:#64748b; }
+    .tf-load-btn { margin-left:auto; background:#1d4ed8; border:none; color:#fff; font-size:0.65rem; padding:3px 10px; border-radius:5px; cursor:pointer; white-space:nowrap; font-weight:600; }
+    .tf-load-btn:hover { background:#2563eb; }
+    .tf-empty { font-size:0.75rem; color:#475569; text-align:center; padding:16px 0; }
+    .tf-loading { font-size:0.73rem; color:#64748b; padding:10px 0; display:flex; align-items:center; gap:8px; }
+    @keyframes tf-spin { to { transform:rotate(360deg); } }
+    .tf-spinner { width:14px; height:14px; border:2px solid #334155; border-top-color:#3b82f6; border-radius:50%; animation:tf-spin 0.7s linear infinite; }
+
     .dc-queue-item.dq-dragging { opacity: 0.4; }
     /* Queued row indicator in pool */
     .dc-pool-table tr.dc-row-queued td:first-child { color: #fcd34d; }
@@ -1483,7 +1521,10 @@
   <div class="card">
     <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
       Trade Machine
-      <button onclick="tmToggleAdminPin()" style="font-size:0.68rem;padding:3px 10px;background:#1e293b;color:#64748b;border:1px solid #334155;border-radius:6px;cursor:pointer;letter-spacing:0.04em;">Admin</button>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button id="tfToggleBtn" onclick="tfToggle()" style="font-size:0.68rem;padding:3px 10px;background:#1e293b;color:#60a5fa;border:1px solid #1e3a5f;border-radius:6px;cursor:pointer;font-weight:600;">🔍 Trade Finder</button>
+        <button onclick="tmToggleAdminPin()" style="font-size:0.68rem;padding:3px 10px;background:#1e293b;color:#64748b;border:1px solid #334155;border-radius:6px;cursor:pointer;letter-spacing:0.04em;">Admin</button>
+      </div>
     </div>
     <!-- Admin PIN entry -->
     <div id="tmAdminPinPanel" style="display:none;padding:10px 0 2px;border-bottom:1px solid #1e293b;margin-bottom:10px;">
@@ -1524,6 +1565,42 @@
       <div style="display:flex;align-items:center;gap:8px;">
         <button class="btn btn-green" style="padding:5px 14px;font-size:0.75rem;" onclick="tmSubmitPicksPaste()">Parse &amp; Save</button>
         <span id="tmAdminPasteStatus" style="font-size:0.73rem;color:#94a3b8;"></span>
+      </div>
+    </div>
+
+    <!-- Trade Finder panel -->
+    <div id="tfPanel" style="display:none;">
+      <div class="tf-panel">
+        <div class="tf-section-label">Players going out
+          <span id="tfTeamLabel" style="color:#94a3b8;font-weight:400;text-transform:none;margin-left:4px;"></span>
+        </div>
+        <div id="tfPlayerList" class="tf-player-list">
+          <span id="tfNoRoster" style="font-size:0.72rem;color:#475569;">Load your team on Side A first.</span>
+        </div>
+        <div id="tfWindowBar" class="tf-window-bar" style="display:none;">
+          Outgoing: <strong id="tfOutTotal">—</strong>
+          &nbsp;·&nbsp; Match window: <strong id="tfWindowMin">—</strong> – <strong id="tfWindowMax">—</strong>
+          &nbsp;·&nbsp;
+          <span style="color:#64748b;">Tolerance</span>
+          <select id="tfTolerance" onchange="tfRun()" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:4px;font-size:0.67rem;padding:2px 5px;">
+            <option value="0.15">±15%</option>
+            <option value="0.20">±20%</option>
+            <option value="0.25" selected>±25%</option>
+            <option value="0.35">±35%</option>
+            <option value="0.50">±50%</option>
+          </select>
+        </div>
+        <div id="tfFilterRow" class="tf-filter-row" style="display:none;">
+          <span style="font-size:0.67rem;color:#64748b;">Position:</span>
+          <button class="tf-filter-btn active" onclick="tfSetPos(this,'ALL')">All</button>
+          <button class="tf-filter-btn" onclick="tfSetPos(this,'PG')">PG</button>
+          <button class="tf-filter-btn" onclick="tfSetPos(this,'SG')">SG</button>
+          <button class="tf-filter-btn" onclick="tfSetPos(this,'SF')">SF</button>
+          <button class="tf-filter-btn" onclick="tfSetPos(this,'PF')">PF</button>
+          <button class="tf-filter-btn" onclick="tfSetPos(this,'C')">C</button>
+          <span id="tfResultCount" style="margin-left:auto;font-size:0.67rem;color:#64748b;"></span>
+        </div>
+        <div id="tfResults" class="tf-results"></div>
       </div>
     </div>
 
@@ -5221,6 +5298,249 @@ function tmCloseAdmin() {
 }
 
 
+
+// ── Trade Finder ──────────────────────────────────────────────────────────────
+let tfOpen = false;
+let tfSelected = [];      // [{name, salary, pos, year1}]
+let tfAllRosters = {};    // abbr -> [{name,salary,pos}]
+let tfPosFilter = 'ALL';
+let tfLoadingCount = 0;
+
+function tfFmt(n) {
+  if (!n) return '—';
+  return '$' + (n / 1e6).toFixed(1) + 'M';
+}
+
+function tfToggle() {
+  tfOpen = !tfOpen;
+  document.getElementById('tfPanel').style.display = tfOpen ? '' : 'none';
+  const btn = document.getElementById('tfToggleBtn');
+  btn.style.background = tfOpen ? '#1d4ed8' : '#1e293b';
+  btn.style.borderColor = tfOpen ? '#3b82f6' : '#1e3a5f';
+  if (tfOpen) tfInit();
+}
+
+function tfInit() {
+  tfSelected = [];
+  const abbr = tmGetSideAbbr('A');
+  const label = document.getElementById('tfTeamLabel');
+  const listEl = document.getElementById('tfPlayerList');
+  const noRoster = document.getElementById('tfNoRoster');
+
+  if (!abbr || !tmRosterA || !tmRosterA.length) {
+    noRoster.style.display = '';
+    label.textContent = '';
+    document.getElementById('tfWindowBar').style.display = 'none';
+    document.getElementById('tfFilterRow').style.display = 'none';
+    document.getElementById('tfResults').innerHTML = '';
+    return;
+  }
+
+  noRoster.style.display = 'none';
+  label.textContent = '(' + (tmNameA || abbr) + ')';
+
+  // Build player chips from Side A roster
+  listEl.innerHTML = '';
+  tmRosterA.forEach((p, idx) => {
+    const chip = document.createElement('span');
+    chip.className = 'tf-player-chip';
+    chip.dataset.idx = idx;
+    const sal = p.year1 || 0;
+    chip.innerHTML = `<span class="tf-rp-pos">${p.pos||''}</span>${p.name} <span class="tf-chip-salary">${tfFmt(sal)}</span>`;
+    chip.onclick = () => tfTogglePlayer(idx, p, chip);
+    listEl.appendChild(chip);
+  });
+
+  document.getElementById('tfWindowBar').style.display = 'none';
+  document.getElementById('tfFilterRow').style.display = 'none';
+  document.getElementById('tfResults').innerHTML = '';
+}
+
+function tfTogglePlayer(idx, player, chip) {
+  const sal = player.year1 || 0;
+  if (!sal) return;
+  const existing = tfSelected.findIndex(p => p._idx === idx);
+  if (existing >= 0) {
+    tfSelected.splice(existing, 1);
+    chip.classList.remove('selected');
+  } else {
+    tfSelected.push({...player, _idx: idx, salary: sal});
+    chip.classList.add('selected');
+  }
+  tfUpdateWindow();
+}
+
+function tfUpdateWindow() {
+  const total = tfSelected.reduce((s, p) => s + p.salary, 0);
+  const tol = parseFloat(document.getElementById('tfTolerance').value);
+  const wb = document.getElementById('tfWindowBar');
+  const fr = document.getElementById('tfFilterRow');
+  if (!total || tfSelected.length === 0) {
+    wb.style.display = 'none';
+    fr.style.display = 'none';
+    document.getElementById('tfResults').innerHTML = '';
+    return;
+  }
+  wb.style.display = 'flex';
+  fr.style.display = 'flex';
+  document.getElementById('tfOutTotal').textContent = tfFmt(total);
+  document.getElementById('tfWindowMin').textContent = tfFmt(total * (1 - tol));
+  document.getElementById('tfWindowMax').textContent = tfFmt(total * (1 + tol));
+  tfRun();
+}
+
+function tfSetPos(btn, pos) {
+  tfPosFilter = pos;
+  document.querySelectorAll('.tf-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  tfRenderResults(tfLastResults || []);
+}
+
+let tfLastResults = [];
+
+async function tfRun() {
+  if (!tfSelected.length) return;
+  const outTotal = tfSelected.reduce((s, p) => s + p.salary, 0);
+  const tol = parseFloat(document.getElementById('tfTolerance').value);
+  const minIn = outTotal * (1 - tol);
+  const maxIn = outTotal * (1 + tol);
+  const outAbbr = tmGetSideAbbr('A');
+
+  // Update window display
+  document.getElementById('tfWindowMin').textContent = tfFmt(minIn);
+  document.getElementById('tfWindowMax').textContent = tfFmt(maxIn);
+
+  const resultsEl = document.getElementById('tfResults');
+  resultsEl.innerHTML = '<div class="tf-loading"><div class="tf-spinner"></div>Loading team rosters…</div>';
+
+  // Load all rosters not yet cached
+  const needed = TM_TEAMS.filter(t => t.abbr !== outAbbr && !tfAllRosters[t.abbr]);
+  if (needed.length) {
+    await Promise.all(needed.map(async t => {
+      try {
+        const res = await fetch('/fetch_salary_roster', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({url: TM_BASE + t.url})
+        });
+        if (res.ok) {
+          const d = await res.json();
+          if (d.players) {
+            tfAllRosters[t.abbr] = d.players.map(p => ({
+              name: p.name, pos: p.pos,
+              salary: p.year1 || 0
+            })).filter(p => p.salary > 0);
+          }
+        }
+      } catch(e) {}
+    }));
+  }
+
+  // Find matches
+  const matches = [];
+  for (const t of TM_TEAMS) {
+    if (t.abbr === outAbbr) continue;
+    const roster = tfAllRosters[t.abbr] || [];
+    const combos = tfFindCombos(roster, minIn, maxIn);
+    for (const combo of combos) {
+      const comboTotal = combo.reduce((s, p) => s + p.salary, 0);
+      matches.push({ team: t, players: combo, total: comboTotal, delta: comboTotal - outTotal });
+    }
+  }
+
+  // Sort: exact first, then by |delta|
+  matches.sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
+  tfLastResults = matches;
+  tfRenderResults(matches);
+}
+
+function tfFindCombos(players, minSal, maxSal) {
+  const results = [];
+  const n = players.length;
+  // 1-player
+  for (let i = 0; i < n; i++) {
+    const s = players[i].salary;
+    if (s >= minSal && s <= maxSal) results.push([players[i]]);
+  }
+  // 2-player
+  for (let i = 0; i < n; i++) {
+    for (let j = i+1; j < n; j++) {
+      const s = players[i].salary + players[j].salary;
+      if (s >= minSal && s <= maxSal) results.push([players[i], players[j]]);
+    }
+  }
+  // 3-player
+  for (let i = 0; i < n; i++) {
+    for (let j = i+1; j < n; j++) {
+      for (let k = j+1; k < n; k++) {
+        const s = players[i].salary + players[j].salary + players[k].salary;
+        if (s >= minSal && s <= maxSal) results.push([players[i], players[j], players[k]]);
+      }
+    }
+  }
+  return results;
+}
+
+function tfRenderResults(matches) {
+  const resultsEl = document.getElementById('tfResults');
+  const countEl = document.getElementById('tfResultCount');
+
+  let filtered = matches;
+  if (tfPosFilter !== 'ALL') {
+    filtered = matches.filter(m => m.players.some(p => p.pos === tfPosFilter));
+  }
+
+  countEl.textContent = filtered.length + ' match' + (filtered.length !== 1 ? 'es' : '') + ' found';
+
+  if (!filtered.length) {
+    resultsEl.innerHTML = '<div class="tf-empty">No salary matches found. Try widening the tolerance.</div>';
+    return;
+  }
+
+  // Show top 20
+  const show = filtered.slice(0, 20);
+  resultsEl.innerHTML = '';
+  show.forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = 'tf-result-card' + (i === 0 ? ' tf-best' : '');
+
+    const imgFile = m.team.url.split('/').pop().replace('.htm', '.png');
+    const badgeClass = Math.abs(m.delta) < 500000 ? 'tf-match-exact' : m.delta < 0 ? 'tf-match-under' : 'tf-match-over';
+    const badgeLabel = Math.abs(m.delta) < 500000 ? 'Exact' : (m.delta > 0 ? '+' : '') + tfFmt(m.delta);
+    const playerChips = m.players.map(p =>
+      `<span class="tf-rp-chip"><span class="tf-rp-pos">${p.pos}</span>${p.name} ${tfFmt(p.salary)}</span>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="tf-result-logo" style="background:linear-gradient(135deg,${m.team.c1},${m.team.c2});">
+        <img src="/static/logos/${imgFile}" alt="${m.team.abbr}"
+          onerror="this.style.display='none';this.parentElement.textContent='${m.team.abbr}'">
+      </div>
+      <div class="tf-result-body">
+        <div class="tf-result-team">
+          ${m.team.name}
+          ${i === 0 ? '<span class="tf-best-tag">BEST</span>' : ''}
+        </div>
+        <div class="tf-result-players">${playerChips}</div>
+        <div class="tf-result-meta">
+          <span class="tf-match-badge ${badgeClass}">${badgeLabel}</span>
+          <span class="tf-delta">${tfFmt(m.total)} incoming</span>
+          <button class="tf-load-btn" onclick="tfLoadInTM('${m.team.abbr}',${JSON.stringify(m.team.url)})">Load in TM →</button>
+        </div>
+      </div>`;
+    resultsEl.appendChild(card);
+  });
+}
+
+async function tfLoadInTM(abbr, teamUrl) {
+  // Set Side B to this team and load
+  const url = TM_BASE + teamUrl;
+  document.getElementById('tmSelectB').value = url;
+  highlightLogoGrid('tmLogoGridB', url);
+  await loadTMTeam('B');
+  // Scroll to the trade machine columns
+  document.getElementById('tfPanel').scrollIntoView({behavior:'smooth', block:'start'});
+}
+// ── End Trade Finder ──────────────────────────────────────────────────────────
 async function tmSaveLeagueYear() {
   const year = parseInt(document.getElementById('tmLeagueYearInput').value);
   const status = document.getElementById('tmLeagueYearStatus');
