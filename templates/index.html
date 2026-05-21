@@ -5369,6 +5369,7 @@ function tfToggleFromB() {
 function tfToggle() {
   if (tfOpen) { tfClose(); return; }
   tfOpen = true;
+  tfMode = 'A';
   const btn = document.getElementById('tfToggleBtn');
   btn.style.background = '#1d4ed8';
   btn.style.borderColor = '#3b82f6';
@@ -5378,6 +5379,17 @@ function tfToggle() {
   document.getElementById('tfTeamBTotals').style.display = 'none';
   document.getElementById('tfTeamBCapRow').style.display = 'none';
   tfInitPlayers();
+  // Pre-load any already-checked Team A players
+  tfSelected = [];
+  document.querySelectorAll('#tmPlayerListA input[type="checkbox"]:checked').forEach(cb => {
+    const p = (tmRosterA || []).find(p => p.name === cb.dataset.name);
+    if (!p || !p.salary) return;
+    const row = cb.closest('.tm-player-row');
+    const idx = (tmRosterA || []).indexOf(p);
+    tfSelected.push({name: p.name, pos: p.pos || '', salary: p.salary, _idx: idx});
+    if (row) row.classList.add('tf-row-selected');
+  });
+  if (tfSelected.length) tfUpdateWindow();
 }
 
 function tfClose() {
