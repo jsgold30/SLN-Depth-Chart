@@ -1642,11 +1642,7 @@
             <span style="font-size:0.72rem;font-weight:700;color:#60a5fa;">🔍 Trade Finder Results</span>
             <button onclick="tfClose()" style="font-size:0.67rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
           </div>
-          <!-- Team B reverse lookup section -->
-          <div id="tfBSection" style="display:none;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #1e293b;">
-            <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.08em;color:#64748b;text-transform:uppercase;margin-bottom:6px;">Find combos to get:</div>
-            <div id="tfBPlayerList" style="display:flex;flex-direction:column;gap:3px;max-height:160px;overflow-y:auto;"></div>
-          </div>
+
           <div id="tfWindowBar" class="tf-window-bar" style="display:none;">
             Outgoing: <strong id="tfOutTotal">—</strong>
             &nbsp;·&nbsp; Window: <strong id="tfWindowMin">—</strong>–<strong id="tfWindowMax">—</strong>
@@ -3897,7 +3893,7 @@ async function loadTMTeam(side) {
 
     const teamName = (data.team_name || (side === 'A' ? 'Team A' : 'Team B')).replace(/\s*Roster$/i, '').trim();
     if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; tfShowButton(true); }
-    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; tfShowButtonB(true); if (tfOpen) tfRenderBIncoming(); }
+    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; tfShowButtonB(true); }
 
     const nameEl = document.getElementById(`tmTeamName${side}`);
     nameEl.textContent = teamName;
@@ -5335,7 +5331,6 @@ function tfToggleFromB() {
   document.getElementById('tfTeamBTotals').style.display = 'none';
   document.getElementById('tfTeamBCapRow').style.display = 'none';
   tfInitPlayers();
-  tfRenderBIncoming();
 }
 
 function tfToggle() {
@@ -5350,7 +5345,6 @@ function tfToggle() {
   document.getElementById('tfTeamBTotals').style.display = 'none';
   document.getElementById('tfTeamBCapRow').style.display = 'none';
   tfInitPlayers();
-  tfRenderBIncoming();
 }
 
 function tfClose() {
