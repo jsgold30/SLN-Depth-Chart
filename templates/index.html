@@ -5389,7 +5389,7 @@ function tfToggle() {
     tfSelected.push({name: p.name, pos: p.pos || '', salary: p.salary, _idx: idx});
     if (row) row.classList.add('tf-row-selected');
   });
-  if (tfSelected.length) tfUpdateWindow();
+  if (tfSelected.length) { tfUpdateWindow(); tmUpdateSending('A'); }
 }
 
 function tfClose() {
@@ -5449,6 +5449,7 @@ function tfTogglePlayer(idx, player, rowEl) {
     if (cb) cb.checked = true;
   }
   tfUpdateWindow();
+  tmUpdateSending('A');
 }
 
 function tfUpdateWindow() {
