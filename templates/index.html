@@ -1723,6 +1723,20 @@
 
     </div><!-- /tm-columns -->
 
+    <!-- Trade Finder B results (full-width, shown when TF opened from Team B) -->
+    <div id="tfResultsPanelB" style="display:none;margin-top:12px;border-top:1px solid #1e293b;padding-top:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span style="font-size:0.72rem;font-weight:700;color:#60a5fa;">🔍 Trade Finder — Combos from your team</span>
+        <button onclick="tfClose()" style="font-size:0.67rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
+      </div>
+      <div id="tfWindowBarB" class="tf-window-bar" style="display:none;">
+        Incoming: <strong id="tfOutTotalB">—</strong>
+        &nbsp;·&nbsp; Send window: <strong id="tfWindowMinB">—</strong>–<strong id="tfWindowMaxB">—</strong>
+      </div>
+      <div style="margin-bottom:8px;"><span id="tfResultCountB" style="font-size:0.67rem;color:#64748b;"></span></div>
+      <div id="tfResultsB" class="tf-results"></div>
+    </div>
+
     <!-- Validate / Clear buttons -->
     <div style="text-align:center;margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
       <button class="btn btn-green" onclick="validateTradeMatch()" style="padding:10px 32px;">Check Trade Validity</button>
@@ -3977,15 +3991,24 @@ function buildTMPlayerList(side) {
       row.appendChild(nameSpan);
       row.appendChild(salSpan);
 
-      // Trade Finder: clicking a Side A row toggles player selection when TF is open
+      // Trade Finder: clicking a row triggers TF selection when TF is open
       if (side === 'A') {
         const playerIdx = roster.indexOf(p);
         row.addEventListener('click', e => {
-          if (!tfOpen) return;
+          if (!tfOpen || tfMode !== 'A') return;
           e.preventDefault();
           e.stopPropagation();
-          if (e.target === cb) return; // ignore synthetic checkbox click fired by label
+          if (e.target === cb) return;
           tfTogglePlayer(playerIdx, {name: p.name, pos: p.pos || '', year1: p.salary}, row);
+        }, true);
+      }
+      if (side === 'B') {
+        row.addEventListener('click', e => {
+          if (!tfOpen || tfMode !== 'B') return;
+          e.preventDefault();
+          e.stopPropagation();
+          if (e.target === cb) return;
+          tfSelectFromB({name: p.name, salary: p.salary}, row);
         }, true);
       }
 
@@ -5306,6 +5329,7 @@ function tmCloseAdmin() {
 
 // ── Trade Finder ──────────────────────────────────────────────────────────────
 let tfOpen = false;
+let tfMode = 'A'; // 'A' = outgoing from Team A, 'B' = incoming from Team B
 let tfSelected = [];      // [{name, salary, pos}]
 let tfAllRosters = {};    // abbr -> [{name,salary,pos}]
 let tfPosFilter = 'ALL';
@@ -5328,15 +5352,13 @@ function tfShowButtonB(show) {
 function tfToggleFromB() {
   if (tfOpen) { tfClose(); return; }
   tfOpen = true;
-  // Style both buttons as active
+  tfMode = 'B';
   const btnB = document.getElementById('tfToggleBtnB');
   if (btnB) { btnB.style.background = '#1d4ed8'; btnB.style.borderColor = '#3b82f6'; btnB.style.color = '#fff'; }
-  document.getElementById('tfResultsPanel').style.display = '';
-  document.getElementById('tfTeamBContent').style.display = 'none';
-  document.getElementById('tfTeamBTotals').style.display = 'none';
-  document.getElementById('tfTeamBCapRow').style.display = 'none';
-  tfInitPlayers();
-  tfRenderBIncoming();
+  // Keep Team B content visible — rows become clickable
+  document.getElementById('tfResultsPanelB').style.display = '';
+  document.getElementById('tfResultsPanelB').scrollIntoView({behavior:'smooth', block:'nearest'});
+  tfInitBResults();
 }
 
 function tfToggle() {
@@ -5356,6 +5378,7 @@ function tfToggle() {
 function tfClose() {
   tfOpen = false;
   tfSelected = [];
+  tfMode = 'A';
   const btn = document.getElementById('tfToggleBtn');
   btn.style.background = '';
   btn.style.borderColor = '#1e3a5f';
@@ -5363,11 +5386,11 @@ function tfClose() {
   const btnB = document.getElementById('tfToggleBtnB');
   if (btnB) { btnB.style.background = ''; btnB.style.borderColor = '#1e3a5f'; btnB.style.color = '#60a5fa'; }
   document.getElementById('tfResultsPanel').style.display = 'none';
+  document.getElementById('tfResultsPanelB').style.display = 'none';
   document.getElementById('tfTeamBContent').style.display = '';
   document.getElementById('tfTeamBTotals').style.display = '';
   document.getElementById('tfTeamBCapRow').style.display = '';
-  // un-highlight and uncheck all selected rows
-  document.querySelectorAll('#tmPlayerListA .tf-row-selected').forEach(r => {
+  document.querySelectorAll('#tmPlayerListA .tf-row-selected, #tmPlayerListB .tf-row-selected').forEach(r => {
     r.classList.remove('tf-row-selected');
     const cb = r.querySelector('input[type="checkbox"]');
     if (cb) cb.checked = false;
@@ -5616,39 +5639,84 @@ function tfRenderBIncoming() {
   });
 }
 
-function tfSelectFromB(player, chipEl) {
-  if (!tmRosterA || !tmRosterA.length) return;
-  // Clear Team A selections
-  tfSelected = [];
-  document.querySelectorAll('#tmPlayerListA .tf-row-selected').forEach(r => {
+function tfInitBResults() {
+  document.querySelectorAll('#tmPlayerListB .tf-row-selected').forEach(r => {
     r.classList.remove('tf-row-selected');
     const cb = r.querySelector('input[type="checkbox"]');
     if (cb) cb.checked = false;
   });
-  // Highlight clicked chip
-  document.querySelectorAll('#tfBPlayerList .tf-b-chip').forEach(c => c.classList.remove('selected'));
-  chipEl.classList.add('selected');
-  // Update window bar
+  document.getElementById('tfWindowBarB').style.display = 'none';
+  document.getElementById('tfResultCountB').textContent = '';
+  document.getElementById('tfResultsB').innerHTML = '<div class="tf-empty">Click a player from Team B to find combos from your team.</div>';
+}
+
+function tfSelectFromB(player, rowEl) {
+  if (!tmRosterA || !tmRosterA.length) return;
+  // Highlight selected row, clear others
+  document.querySelectorAll('#tmPlayerListB .tf-row-selected').forEach(r => {
+    r.classList.remove('tf-row-selected');
+    const cb = r.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = false;
+  });
+  rowEl.classList.add('tf-row-selected');
+  const rowCb = rowEl.querySelector('input[type="checkbox"]');
+  if (rowCb) rowCb.checked = true;
+  // Update window bar in B panel
   const tol = 0.25;
   const minIn = player.salary * (1 - tol);
   const maxIn = player.salary * (1 + tol);
-  const wb = document.getElementById('tfWindowBar');
-  wb.style.display = '';
-  document.getElementById('tfOutTotal').textContent = tfFmt(player.salary);
-  document.getElementById('tfWindowMin').textContent = tfFmt(minIn);
-  document.getElementById('tfWindowMax').textContent = tfFmt(maxIn);
+  document.getElementById('tfWindowBarB').style.display = '';
+  document.getElementById('tfOutTotalB').textContent = tfFmt(player.salary);
+  document.getElementById('tfWindowMinB').textContent = tfFmt(minIn);
+  document.getElementById('tfWindowMaxB').textContent = tfFmt(maxIn);
   // Find combos from Team A
   const aRoster = (tmRosterA || []).map(p => ({name: p.name, pos: '', salary: p.salary || 0})).filter(p => p.salary > 0);
   const combos = tfFindCombos(aRoster, minIn, maxIn);
   const inAbbr = tmGetSideAbbr('A');
-  const aTeam = TM_TEAMS.find(t => t.abbr === inAbbr) || {name: tmNameA, abbr: inAbbr || 'YR', url: '', c1: '#1e293b', c2: '#334155'};
+  const aTeam = TM_TEAMS.find(t => t.abbr === inAbbr) || {name: tmNameA, abbr: inAbbr || '', url: '', c1: '#1e293b', c2: '#334155'};
   const matches = combos.map(combo => {
     const total = combo.reduce((s, p) => s + p.salary, 0);
     return {team: aTeam, players: combo, total, delta: total - player.salary};
   }).sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
-  document.getElementById('tfResultCount').textContent = matches.length + ' combo' + (matches.length !== 1 ? 's' : '') + ' found';
-  tfLastResults = matches;
-  tfRenderResults(matches);
+  const countEl = document.getElementById('tfResultCountB');
+  const resultsEl = document.getElementById('tfResultsB');
+  if (!matches.length) {
+    countEl.textContent = '0 combos found';
+    resultsEl.innerHTML = '<div class="tf-empty">No salary matches found within the trade threshold.</div>';
+    return;
+  }
+  const show = matches.slice(0, 20);
+  countEl.textContent = matches.length > 20 ? `Top 20 of ${matches.length} combos` : matches.length + ' combo' + (matches.length !== 1 ? 's' : '') + ' found';
+  resultsEl.innerHTML = '';
+  show.forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = 'tf-result-card' + (i === 0 ? ' tf-best' : '');
+    const playerChips = m.players.map(p =>
+      `<span class="tf-rp-chip">${p.name} ${tfFmt(p.salary)}</span>`
+    ).join('');
+    card.innerHTML = `
+      <div class="tf-result-body" style="width:100%;">
+        <div class="tf-result-players">${playerChips}</div>
+        <div class="tf-result-meta">
+          <span class="tf-match-badge ${Math.abs(m.delta)<500000?'tf-match-exact':m.delta<0?'tf-match-under':'tf-match-over'}">${Math.abs(m.delta)<500000?'Exact':(m.delta>0?'+':'')+tfFmt(m.delta)}</span>
+          <span class="tf-delta">${tfFmt(m.total)} outgoing</span>
+          <button class="tf-load-btn" onclick="tfLoadBComboInTM(${JSON.stringify(m.players.map(p=>p.name))})">Load in TM →</button>
+        </div>
+      </div>`;
+    resultsEl.appendChild(card);
+  });
+}
+function tfLoadBComboInTM(playerNames) {
+  // Check the matching players in Team A's TM list and close TF
+  tfClose();
+  const nameSet = new Set(playerNames.map(n => n.toLowerCase()));
+  document.querySelectorAll('#tmPlayerListA input[type="checkbox"]').forEach(cb => {
+    if (nameSet.has(cb.dataset.name.toLowerCase())) {
+      cb.checked = true;
+      cb.closest('.tm-player-row')?.classList.add('selected');
+    }
+  });
+  tmUpdateSending('A');
 }
 // ── End Trade Finder ──────────────────────────────────────────────────────────
 async function tmSaveLeagueYear() {
