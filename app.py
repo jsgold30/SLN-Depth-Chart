@@ -619,6 +619,22 @@ def fetch_salary_roster():
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
 
+    cache_key = 'salary:' + url
+    try:
+        conn = get_db()
+        cache_row = conn.execute(
+            "SELECT data, fetched_at FROM roster_cache WHERE team_url = ?", (cache_key,)
+        ).fetchone()
+        conn.close()
+        if cache_row:
+            fetched_at = cache_row[1]
+            if isinstance(fetched_at, str):
+                fetched_at = datetime.fromisoformat(fetched_at)
+            if datetime.utcnow() - fetched_at < timedelta(minutes=30):
+                return jsonify(json.loads(cache_row[0]))
+    except Exception:
+        pass
+
     try:
         resp = _scraper.get(url, timeout=20)
         resp.raise_for_status()
@@ -699,7 +715,28 @@ def fetch_salary_roster():
                 break
 
         total_salary = sum(p['salary'] for p in players) + cut_salary
-        return jsonify({'players': players, 'team_name': team_name, 'total_salary': total_salary})
+        result = {'players': players, 'team_name': team_name, 'total_salary': total_salary}
+
+        try:
+            conn = get_db()
+            now = datetime.utcnow().isoformat()
+            if USE_POSTGRES:
+                conn.execute(
+                    "INSERT INTO roster_cache (team_url, data, fetched_at) VALUES (?, ?, ?) "
+                    "ON CONFLICT (team_url) DO UPDATE SET data = EXCLUDED.data, fetched_at = EXCLUDED.fetched_at",
+                    (cache_key, json.dumps(result), now)
+                )
+            else:
+                conn.execute(
+                    "INSERT OR REPLACE INTO roster_cache (team_url, data, fetched_at) VALUES (?, ?, ?)",
+                    (cache_key, json.dumps(result), now)
+                )
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+
+        return jsonify(result)
 
     except requests.exceptions.Timeout:
         return jsonify({'error': 'Request timed out.'}), 400
