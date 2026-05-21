@@ -5466,6 +5466,7 @@ function tfSetPos(btn, pos) {
 }
 
 let tfLastResults = [];
+let tfLastShow = [];
 
 async function tfRun() {
   if (!tfSelected.length) return;
@@ -5565,6 +5566,7 @@ function tfRenderResults(matches) {
   }
 
   const show = filtered.slice(0, 20);
+  tfLastShow = show;
   countEl.textContent = filtered.length > 20
     ? `Top 20 of ${filtered.length} matches`
     : filtered.length + ' match' + (filtered.length !== 1 ? 'es' : '') + ' found';
@@ -5594,31 +5596,43 @@ function tfRenderResults(matches) {
         <div class="tf-result-meta">
           <span class="tf-match-badge ${badgeClass}">${badgeLabel}</span>
           <span class="tf-delta">${tfFmt(m.total)} incoming</span>
-          <button class="tf-load-btn" onclick="tfLoadInTM('${m.team.abbr}','${m.team.url}')">Load in TM →</button>
+          <button class="tf-load-btn" onclick="tfLoadInTM('${m.team.abbr}','${m.team.url}',${i})">Load in TM →</button>
         </div>
       </div>`;
     resultsEl.appendChild(card);
   });
 }
 
-async function tfLoadInTM(abbr, teamUrl) {
-  // Capture selected players before closing TF
-  const selectedNames = new Set(tfSelected.map(p => p.name.toLowerCase()));
+async function tfLoadInTM(abbr, teamUrl, showIdx) {
+  // Capture selected A players and B combo players before closing TF
+  const selectedANames = new Set(tfSelected.map(p => p.name.toLowerCase()));
+  const combo = tfLastShow[showIdx];
+  const selectedBNames = new Set((combo?.players || []).map(p => p.name.toLowerCase()));
   // Close TF and restore normal view
   tfClose();
-  // Check the selected TF players in Team A's TM list
+  // Check Team A players
   document.querySelectorAll('#tmPlayerListA input[type="checkbox"]').forEach(cb => {
-    if (selectedNames.has(cb.dataset.name.toLowerCase())) {
+    if (selectedANames.has(cb.dataset.name.toLowerCase())) {
       cb.checked = true;
       cb.closest('.tm-player-row')?.classList.add('selected');
     }
   });
   tmUpdateSending('A');
-  // Load the result team as Team B
+  // Load Team B and then check its players
   const url = TM_BASE + teamUrl;
   document.getElementById('tmSelectB').value = url;
   highlightLogoGrid('tmLogoGridB', url);
   await loadTMTeam('B');
+  // Check the combo players on Team B
+  if (selectedBNames.size) {
+    document.querySelectorAll('#tmPlayerListB input[type="checkbox"]').forEach(cb => {
+      if (selectedBNames.has(cb.dataset.name.toLowerCase())) {
+        cb.checked = true;
+        cb.closest('.tm-player-row')?.classList.add('selected');
+      }
+    });
+    tmUpdateSending('B');
+  }
 }
 
 function tfRenderBIncoming() {
