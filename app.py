@@ -1,8 +1,14 @@
 from flask import Flask, render_template, request, jsonify, make_response
 import os
 import requests
-import cloudscraper
-_scraper = cloudscraper.create_scraper()
+try:
+    import cloudscraper
+    _scraper = cloudscraper.create_scraper()
+except ImportError:
+    import requests as _req
+    class _FallbackScraper:
+        def get(self, *a, **kw): return _req.get(*a, **kw)
+    _scraper = _FallbackScraper()
 from bs4 import BeautifulSoup
 import re
 import sqlite3
@@ -274,6 +280,10 @@ def index():
 @app.route('/mockups')
 def mockups():
     return render_template('mockups.html')
+
+@app.route('/mockup-trade-finder')
+def mockup_trade_finder():
+    return render_template('mockup_trade_finder.html')
 
 @app.route('/mockup-team-select')
 def mockup_team_select():
