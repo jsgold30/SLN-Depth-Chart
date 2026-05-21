@@ -1181,21 +1181,9 @@ def get_picks():
     db = get_db()
     row = db.execute('SELECT data, updated_at FROM owed_picks WHERE id = 1').fetchone()
     db.close()
-
-    stale = True
-    if row and row[1]:
-        try:
-            updated = datetime.strptime(row[1], '%Y-%m-%d %H:%M:%S')
-            stale = (datetime.utcnow() - updated) > timedelta(hours=1)
-        except Exception:
-            pass
-
-    if stale and not _sync_running:
-        threading.Thread(target=_bg_sync, daemon=True).start()
-
     if row:
-        return jsonify({'owed': json.loads(row[0]), 'updated_at': row[1], 'syncing': stale})
-    return jsonify({'owed': [], 'updated_at': None, 'syncing': True})
+        return jsonify({'owed': json.loads(row[0]), 'updated_at': row[1], 'syncing': False})
+    return jsonify({'owed': [], 'updated_at': None, 'syncing': False})
 
 
 @app.route('/api/picks/sync', methods=['POST'])
