@@ -1674,6 +1674,7 @@
             <button class="btn btn-slate tm-vetmin-add" id="tmPickBtnB" onclick="tmAddPickUI('B')" style="display:none;">+ Add Pick</button>
             <button class="btn btn-slate tm-vetmin-add" id="tmRPBtnB" onclick="tmAddRPUI('B')" style="display:none;">+ Add RP</button>
             <button class="btn btn-slate tm-vetmin-add" id="tmFABtnB" onclick="toggleSideFAPanel('B')" style="display:none;">+ Free Agent</button>
+            <button class="btn btn-slate tm-vetmin-add" id="tfToggleBtnB" onclick="tfToggleFromB()" style="border-color:#1e3a5f;color:#60a5fa;display:none;">🔍 Trade Finder</button>
           </div>
           <!-- Pick selector -->
           <div id="tmPickSelectorB" class="tm-pick-selector" style="display:none;">
@@ -3896,7 +3897,7 @@ async function loadTMTeam(side) {
 
     const teamName = (data.team_name || (side === 'A' ? 'Team A' : 'Team B')).replace(/\s*Roster$/i, '').trim();
     if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; tfShowButton(true); }
-    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; if (tfOpen) tfRenderBIncoming(); }
+    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; tfShowButtonB(true); if (tfOpen) tfRenderBIncoming(); }
 
     const nameEl = document.getElementById(`tmTeamName${side}`);
     nameEl.textContent = teamName;
@@ -5318,6 +5319,25 @@ function tfShowButton(show) {
   if (btn) btn.style.display = show ? '' : 'none';
 }
 
+function tfShowButtonB(show) {
+  const btn = document.getElementById('tfToggleBtnB');
+  if (btn) btn.style.display = show ? '' : 'none';
+}
+
+function tfToggleFromB() {
+  if (tfOpen) { tfClose(); return; }
+  tfOpen = true;
+  // Style both buttons as active
+  const btnB = document.getElementById('tfToggleBtnB');
+  if (btnB) { btnB.style.background = '#1d4ed8'; btnB.style.borderColor = '#3b82f6'; btnB.style.color = '#fff'; }
+  document.getElementById('tfResultsPanel').style.display = '';
+  document.getElementById('tfTeamBContent').style.display = 'none';
+  document.getElementById('tfTeamBTotals').style.display = 'none';
+  document.getElementById('tfTeamBCapRow').style.display = 'none';
+  tfInitPlayers();
+  tfRenderBIncoming();
+}
+
 function tfToggle() {
   if (tfOpen) { tfClose(); return; }
   tfOpen = true;
@@ -5340,6 +5360,8 @@ function tfClose() {
   btn.style.background = '';
   btn.style.borderColor = '#1e3a5f';
   btn.style.color = '#60a5fa';
+  const btnB = document.getElementById('tfToggleBtnB');
+  if (btnB) { btnB.style.background = ''; btnB.style.borderColor = '#1e3a5f'; btnB.style.color = '#60a5fa'; }
   document.getElementById('tfResultsPanel').style.display = 'none';
   document.getElementById('tfTeamBContent').style.display = '';
   document.getElementById('tfTeamBTotals').style.display = '';
