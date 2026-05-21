@@ -5374,17 +5374,19 @@ function tfToggle() {
   btn.style.background = '#1d4ed8';
   btn.style.borderColor = '#3b82f6';
   btn.style.color = '#fff';
+  // Collect pre-checked players BEFORE init clears state
+  const preChecked = [];
+  document.querySelectorAll('#tmPlayerListA input[type="checkbox"]:checked').forEach(cb => {
+    const p = (tmRosterA || []).find(pl => pl.name === cb.dataset.name);
+    if (p && p.salary) preChecked.push({player: p, row: cb.closest('.tm-player-row')});
+  });
   document.getElementById('tfResultsPanel').style.display = '';
   document.getElementById('tfTeamBContent').style.display = 'none';
   document.getElementById('tfTeamBTotals').style.display = 'none';
   document.getElementById('tfTeamBCapRow').style.display = 'none';
   tfInitPlayers();
-  // Pre-load any already-checked Team A players
-  tfSelected = [];
-  document.querySelectorAll('#tmPlayerListA input[type="checkbox"]:checked').forEach(cb => {
-    const p = (tmRosterA || []).find(p => p.name === cb.dataset.name);
-    if (!p || !p.salary) return;
-    const row = cb.closest('.tm-player-row');
+  // Restore pre-checked players into TF selection
+  preChecked.forEach(({player: p, row}) => {
     const idx = (tmRosterA || []).indexOf(p);
     tfSelected.push({name: p.name, pos: p.pos || '', salary: p.salary, _idx: idx});
     if (row) row.classList.add('tf-row-selected');
@@ -5423,7 +5425,7 @@ function tfInitPlayers() {
     if (cb) cb.checked = false;
   });
   document.getElementById('tfWindowBar').style.display = 'none';
-  document.getElementById('tfBSection').style.display = 'none';
+  const tfBSec = document.getElementById('tfBSection'); if (tfBSec) tfBSec.style.display = 'none';
   document.getElementById('tfOutTotal').textContent = '—';
   document.getElementById('tfWindowMin').textContent = '—';
   document.getElementById('tfWindowMax').textContent = '—';
