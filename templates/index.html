@@ -516,7 +516,7 @@
     .tm-player-row:hover { background: #1e293b; }
     .tm-player-row input[type="checkbox"] { accent-color: #38bdf8; cursor: pointer; }
     .tm-player-row.selected { background: #0c1a2e; color: #e2e8f0; }
-    .tm-player-row.tf-row-selected { background: #1e3a5f !important; outline: 1px solid #2563eb; }
+    .tm-player-row.tf-row-selected { background: #1e3a5f !important; outline: 2px solid #3b82f6 !important; box-shadow: inset 3px 0 0 #3b82f6; }
     .tm-player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tm-salary { font-variant-numeric: tabular-nums; color: #4ade80; font-size: 0.8rem; text-align: right; white-space: nowrap; }
     .tm-total-row {
@@ -1643,14 +1643,8 @@
             Outgoing: <strong id="tfOutTotal">—</strong>
             &nbsp;·&nbsp; Window: <strong id="tfWindowMin">—</strong>–<strong id="tfWindowMax">—</strong>
           </div>
-          <div id="tfFilterRow" class="tf-filter-row">
-            <button class="tf-filter-btn active" onclick="tfSetPos(this,'ALL')">All</button>
-            <button class="tf-filter-btn" onclick="tfSetPos(this,'PG')">PG</button>
-            <button class="tf-filter-btn" onclick="tfSetPos(this,'SG')">SG</button>
-            <button class="tf-filter-btn" onclick="tfSetPos(this,'SF')">SF</button>
-            <button class="tf-filter-btn" onclick="tfSetPos(this,'PF')">PF</button>
-            <button class="tf-filter-btn" onclick="tfSetPos(this,'C')">C</button>
-            <span id="tfResultCount" style="margin-left:auto;font-size:0.67rem;color:#64748b;"></span>
+          <div id="tfFilterRow" style="margin-bottom:8px;">
+            <span id="tfResultCount" style="font-size:0.67rem;color:#64748b;"></span>
           </div>
           <div id="tfResults" class="tf-results"></div>
         </div>
@@ -5509,7 +5503,7 @@ function tfRenderResults(matches) {
     const badgeClass = Math.abs(m.delta) < 500000 ? 'tf-match-exact' : m.delta < 0 ? 'tf-match-under' : 'tf-match-over';
     const badgeLabel = Math.abs(m.delta) < 500000 ? 'Exact' : (m.delta > 0 ? '+' : '') + tfFmt(m.delta);
     const playerChips = m.players.map(p =>
-      `<span class="tf-rp-chip"><span class="tf-rp-pos">${p.pos}</span>${p.name} ${tfFmt(p.salary)}</span>`
+      `<span class="tf-rp-chip">${p.pos ? `<span class="tf-rp-pos">${p.pos}</span>` : ''}${p.name} ${tfFmt(p.salary)}</span>`
     ).join('');
 
     card.innerHTML = `
