@@ -5481,8 +5481,26 @@ function tfSetPos(btn, pos) {
 let tfLastResults = [];
 let tfLastShow = [];
 
+function tfComboScore(combo) {
+  // Sum gradeVal of all ratings across all players in combo
+  const keys = ['in_rating', 'out', 'df', 'reb', 'hn'];
+  return combo.reduce((total, cp) => {
+    const p = dcAllPlayers.find(pl => pl.name.toLowerCase() === cp.name.toLowerCase());
+    if (!p) return total;
+    return total + keys.reduce((s, k) => s + Math.max(0, gradeVal(p[k])), 0);
+  }, 0);
+}
+
 async function tfRun() {
   if (!tfSelected.length) return;
+  // Ensure player pool is loaded for rating-based sorting
+  if (!dcAllPlayers.length) {
+    try {
+      const r = await fetch('/fetch_draft_players', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+      const d = await r.json();
+      if (d.players) dcAllPlayers = d.players;
+    } catch(e) {}
+  }
   const outTotal = tfSelected.reduce((s, p) => s + p.salary, 0);
   const tol = 0.25;
   const minIn = outTotal * (1 - tol);
@@ -5505,7 +5523,7 @@ async function tfRun() {
       const comboTotal = combo.reduce((s, p) => s + p.salary, 0);
       return { team: teamB, players: combo, total: comboTotal, delta: comboTotal - outTotal };
     });
-    matches.sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
+    matches.sort((a, b) => tfComboScore(b.players) - tfComboScore(a.players));
     tfLastResults = matches;
     tfRenderResults(matches);
     return;
@@ -5547,8 +5565,8 @@ async function tfRun() {
     }
   }
 
-  // Sort: exact first, then by |delta|
-  matches.sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
+  // Sort by incoming player rating quality (highest first)
+  matches.sort((a, b) => tfComboScore(b.players) - tfComboScore(a.players));
   tfLastResults = matches;
   tfRenderResults(matches);
 }
