@@ -5333,6 +5333,7 @@ function tmCloseAdmin() {
 let tfOpen = false;
 let tfMode = 'A'; // 'A' = outgoing from Team A, 'B' = incoming from Team B
 let tfSelected = [];      // [{name, salary, pos}]
+let tfPinnedB  = [];      // Team B players pre-checked when TF opens (must appear in combos)
 let tfAllRosters = {};    // abbr -> [{name,salary,pos}]
 let tfPosFilter = 'ALL';
 
@@ -5378,6 +5379,12 @@ function tfToggle() {
     const p = (tmRosterA || []).find(pl => pl.name === cb.dataset.name);
     if (p && p.salary) preChecked.push({player: p, row: cb.closest('.tm-player-row')});
   });
+  // Collect pre-checked Team B players as pinned incoming
+  tfPinnedB = [];
+  document.querySelectorAll('#tmPlayerListB input[type="checkbox"]:checked').forEach(cb => {
+    const p = (tmRosterB || []).find(pl => pl.name === cb.dataset.name);
+    if (p && p.salary) tfPinnedB.push({name: p.name, pos: p.pos || '', salary: p.salary});
+  });
   document.getElementById('tfResultsPanel').style.display = '';
   document.getElementById('tfTeamBContent').style.display = 'none';
   document.getElementById('tfTeamBTotals').style.display = 'none';
@@ -5395,6 +5402,7 @@ function tfToggle() {
 function tfClose() {
   tfOpen = false;
   tfSelected = [];
+  tfPinnedB = [];
   tfMode = 'A';
   const btn = document.getElementById('tfToggleBtn');
   btn.style.background = '';
@@ -5517,12 +5525,39 @@ async function tfRun() {
   // If Team B is loaded, only search Team B
   if (inAbbrB && tmRosterB && tmRosterB.length) {
     const teamB = TM_TEAMS.find(t => t.abbr === inAbbrB);
-    const roster = tmRosterB.map(p => ({name: p.name, pos: p.pos, salary: p.salary || 0})).filter(p => p.salary > 0);
-    const combos = tfFindCombos(roster, minIn, maxIn);
-    const matches = combos.map(combo => {
-      const comboTotal = combo.reduce((s, p) => s + p.salary, 0);
-      return { team: teamB, players: combo, total: comboTotal, delta: comboTotal - outTotal };
-    });
+    const matches = [];
+
+    if (tfPinnedB.length > 0) {
+      // Pinned Team B players must appear in every combo
+      const pinnedNames = new Set(tfPinnedB.map(p => p.name.toLowerCase()));
+      const pinnedTotal = tfPinnedB.reduce((s, p) => s + p.salary, 0);
+      const remaining = tmRosterB
+        .filter(p => !pinnedNames.has(p.name.toLowerCase()))
+        .map(p => ({name: p.name, pos: p.pos, salary: p.salary || 0}))
+        .filter(p => p.salary > 0);
+
+      // Pinned alone satisfies window?
+      if (pinnedTotal >= minIn && pinnedTotal <= maxIn) {
+        matches.push({ team: teamB, players: [...tfPinnedB], total: pinnedTotal, delta: pinnedTotal - outTotal });
+      }
+      // Pinned + additional combos
+      const remMin = Math.max(0, minIn - pinnedTotal);
+      const remMax = maxIn - pinnedTotal;
+      if (remMax > 0) {
+        tfFindCombos(remaining, remMin, remMax).forEach(combo => {
+          const comboTotal = pinnedTotal + combo.reduce((s, p) => s + p.salary, 0);
+          if (comboTotal >= minIn && comboTotal <= maxIn)
+            matches.push({ team: teamB, players: [...tfPinnedB, ...combo], total: comboTotal, delta: comboTotal - outTotal });
+        });
+      }
+    } else {
+      const roster = tmRosterB.map(p => ({name: p.name, pos: p.pos, salary: p.salary || 0})).filter(p => p.salary > 0);
+      tfFindCombos(roster, minIn, maxIn).forEach(combo => {
+        const comboTotal = combo.reduce((s, p) => s + p.salary, 0);
+        matches.push({ team: teamB, players: combo, total: comboTotal, delta: comboTotal - outTotal });
+      });
+    }
+
     matches.sort((a, b) => tfComboScore(b.players) - tfComboScore(a.players));
     tfLastResults = matches;
     tfRenderResults(matches);
