@@ -1677,7 +1677,10 @@
         <input type="hidden" id="tmSelectB">
         <div id="tmLogoGridB" class="tm-logo-grid"></div>
         <div id="tmStatusB" style="font-size:0.75rem;color:#94a3b8;margin-bottom:4px;min-height:16px;"></div>
-        <div id="tmTeamNameB" style="font-size:0.85rem;font-weight:700;color:#7dd3fc;margin:6px 0 4px;display:none;"></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div id="tmTeamNameB" style="font-size:0.85rem;font-weight:700;color:#7dd3fc;margin:6px 0 4px;display:none;"></div>
+          <button id="tmClearBBtn" onclick="tmClearTeamB()" style="display:none;font-size:0.65rem;padding:2px 7px;background:transparent;border:1px solid #334155;color:#64748b;border-radius:4px;cursor:pointer;line-height:1.4;">× Clear</button>
+        </div>
         <div id="tmPlayerListB" class="tm-player-list"></div>
 
         <!-- Vet Min Players -->
@@ -5350,6 +5353,21 @@ function tfShowButton(show) {
 function tfShowButtonB(show) {
   const btn = document.getElementById('tfToggleBtnB');
   if (btn) btn.style.display = show ? '' : 'none';
+  const clearBtn = document.getElementById('tmClearBBtn');
+  if (clearBtn) clearBtn.style.display = show ? '' : 'none';
+}
+
+function tmClearTeamB() {
+  if (tfOpen) tfClose();
+  tmRosterB = []; tmTotalB = 0; tmNameB = 'Team B'; tfPinnedB = [];
+  document.getElementById('tmSelectB').value = '';
+  document.getElementById('tmPlayerListB').innerHTML = '';
+  document.getElementById('tmTeamNameB').style.display = 'none';
+  document.getElementById('tmClearBBtn').style.display = 'none';
+  tfShowButtonB(false);
+  // Reset logo grid selection
+  document.querySelectorAll('#tmLogoGridB .logo-item').forEach(el => el.classList.remove('selected'));
+  tmUpdateSending('B');
 }
 
 function tfToggleFromB() {
