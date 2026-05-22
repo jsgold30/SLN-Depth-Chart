@@ -5488,12 +5488,29 @@ async function tfRun() {
   const minIn = outTotal * (1 - tol);
   const maxIn = outTotal * (1 + tol);
   const outAbbr = tmGetSideAbbr('A');
+  const inAbbrB = tmGetSideAbbr('B');
 
   // Update window display
   document.getElementById('tfWindowMin').textContent = tfFmt(minIn);
   document.getElementById('tfWindowMax').textContent = tfFmt(maxIn);
 
   const resultsEl = document.getElementById('tfResults');
+
+  // If Team B is loaded, only search Team B
+  if (inAbbrB && tmRosterB && tmRosterB.length) {
+    const teamB = TM_TEAMS.find(t => t.abbr === inAbbrB);
+    const roster = tmRosterB.map(p => ({name: p.name, pos: p.pos, salary: p.salary || 0})).filter(p => p.salary > 0);
+    const combos = tfFindCombos(roster, minIn, maxIn);
+    const matches = combos.map(combo => {
+      const comboTotal = combo.reduce((s, p) => s + p.salary, 0);
+      return { team: teamB, players: combo, total: comboTotal, delta: comboTotal - outTotal };
+    });
+    matches.sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
+    tfLastResults = matches;
+    tfRenderResults(matches);
+    return;
+  }
+
   resultsEl.innerHTML = '<div class="tf-loading"><div class="tf-spinner"></div>Loading team rosters…</div>';
 
   // Load all rosters not yet cached
@@ -5518,7 +5535,7 @@ async function tfRun() {
     }));
   }
 
-  // Find matches
+  // Find matches across all teams
   const matches = [];
   for (const t of TM_TEAMS) {
     if (t.abbr === outAbbr) continue;
