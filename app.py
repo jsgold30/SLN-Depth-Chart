@@ -665,11 +665,15 @@ def fetch_salary_roster():
             # Find the header row that has both 'name' and 'year 1' columns
             header_row_index = None
             year1_idx = None
+            rating_idxs = {}
             for i, row in enumerate(rows):
                 cols = [c.get_text(strip=True).lower() for c in row.find_all('td')]
                 if 'name' in cols and 'year 1' in cols:
                     year1_idx = cols.index('year 1')
                     header_row_index = i
+                    for field, col_name in [('in_rat','in'),('out','out'),('hn','hn'),('df','df'),('reb','reb')]:
+                        if col_name in cols:
+                            rating_idxs[field] = cols.index(col_name)
                     break
 
             if header_row_index is None:
@@ -687,7 +691,11 @@ def fetch_salary_roster():
                 if len(td_cells) <= year1_idx:
                     continue
                 salary = parse_salary(td_cells[year1_idx])
-                players.append({'name': name, 'salary': salary})
+                player = {'name': name, 'salary': salary}
+                for field, idx in rating_idxs.items():
+                    if idx < len(td_cells):
+                        player[field] = td_cells[idx]
+                players.append(player)
 
             if players:
                 break

@@ -3924,7 +3924,7 @@ async function loadTMTeam(side) {
     else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; tfShowButtonB(true);
       // Pre-cache Team B roster for TF all-teams search
       const _abbrB = tmGetSideAbbr('B');
-      if (_abbrB) tfAllRosters[_abbrB] = data.players.map(p => ({name:p.name,pos:p.pos,salary:p.salary||0})).filter(p=>p.salary>0);
+      if (_abbrB) tfAllRosters[_abbrB] = data.players.map(p => ({name:p.name,pos:p.pos,salary:p.salary||0,in_rat:p.in_rat||'',out:p.out||'',hn:p.hn||'',df:p.df||'',reb:p.reb||''})).filter(p=>p.salary>0);
     }
 
     const nameEl = document.getElementById(`tmTeamName${side}`);
@@ -5509,13 +5509,11 @@ let tfLastResults = [];
 let tfLastShow = [];
 
 function tfComboScore(combo) {
-  // Sum gradeVal of all ratings across all players in combo
-  const keys = ['in_rating', 'out', 'df', 'reb', 'hn'];
-  return combo.reduce((total, cp) => {
-    const p = dcAllPlayers.find(pl => pl.name.toLowerCase() === cp.name.toLowerCase());
-    if (!p) return total;
-    return total + keys.reduce((s, k) => s + Math.max(0, gradeVal(p[k])), 0);
-  }, 0);
+  // Sum grade values of in/out/hn/df/reb ratings stored directly on each player
+  const TF_GRADES = ['F','D-','D','D+','C-','C','C+','B-','B','B+','A-','A','A+'];
+  const gv = g => { const i = TF_GRADES.indexOf(g||''); return i < 0 ? 0 : i; };
+  const keys = ['in_rat','out','hn','df','reb'];
+  return combo.reduce((total, cp) => total + keys.reduce((s, k) => s + Math.max(0, gv(cp[k])), 0), 0);
 }
 
 async function tfRun() {
@@ -5577,7 +5575,7 @@ async function tfRun() {
       });
     }
 
-    matches.sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
+    matches.sort((a, b) => tfComboScore(b.players) - tfComboScore(a.players));
     tfLastResults = matches;
     tfRenderResults(matches);
     return;
@@ -5598,8 +5596,8 @@ async function tfRun() {
           const d = await res.json();
           if (d.players) {
             tfAllRosters[t.abbr] = d.players.map(p => ({
-              name: p.name, pos: p.pos,
-              salary: p.salary || 0
+              name: p.name, pos: p.pos, salary: p.salary || 0,
+              in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
             })).filter(p => p.salary > 0);
           }
         }
@@ -5619,8 +5617,8 @@ async function tfRun() {
     }
   }
 
-  // Sort by closest salary match (smallest absolute delta first)
-  matches.sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
+  // Sort by combo rating quality (highest combined grades first)
+  matches.sort((a, b) => tfComboScore(b.players) - tfComboScore(a.players));
   tfLastResults = matches;
   tfRenderResults(matches);
 }
