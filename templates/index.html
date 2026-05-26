@@ -4675,7 +4675,7 @@ function dcSortPool(col) {
     dcSortAsc = !dcSortAsc;
   } else {
     dcSortCol = col;
-    dcSortAsc = true;
+    dcSortAsc = false;
   }
   // Map column name -> pre-computed site rank field (lower rank = better)
   const siteRankField = {'in_rat':'sri','out':'sro','hn':'srh','df':'srd','reb':'srr','pot':'srp'};
