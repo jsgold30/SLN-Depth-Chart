@@ -5577,7 +5577,7 @@ async function tfRun() {
       });
     }
 
-    matches.sort((a, b) => tfComboScore(b.players) - tfComboScore(a.players));
+    matches.sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
     tfLastResults = matches;
     tfRenderResults(matches);
     return;
@@ -5619,8 +5619,8 @@ async function tfRun() {
     }
   }
 
-  // Sort by incoming player rating quality (highest first)
-  matches.sort((a, b) => tfComboScore(b.players) - tfComboScore(a.players));
+  // Sort by closest salary match (smallest absolute delta first)
+  matches.sort((a, b) => Math.abs(a.delta) - Math.abs(b.delta));
   tfLastResults = matches;
   tfRenderResults(matches);
 }
