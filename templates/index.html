@@ -3921,7 +3921,11 @@ async function loadTMTeam(side) {
 
     const teamName = (data.team_name || (side === 'A' ? 'Team A' : 'Team B')).replace(/\s*Roster$/i, '').trim();
     if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; tfShowButton(true); }
-    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; tfShowButtonB(true); }
+    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; tfShowButtonB(true);
+      // Pre-cache Team B roster for TF all-teams search
+      const _abbrB = tmGetSideAbbr('B');
+      if (_abbrB) tfAllRosters[_abbrB] = data.players.map(p => ({name:p.name,pos:p.pos,salary:p.salary||0})).filter(p=>p.salary>0);
+    }
 
     const nameEl = document.getElementById(`tmTeamName${side}`);
     nameEl.textContent = teamName;
