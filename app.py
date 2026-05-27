@@ -469,7 +469,7 @@ def fetch_roster():
                 fetched_at = cache_row[1]
                 if isinstance(fetched_at, str):
                     fetched_at = datetime.fromisoformat(fetched_at)
-                if datetime.utcnow() - fetched_at < timedelta(hours=24):
+                if datetime.utcnow() - fetched_at < timedelta(minutes=30):
                     return jsonify(json.loads(cache_row[0]))
         except Exception:
             pass
