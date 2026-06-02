@@ -635,7 +635,7 @@ def fetch_salary_roster():
                 cached_data = json.loads(cache_row[0])
                 # Bust old cache entries that don't have rating fields
                 players_list = cached_data.get('players', [])
-                if players_list and 'in_rat' in players_list[0]:
+                if players_list and players_list[0].get('in_rat'):
                     return jsonify(cached_data)
     except Exception:
         pass
@@ -699,37 +699,19 @@ def fetch_salary_roster():
         if not players:
             return jsonify({'error': 'Could not find salary data (Year 1 column) on this page.'}), 400
 
-        # Parse abilities table (same page) to get In/Out/Hn/Df/Reb ratings
-        abilities_map = {}
-        for table in soup.find_all('table'):
-            all_rows = table.find_all('tr')
-            header_row_index = None
-            col_names = []
-            for i, row in enumerate(all_rows):
-                candidate = [c.get_text(strip=True).lower() for c in row.find_all(['th', 'td'])]
-                if 'pos' in candidate and 'reb' in candidate and 'hn' in candidate:
-                    col_names = candidate
-                    header_row_index = i
-                    break
-            if header_row_index is None:
-                continue
-            for row in all_rows[header_row_index + 1:]:
-                cells = [td.get_text(strip=True) for td in row.find_all('td')]
-                if len(cells) < len(col_names):
-                    continue
-                d = dict(zip(col_names, cells))
-                name = d.get('name', '').strip()
-                if not name:
-                    continue
-                abilities_map[name.lower()] = {
-                    'in_rat': d.get('in', ''),
-                    'out': d.get('out', ''),
-                    'hn': d.get('hn', ''),
-                    'df': d.get('df', ''),
-                    'reb': d.get('reb', ''),
-                }
-            if abilities_map:
-                break
+        # Parse abilities from same page using the working _parse_roster_from_soup function
+        # (avoids nested-table issues that break a naive loop approach)
+        try:
+            abilities_result = _parse_roster_from_soup(soup)
+            abilities_map = {p['name'].lower(): {
+                'in_rat': p.get('in_rating', ''),
+                'out': p.get('out', ''),
+                'hn': p.get('hn', ''),
+                'df': p.get('df', ''),
+                'reb': p.get('reb', ''),
+            } for p in abilities_result['players']}
+        except Exception:
+            abilities_map = {}
 
         # Merge ratings into salary players
         for p in players:
