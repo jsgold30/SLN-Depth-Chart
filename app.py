@@ -669,15 +669,11 @@ def fetch_salary_roster():
             # Find the header row that has both 'name' and 'year 1' columns
             header_row_index = None
             year1_idx = None
-            rating_idxs = {}
             for i, row in enumerate(rows):
                 cols = [c.get_text(strip=True).lower() for c in row.find_all('td')]
                 if 'name' in cols and 'year 1' in cols:
                     year1_idx = cols.index('year 1')
                     header_row_index = i
-                    for field, col_name in [('in_rat','in'),('out','out'),('hn','hn'),('df','df'),('reb','reb')]:
-                        if col_name in cols:
-                            rating_idxs[field] = cols.index(col_name)
                     break
 
             if header_row_index is None:
@@ -695,17 +691,54 @@ def fetch_salary_roster():
                 if len(td_cells) <= year1_idx:
                     continue
                 salary = parse_salary(td_cells[year1_idx])
-                player = {'name': name, 'salary': salary}
-                for field, idx in rating_idxs.items():
-                    if idx < len(td_cells):
-                        player[field] = td_cells[idx]
-                players.append(player)
+                players.append({'name': name, 'salary': salary})
 
             if players:
                 break
 
         if not players:
             return jsonify({'error': 'Could not find salary data (Year 1 column) on this page.'}), 400
+
+        # Parse abilities table (same page) to get In/Out/Hn/Df/Reb ratings
+        abilities_map = {}
+        for table in soup.find_all('table'):
+            all_rows = table.find_all('tr')
+            header_row_index = None
+            col_names = []
+            for i, row in enumerate(all_rows):
+                candidate = [c.get_text(strip=True).lower() for c in row.find_all(['th', 'td'])]
+                if 'pos' in candidate and 'reb' in candidate and 'hn' in candidate:
+                    col_names = candidate
+                    header_row_index = i
+                    break
+            if header_row_index is None:
+                continue
+            for row in all_rows[header_row_index + 1:]:
+                cells = [td.get_text(strip=True) for td in row.find_all('td')]
+                if len(cells) < len(col_names):
+                    continue
+                d = dict(zip(col_names, cells))
+                name = d.get('name', '').strip()
+                if not name:
+                    continue
+                abilities_map[name.lower()] = {
+                    'in_rat': d.get('in', ''),
+                    'out': d.get('out', ''),
+                    'hn': d.get('hn', ''),
+                    'df': d.get('df', ''),
+                    'reb': d.get('reb', ''),
+                }
+            if abilities_map:
+                break
+
+        # Merge ratings into salary players
+        for p in players:
+            ab = abilities_map.get(p['name'].lower(), {})
+            p['in_rat'] = ab.get('in_rat', '')
+            p['out'] = ab.get('out', '')
+            p['hn'] = ab.get('hn', '')
+            p['df'] = ab.get('df', '')
+            p['reb'] = ab.get('reb', '')
 
         # Add cut players Year 1 salary to total
         cut_salary = 0
