@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, make_response
 import os
+import time
 import requests
 try:
     import cloudscraper
@@ -641,7 +642,12 @@ def fetch_salary_roster():
         pass
 
     try:
-        resp = _scraper.get(url, timeout=20)
+        resp = None
+        for _attempt in range(3):
+            resp = _scraper.get(url, timeout=20)
+            if resp.status_code != 429:
+                break
+            time.sleep(2 ** _attempt)  # 1s, 2s, 4s backoff
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
 

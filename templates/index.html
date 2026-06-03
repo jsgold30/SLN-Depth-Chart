@@ -5583,26 +5583,31 @@ async function tfRun() {
 
   resultsEl.innerHTML = '<div class="tf-loading"><div class="tf-spinner"></div>Loading team rosters…</div>';
 
-  // Load all rosters not yet cached
+  // Load all rosters not yet cached — fetch in batches of 4 to avoid rate-limiting SLN
   const needed = TM_TEAMS.filter(t => t.abbr !== outAbbr && !tfAllRosters[t.abbr]);
   if (needed.length) {
-    await Promise.all(needed.map(async t => {
-      try {
-        const res = await fetch('/fetch_salary_roster', {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({url: TM_BASE + t.url})
-        });
-        if (res.ok) {
-          const d = await res.json();
-          if (d.players) {
-            tfAllRosters[t.abbr] = d.players.map(p => ({
-              name: p.name, pos: p.pos, salary: p.salary || 0,
-              in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
-            })).filter(p => p.salary > 0);
+    const BATCH = 2;
+    for (let i = 0; i < needed.length; i += BATCH) {
+      const batch = needed.slice(i, i + BATCH);
+      await Promise.all(batch.map(async t => {
+        try {
+          const res = await fetch('/fetch_salary_roster', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({url: TM_BASE + t.url})
+          });
+          if (res.ok) {
+            const d = await res.json();
+            if (d.players) {
+              tfAllRosters[t.abbr] = d.players.map(p => ({
+                name: p.name, pos: p.pos, salary: p.salary || 0,
+                in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
+              })).filter(p => p.salary > 0);
+            }
           }
-        }
-      } catch(e) {}
-    }));
+        } catch(e) {}
+      }));
+      if (i + BATCH < needed.length) await new Promise(r => setTimeout(r, 800));
+    }
   }
 
   // Find matches across all teams
