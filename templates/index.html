@@ -502,7 +502,7 @@
     }
     .tm-player-row {
       display: grid;
-      grid-template-columns: 18px 1fr 100px;
+      grid-template-columns: 28px 1fr 100px;
       gap: 6px;
       align-items: center;
       padding: 5px 6px;
@@ -514,7 +514,7 @@
       transition: background 0.1s;
     }
     .tm-player-row:hover { background: #1e293b; }
-    .tm-player-row input[type="checkbox"] { accent-color: #38bdf8; cursor: pointer; }
+    .tm-player-row input[type="checkbox"] { accent-color: #38bdf8; cursor: pointer; width: 16px; height: 16px; }
     .tm-player-row.selected { background: #0c1a2e; color: #e2e8f0; }
     .tm-player-row.tf-row-selected { background: #1e3a5f !important; outline: 2px solid #3b82f6 !important; box-shadow: inset 3px 0 0 #3b82f6; }
     .tm-player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -4015,18 +4015,18 @@ function buildTMPlayerList(side) {
         const playerIdx = roster.indexOf(p);
         row.addEventListener('click', e => {
           if (!tfOpen || tfMode !== 'A') return;
+          if (e.target === cb) return; // let direct checkbox clicks through
           e.preventDefault();
           e.stopPropagation();
-          if (e.target === cb) return;
           tfTogglePlayer(playerIdx, {name: p.name, pos: p.pos || '', year1: p.salary}, row);
         }, true);
       }
       if (side === 'B') {
         row.addEventListener('click', e => {
           if (!tfOpen || tfMode !== 'B') return;
+          if (e.target === cb) return; // let direct checkbox clicks through
           e.preventDefault();
           e.stopPropagation();
-          if (e.target === cb) return;
           tfSelectFromB({name: p.name, salary: p.salary}, row);
         }, true);
       }
