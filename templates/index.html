@@ -1977,6 +1977,7 @@ function switchTab(tab) {
     buildTMLogoGrids();
     tmLogoGridsBuilt = true;
     tmLoadOwedPicks();
+    tfPreloadAllRosters(); // background pre-load so TF ratings are ready
     // Auto-select myTeam as side A on first open
     if (myTeam) {
       const url = TM_BASE + myTeam.url;
@@ -5349,9 +5350,11 @@ async function tmFlushSalaryCache() {
     const r = await fetch('/flush_salary_cache', {method: 'POST'});
     const d = await r.json();
     if (d.ok) {
-      // Also clear in-memory TF roster cache
+      // Clear in-memory TF roster cache and restart pre-load
       Object.keys(tfAllRosters).forEach(k => delete tfAllRosters[k]);
-      statusEl.textContent = '✓ Done — next Trade Finder run will re-fetch all rosters';
+      tfPreloadStarted = false;
+      tfPreloadAllRosters(); // restart background pre-load
+      statusEl.textContent = '✓ Done — re-loading all rosters in background…';
       setTimeout(() => { statusEl.textContent = ''; }, 5000);
     } else {
       statusEl.textContent = 'Error: ' + (d.error || 'unknown');
@@ -5368,8 +5371,38 @@ let tfOpen = false;
 let tfMode = 'A'; // 'A' = outgoing from Team A, 'B' = incoming from Team B
 let tfSelected = [];      // [{name, salary, pos}]
 let tfPinnedB  = [];      // Team B players pre-checked when TF opens (must appear in combos)
-let tfAllRosters = {};    // abbr -> [{name,salary,pos}]
+let tfAllRosters = {};    // abbr -> [{name,salary,pos,in_rat,...}]
 let tfPosFilter = 'ALL';
+let tfPreloadStarted = false;
+
+// Pre-load all team salary rosters slowly in the background (1 per 1.5s)
+// so TF ratings are available by the time the user runs Trade Finder.
+async function tfPreloadAllRosters() {
+  if (tfPreloadStarted) return;
+  tfPreloadStarted = true;
+  const outAbbr = tmGetSideAbbr('A');
+  for (const t of TM_TEAMS) {
+    if (t.abbr === outAbbr) continue;
+    if (tfAllRosters[t.abbr]) continue; // already loaded
+    try {
+      const res = await fetch('/fetch_salary_roster', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({url: TM_BASE + t.url})
+      });
+      if (res.ok) {
+        const d = await res.json();
+        if (d.players) {
+          const mapped = d.players.map(p => ({
+            name: p.name, pos: p.pos, salary: p.salary || 0,
+            in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
+          })).filter(p => p.salary > 0);
+          if (mapped.some(p => p.in_rat)) tfAllRosters[t.abbr] = mapped;
+        }
+      }
+    } catch(e) {}
+    await new Promise(r => setTimeout(r, 1500)); // 1.5s between each team
+  }
+}
 
 function tfFmt(n) {
   if (!n) return '—';
@@ -5608,34 +5641,27 @@ async function tfRun() {
 
   resultsEl.innerHTML = '<div class="tf-loading"><div class="tf-spinner"></div>Loading team rosters…</div>';
 
-  // Load all rosters not yet cached — fetch in batches of 4 to avoid rate-limiting SLN
+  // Load all rosters not yet cached — fetch one at a time to avoid rate-limiting SLN
   const needed = TM_TEAMS.filter(t => t.abbr !== outAbbr && !tfAllRosters[t.abbr]);
   if (needed.length) {
-    const BATCH = 2;
-    for (let i = 0; i < needed.length; i += BATCH) {
-      const batch = needed.slice(i, i + BATCH);
-      await Promise.all(batch.map(async t => {
-        try {
-          const res = await fetch('/fetch_salary_roster', {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({url: TM_BASE + t.url})
-          });
-          if (res.ok) {
-            const d = await res.json();
-            if (d.players) {
-              const mapped = d.players.map(p => ({
-                name: p.name, pos: p.pos, salary: p.salary || 0,
-                in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
-              })).filter(p => p.salary > 0);
-              // Only cache in memory if ratings are present; otherwise retry next run
-              if (mapped.some(p => p.in_rat)) {
-                tfAllRosters[t.abbr] = mapped;
-              }
-            }
+    for (const t of needed) {
+      try {
+        const res = await fetch('/fetch_salary_roster', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({url: TM_BASE + t.url})
+        });
+        if (res.ok) {
+          const d = await res.json();
+          if (d.players) {
+            const mapped = d.players.map(p => ({
+              name: p.name, pos: p.pos, salary: p.salary || 0,
+              in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
+            })).filter(p => p.salary > 0);
+            if (mapped.some(p => p.in_rat)) tfAllRosters[t.abbr] = mapped;
           }
-        } catch(e) {}
-      }));
-      if (i + BATCH < needed.length) await new Promise(r => setTimeout(r, 800));
+        }
+      } catch(e) {}
+      await new Promise(r => setTimeout(r, 1500)); // 1.5s between each to avoid rate limit
     }
   }
 
@@ -5729,7 +5755,7 @@ function tfRenderResults(matches) {
         <div class="tf-result-meta">
           <span class="tf-match-badge ${badgeClass}">${badgeLabel}</span>
           <span class="tf-delta">${tfFmt(m.total)} incoming</span>
-          <button class="tf-load-btn" onclick="tfLoadInTM('${m.team.abbr}','${m.team.url}',${i})">Load in TM →</button>
+          <button class="tf-load-btn" onclick="tfLoadInTM('${m.team.abbr}','${m.team.url}',${i})">Load Trade</button>
         </div>
       </div>`;
     resultsEl.appendChild(card);
@@ -5845,7 +5871,7 @@ function tfSelectFromB(player, rowEl) {
         <div class="tf-result-meta">
           <span class="tf-match-badge ${Math.abs(m.delta)<500000?'tf-match-exact':m.delta<0?'tf-match-under':'tf-match-over'}">${Math.abs(m.delta)<500000?'Exact':(m.delta>0?'+':'')+tfFmt(m.delta)}</span>
           <span class="tf-delta">${tfFmt(m.total)} outgoing</span>
-          <button class="tf-load-btn" onclick="tfLoadBComboInTM(${JSON.stringify(m.players.map(p=>p.name))})">Load in TM →</button>
+          <button class="tf-load-btn" onclick="tfLoadBComboInTM(${JSON.stringify(m.players.map(p=>p.name))})">Load Trade</button>
         </div>
       </div>`;
     resultsEl.appendChild(card);
