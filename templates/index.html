@@ -5958,16 +5958,39 @@ function dcUpdateTradeHistoryDisplay() {
   if (dcModalTradeStr) {
     section.style.display = '';
     const parts = dcModalTradeStr.split(' to ');
-    preview.innerHTML = '<div class="dc-chain-preview">'
+    preview.innerHTML = '<div class="dc-chain-preview" style="flex-wrap:wrap;gap:4px;">'
       + parts.map((abbr, i) => {
           const cls = i === parts.length - 1 ? 'cp-final' : 'cp-team';
-          return `<span class="${cls}">${abbr}</span>${i < parts.length - 1 ? '<span class="cp-arr">→</span>' : ''}`;
+          return `<span class="${cls}" style="display:inline-flex;align-items:center;gap:3px;">${abbr}<button type="button" onclick="dcRemoveTradeHop(${i})" style="font-size:0.6rem;background:none;border:none;color:#64748b;cursor:pointer;padding:0;line-height:1;" title="Remove">✕</button></span>${i < parts.length - 1 ? '<span class="cp-arr">→</span>' : ''}`;
         }).join('')
       + '</div>';
   } else {
     section.style.display = 'none';
     preview.innerHTML = '';
   }
+}
+
+function dcRemoveTradeHop(i) {
+  const parts = dcModalTradeStr.split(' to ');
+  const isLast = (i === parts.length - 1);
+  parts.splice(i, 1);
+
+  if (parts.length <= 1) {
+    // Chain collapses — pick the remaining team as the current owner if it was last
+    if (parts.length === 1 && isLast) {
+      const t = TM_TEAMS.find(t => t.abbr === parts[0]);
+      if (t) document.getElementById('dcPickTeamSel').value = t.name;
+    }
+    dcModalTradeStr = '';
+  } else {
+    dcModalTradeStr = parts.join(' to ');
+    // If last element was removed, update the Team select to new last
+    if (isLast) {
+      const t = TM_TEAMS.find(t => t.abbr === parts[parts.length - 1]);
+      if (t) document.getElementById('dcPickTeamSel').value = t.name;
+    }
+  }
+  dcUpdateTradeHistoryDisplay();
 }
 
 function dcResetTradeToSection() {
