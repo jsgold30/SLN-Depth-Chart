@@ -5539,7 +5539,6 @@ function tfTogglePlayer(idx, player, rowEl) {
 
 function tfUpdateWindow() {
   const total = tfSelected.reduce((s, p) => s + p.salary, 0);
-  const tol = 0.25;
   const wb = document.getElementById('tfWindowBar');
   const fr = document.getElementById('tfFilterRow');
   if (!total || tfSelected.length === 0) {
@@ -5551,8 +5550,8 @@ function tfUpdateWindow() {
   wb.style.display = 'flex';
   fr.style.display = 'flex';
   document.getElementById('tfOutTotal').textContent = tfFmt(total);
-  document.getElementById('tfWindowMin').textContent = tfFmt(total * (1 - tol));
-  document.getElementById('tfWindowMax').textContent = tfFmt(total * (1 + tol));
+  document.getElementById('tfWindowMin').textContent = tfFmt(total / 1.15);
+  document.getElementById('tfWindowMax').textContent = tfFmt(total * 1.15);
   tfRun();
 }
 
@@ -5585,9 +5584,8 @@ async function tfRun() {
     } catch(e) {}
   }
   const outTotal = tfSelected.reduce((s, p) => s + p.salary, 0);
-  const tol = 0.25;
-  const minIn = outTotal * (1 - tol);
-  const maxIn = outTotal * (1 + tol);
+  const minIn = outTotal / 1.15;
+  const maxIn = outTotal * 1.15;
   const outAbbr = tmGetSideAbbr('A');
   const inAbbrB = tmGetSideAbbr('B');
 
