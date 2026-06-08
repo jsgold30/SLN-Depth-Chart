@@ -1169,12 +1169,12 @@
     .dc-order-spacer { flex: 1; }
     .dc-order-move { display: flex; flex-direction: column; gap: 1px; }
     .dc-move-btn {
-      background: none; border: none; color: #475569; cursor: pointer;
-      padding: 1px 4px; font-size: 0.65rem; line-height: 1;
+      background: #1e293b; border: 1px solid #334155; color: #94a3b8; cursor: pointer;
+      padding: 5px 9px; font-size: 0.85rem; line-height: 1; border-radius: 5px;
     }
-    .dc-move-btn:hover { color: #94a3b8; }
-    .dc-order-del { background: none; border: none; color: #475569; cursor: pointer; font-size: 0.8rem; padding: 0 2px; }
-    .dc-order-del:hover { color: #ef4444; }
+    .dc-move-btn:hover { color: #e2e8f0; border-color: #0ea5e9; background: #0f172a; }
+    .dc-order-del { background: #1e293b; border: 1px solid #334155; color: #94a3b8; cursor: pointer; font-size: 0.85rem; padding: 5px 9px; border-radius: 5px; }
+    .dc-order-del:hover { color: #ef4444; border-color: #7f1d1d; background: #0f172a; }
     /* Draft log */
     .dc-log-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
     .dc-log-table th {
@@ -1923,9 +1923,9 @@
   <div class="dc-add-pick-modal">
     <h3 id="dcPickModalTitle">Add Pick</h3>
 
-    <!-- Receiving team -->
+    <!-- Team (current owner) -->
     <div class="dc-add-pick-field">
-      <label>Receiving Team</label>
+      <label>Team</label>
       <select id="dcPickTeamSel"></select>
     </div>
 
@@ -1938,15 +1938,14 @@
       </select>
     </div>
 
-    <!-- Trade chain -->
-    <div style="margin-top:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <label style="font-size:0.72rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Trade History <span style="color:#475569;font-size:0.68rem;font-weight:400;text-transform:none;">optional</span></label>
-        <button type="button" onclick="dcAddTradeHop()" class="dc-hop-add-btn">+ Add Team</button>
-      </div>
-      <div id="dcTradeHopList" style="display:flex;flex-direction:column;gap:4px;"></div>
-      <div id="dcTradeChainPreview" style="margin-top:8px;min-height:20px;"></div>
+    <!-- Trade history (read-only, auto-built) -->
+    <div id="dcTradeHistorySection" style="margin-top:14px;display:none;">
+      <label style="font-size:0.72rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Trade History</label>
+      <div id="dcTradeChainPreview" style="margin-top:6px;min-height:20px;"></div>
     </div>
+
+    <!-- Trade Pick To -->
+    <div style="margin-top:14px;" id="dcTradeToSection"></div>
 
     <div class="dc-add-pick-actions" style="margin-top:16px;">
       <button id="dcPickRescindBtn" onclick="dcRescindFromModal()" style="display:none;background:#450a0a;border:1px solid #7f1d1d;color:#fca5a5;border-radius:6px;padding:6px 14px;font-size:0.8rem;cursor:pointer;margin-right:auto;">Rescind Pick</button>
@@ -5253,7 +5252,7 @@ function dcLoadCsv(input) {
 
 
 // ── Draft Mod PIN ────────────────────────────────────────────────────────
-const DC_MOD_PIN = '3256';
+const DC_MOD_PINS = ['Jordo', 'Hoff', 'Tyler'];
 let dcModUnlocked = false;
 
 function dcShowModPin() {
@@ -5269,7 +5268,7 @@ function dcHideModPin() {
 
 function dcConfirmModPin() {
   const entered = document.getElementById('dcModPinInput').value.trim();
-  if (entered === DC_MOD_PIN) {
+  if (DC_MOD_PINS.includes(entered)) {
     dcModUnlocked = true;
     dcHideModPin();
     document.getElementById('dcModLockBtn').style.display  = 'none';
@@ -5297,7 +5296,7 @@ function dcLockMod() {
   dcUpdateDraftBtn();
 }
 
-const TM_ADMIN_PIN = '3256';
+const TM_ADMIN_PINS = ['Jordo', 'Hoff', 'Tyler'];
 let tmAdminUnlocked = false;
 
 function tmToggleAdminPin() {
@@ -5319,7 +5318,7 @@ function tmToggleAdminPin() {
 
 function tmCheckAdminPin() {
   const val = document.getElementById('tmAdminPinInput').value.trim();
-  if (val === TM_ADMIN_PIN) {
+  if (TM_ADMIN_PINS.includes(val)) {
     tmAdminUnlocked = true;
     document.getElementById('tmAdminPinPanel').style.display = 'none';
     document.getElementById('tmAdminPanel').style.display = 'flex';
@@ -5942,7 +5941,8 @@ function dcCopyForumPost() {
 }
 
 // ── Add Pick modal ────────────────────────────────────────────────────────
-let dcEditingIdx = -1; // -1 = adding new, >=0 = editing existing
+let dcEditingIdx = -1;   // -1 = adding new, >=0 = editing existing
+let dcModalTradeStr = ''; // accumulated trade chain string, e.g. "DEN to MIL to BOS"
 
 function dcTeamOptsHtml() {
   return TM_TEAMS.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
@@ -5952,104 +5952,98 @@ function dcPopulateTeamSelects() {
   document.getElementById('dcPickTeamSel').innerHTML = dcTeamOptsHtml();
 }
 
-function dcUpdateChainPreview() {
-  const receivingName = document.getElementById('dcPickTeamSel').value;
-  const receiving     = TM_TEAMS.find(t => t.name === receivingName);
-  const hops = [...document.querySelectorAll('#dcTradeHopList .dc-hop-sel')]
-    .map(s => TM_TEAMS.find(t => t.name === s.value))
-    .filter(Boolean);
+function dcUpdateTradeHistoryDisplay() {
+  const section = document.getElementById('dcTradeHistorySection');
   const preview = document.getElementById('dcTradeChainPreview');
-  if (hops.length === 0) { preview.innerHTML = ''; return; }
-  const parts = [...hops, receiving].filter(Boolean);
-  preview.innerHTML = '<div class="dc-chain-preview">'
-    + parts.map((t, i) => {
-        const cls = i === parts.length - 1 ? 'cp-final' : 'cp-team';
-        return `<span class="${cls}">${t.abbr}</span>${i < parts.length - 1 ? '<span class="cp-arr">→</span>' : ''}`;
-      }).join('')
-    + '</div>';
+  if (dcModalTradeStr) {
+    section.style.display = '';
+    const parts = dcModalTradeStr.split(' to ');
+    preview.innerHTML = '<div class="dc-chain-preview">'
+      + parts.map((abbr, i) => {
+          const cls = i === parts.length - 1 ? 'cp-final' : 'cp-team';
+          return `<span class="${cls}">${abbr}</span>${i < parts.length - 1 ? '<span class="cp-arr">→</span>' : ''}`;
+        }).join('')
+      + '</div>';
+  } else {
+    section.style.display = 'none';
+    preview.innerHTML = '';
+  }
 }
 
-function dcAddTradeHop(preselect) {
-  const list = document.getElementById('dcTradeHopList');
-  const row  = document.createElement('div');
-  row.className = 'dc-hop-row';
+function dcResetTradeToSection() {
+  const section = document.getElementById('dcTradeToSection');
+  if (!section) return;
+  section.innerHTML = `<button type="button" class="dc-hop-add-btn" style="font-size:0.82rem;padding:6px 14px;" onclick="dcShowTradeToSelector()">Trade Pick To →</button>`;
+}
 
-  const num = document.createElement('span');
-  num.style.cssText = 'font-size:0.68rem;color:#475569;min-width:14px;text-align:right;flex-shrink:0;';
-  num.textContent = list.children.length + 1;
+function dcShowTradeToSelector() {
+  const section = document.getElementById('dcTradeToSection');
+  const opts = TM_TEAMS.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+  section.innerHTML = `
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select id="dcTradeToSel" style="flex:1;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-size:0.85rem;">
+        <option value="">Select team...</option>
+        ${opts}
+      </select>
+      <button type="button" onclick="dcConfirmTradeTo()" style="background:#0ea5e9;border:1px solid #0284c7;color:#fff;border-radius:6px;padding:6px 14px;font-size:0.82rem;cursor:pointer;font-weight:600;white-space:nowrap;">Confirm →</button>
+      <button type="button" onclick="dcResetTradeToSection()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:6px;padding:6px 10px;font-size:0.82rem;cursor:pointer;">✕</button>
+    </div>`;
+}
 
-  const sel = document.createElement('select');
-  sel.className = 'dc-hop-sel';
-  sel.innerHTML = dcTeamOptsHtml();
-  if (preselect) {
-    const opt = [...sel.options].find(o => {
-      const t = TM_TEAMS.find(t => t.name === o.value);
-      return t && (t.abbr === preselect || t.name === preselect);
-    });
-    if (opt) sel.value = opt.value;
-  }
-  sel.addEventListener('change', dcUpdateChainPreview);
+function dcConfirmTradeTo() {
+  const sel = document.getElementById('dcTradeToSel');
+  if (!sel || !sel.value) return;
+  const newTeam = TM_TEAMS.find(t => t.name === sel.value);
+  if (!newTeam) return;
 
-  const del = document.createElement('button');
-  del.type      = 'button';
-  del.className = 'dc-hop-del';
-  del.textContent = '✕';
-  del.onclick = () => {
-    list.removeChild(row);
-    // Renumber remaining hops
-    [...list.querySelectorAll('.dc-hop-row')].forEach((r, i) => {
-      r.querySelector('span').textContent = i + 1;
-    });
-    dcUpdateChainPreview();
-  };
+  const currentOwnerName = document.getElementById('dcPickTeamSel').value;
+  const currentOwner = TM_TEAMS.find(t => t.name === currentOwnerName);
+  const currentAbbr = currentOwner ? currentOwner.abbr : currentOwnerName.slice(0, 3).toUpperCase();
 
-  row.appendChild(num);
-  row.appendChild(sel);
-  row.appendChild(del);
-  list.appendChild(row);
-  dcUpdateChainPreview();
+  dcModalTradeStr = dcModalTradeStr
+    ? `${dcModalTradeStr} to ${newTeam.abbr}`
+    : `${currentAbbr} to ${newTeam.abbr}`;
+
+  // Update team select to new owner
+  document.getElementById('dcPickTeamSel').value = newTeam.name;
+
+  dcUpdateTradeHistoryDisplay();
+  dcResetTradeToSection();
 }
 
 function dcShowAddPick() {
   dcEditingIdx = -1;
+  dcModalTradeStr = '';
   dcPopulateTeamSelects();
   document.getElementById('dcPickModalTitle').textContent = 'Add Pick';
   document.getElementById('dcPickConfirmBtn').textContent = 'Add Pick';
-  document.getElementById('dcTradeHopList').innerHTML = '';
-  document.getElementById('dcTradeChainPreview').innerHTML = '';
   document.getElementById('dcPickRescindBtn').style.display = 'none';
   // Default round: match the last pick in order, or 1 if empty
   const lastRoundInOrder = dcOrder.length > 0 ? (dcOrder[dcOrder.length - 1].round || 1) : 1;
   document.getElementById('dcPickRoundSel').value = lastRoundInOrder;
+  dcUpdateTradeHistoryDisplay();
+  dcResetTradeToSection();
   document.getElementById('dcAddPickOverlay').classList.add('open');
-  // Update preview when receiving team changes
-  document.getElementById('dcPickTeamSel').onchange = dcUpdateChainPreview;
 }
 
 function dcEditPick(idx) {
   dcEditingIdx = idx;
   const team = dcOrder[idx];
+  dcModalTradeStr = team.trade || '';
   dcPopulateTeamSelects();
   document.getElementById('dcPickModalTitle').textContent = `Edit Pick ${idx + 1}`;
   document.getElementById('dcPickConfirmBtn').textContent = 'Save Changes';
   document.getElementById('dcPickRescindBtn').style.display = 'inline-block';
-  document.getElementById('dcTradeHopList').innerHTML = '';
-  document.getElementById('dcTradeChainPreview').innerHTML = '';
 
-  // Pre-select receiving team
+  // Pre-select current owner
   const sel = document.getElementById('dcPickTeamSel');
   const opt = [...sel.options].find(o => o.value === team.name);
   if (opt) sel.value = opt.value;
-  sel.onchange = dcUpdateChainPreview;
   // Pre-select round
   document.getElementById('dcPickRoundSel').value = team.round || 1;
 
-  // Pre-fill trade hops (all parts except the last = receiving abbr)
-  if (team.trade) {
-    const parts = team.trade.split(' to ').map(s => s.trim());
-    parts.slice(0, -1).forEach(abbr => dcAddTradeHop(abbr));
-  }
-
+  dcUpdateTradeHistoryDisplay();
+  dcResetTradeToSection();
   document.getElementById('dcAddPickOverlay').classList.add('open');
 }
 
@@ -6083,6 +6077,7 @@ function dcRescindFromModal() {
 function dcHideAddPick() {
   document.getElementById('dcAddPickOverlay').classList.remove('open');
   document.getElementById('dcPickRescindBtn').style.display = 'none';
+  dcModalTradeStr = '';
   dcEditingIdx = -1;
 }
 
@@ -6091,24 +6086,13 @@ function dcConfirmAddPick() {
   const receiving = TM_TEAMS.find(t => t.name === receivingName)
     || { name: receivingName, abbr: receivingName.slice(0,3).toUpperCase(), c1: '#1e293b', c2: '#334155', url: '' };
 
-  const hopEls = [...document.querySelectorAll('#dcTradeHopList .dc-hop-sel')];
-  const hops = hopEls
-    .map(s => TM_TEAMS.find(t => t.name === s.value))
-    .filter(Boolean);
-  console.log('[dcConfirmAddPick] hopEls:', hopEls.length, '→ matched hops:', hops.map(t=>t.abbr), 'receiving:', receiving.abbr);
-
-  const tradeBadge = hops.length > 0
-    ? [...hops.map(t => t.abbr), receiving.abbr].join(' to ')
-    : null;
-  console.log('[dcConfirmAddPick] tradeBadge:', tradeBadge);
-
   const entry = {
     name:          receivingName,
     abbr:          receiving.abbr,
     c1:            receiving.c1,
     c2:            receiving.c2,
     url:           receiving.url,
-    trade:         tradeBadge,
+    trade:         dcModalTradeStr || null,
     round:         parseInt(document.getElementById('dcPickRoundSel').value) || 1,
     draftedPlayer: '',
     draftedPos:    ''
