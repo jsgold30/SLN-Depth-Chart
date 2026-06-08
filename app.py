@@ -716,8 +716,16 @@ def fetch_salary_roster():
                 'df': p.get('df', ''),
                 'reb': p.get('reb', ''),
             } for p in abilities_result['players']}
-        except Exception:
+            if not abilities_map:
+                print(f'[WARN] fetch_salary_roster: abilities_map empty after parse for {url}')
+        except Exception as e:
+            print(f'[WARN] fetch_salary_roster: abilities parsing failed for {url}: {e}')
             abilities_map = {}
+
+        # Log any salary players that didn't match an abilities entry (name mismatch)
+        unmatched = [p['name'] for p in players if not abilities_map.get(p['name'].lower())]
+        if unmatched and abilities_map:
+            print(f'[WARN] fetch_salary_roster: {len(unmatched)} unmatched names for {url}: {unmatched[:5]}')
 
         # Merge ratings into salary players
         for p in players:
@@ -856,6 +864,23 @@ DRAFT_PLAYER_POOL = [
     {'id':'','name':'Samuel Gallagher','pos':'C','ht':"6'11\"",'wt':'240','age':'22','in_rat':'C','out_rat':'C-','hn':'C-','df':'C','reb':'C+','pot':'C','sri':35,'sro':62,'srh':44,'srd':63,'srr':17,'srp':70},
     {'id':'','name':'Aaden Massey','pos':'C','ht':"6'10\"",'wt':'225','age':'23','in_rat':'B','out_rat':'C-','hn':'C-','df':'C','reb':'C','pot':'C','sri':4,'sro':65,'srh':54,'srd':64,'srr':35,'srp':71},
 ]
+
+@app.route('/flush_salary_cache', methods=['POST'])
+def flush_salary_cache():
+    """Delete all cached salary roster entries so TF re-fetches fresh data from SLN."""
+    try:
+        conn = get_db()
+        if USE_POSTGRES:
+            conn.execute("DELETE FROM roster_cache WHERE team_url LIKE 'salary:%'")
+            conn.commit()
+        else:
+            conn.execute("DELETE FROM roster_cache WHERE team_url LIKE 'salary:%'")
+            conn.commit()
+        conn.close()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/fetch_draft_players', methods=['POST'])
 def fetch_draft_players():

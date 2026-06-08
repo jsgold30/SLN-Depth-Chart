@@ -1550,6 +1550,13 @@
         <span id="tmLeagueYearStatus" style="font-size:0.72rem;color:#94a3b8;"></span>
       </div>
       <hr style="border-color:#334155;margin:2px 0;">
+      <!-- Refresh Roster Cache -->
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span style="color:#94a3b8;font-size:0.72rem;font-weight:600;">Trade Finder Rosters</span>
+        <button class="btn btn-slate" style="padding:3px 10px;font-size:0.73rem;" onclick="tmFlushSalaryCache()">🔄 Refresh All Rosters</button>
+        <span id="tmFlushStatus" style="font-size:0.72rem;color:#94a3b8;"></span>
+      </div>
+      <hr style="border-color:#334155;margin:2px 0;">
       <!-- Owed Picks Paste -->
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <span style="color:#94a3b8;font-size:0.72rem;font-weight:600;">Sync Owed Picks</span>
@@ -5335,6 +5342,25 @@ function tmCloseAdmin() {
   tmAdminUnlocked = false;
 }
 
+async function tmFlushSalaryCache() {
+  const statusEl = document.getElementById('tmFlushStatus');
+  statusEl.textContent = 'Flushing…';
+  try {
+    const r = await fetch('/flush_salary_cache', {method: 'POST'});
+    const d = await r.json();
+    if (d.ok) {
+      // Also clear in-memory TF roster cache
+      Object.keys(tfAllRosters).forEach(k => delete tfAllRosters[k]);
+      statusEl.textContent = '✓ Done — next Trade Finder run will re-fetch all rosters';
+      setTimeout(() => { statusEl.textContent = ''; }, 5000);
+    } else {
+      statusEl.textContent = 'Error: ' + (d.error || 'unknown');
+    }
+  } catch(e) {
+    statusEl.textContent = 'Error: ' + e;
+  }
+}
+
 
 
 // ── Trade Finder ──────────────────────────────────────────────────────────────
@@ -5597,10 +5623,14 @@ async function tfRun() {
           if (res.ok) {
             const d = await res.json();
             if (d.players) {
-              tfAllRosters[t.abbr] = d.players.map(p => ({
+              const mapped = d.players.map(p => ({
                 name: p.name, pos: p.pos, salary: p.salary || 0,
                 in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
               })).filter(p => p.salary > 0);
+              // Only cache in memory if ratings are present; otherwise retry next run
+              if (mapped.some(p => p.in_rat)) {
+                tfAllRosters[t.abbr] = mapped;
+              }
             }
           }
         } catch(e) {}
