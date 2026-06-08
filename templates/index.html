@@ -1528,7 +1528,7 @@
     <!-- Admin PIN entry -->
     <div id="tmAdminPinPanel" style="display:none;padding:10px 0 2px;border-bottom:1px solid #1e293b;margin-bottom:10px;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <input type="password" id="tmAdminPinInput" placeholder="PIN" maxlength="4" inputmode="numeric"
+        <input type="password" id="tmAdminPinInput" placeholder="Password" maxlength="20"
           onkeydown="if(event.key==='Enter')tmCheckAdminPin()"
           style="width:80px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:4px 8px;font-size:0.8rem;letter-spacing:0.2em;">
         <button class="btn btn-slate" style="padding:3px 12px;font-size:0.73rem;" onclick="tmCheckAdminPin()">Unlock</button>
@@ -1904,8 +1904,8 @@
   <div class="dc-add-pick-modal" style="max-width:300px;">
     <h3>Draft Mod</h3>
     <div class="dc-add-pick-field">
-      <label>Enter PIN to unlock</label>
-      <input id="dcModPinInput" type="password" inputmode="numeric" maxlength="4"
+      <label>Enter Password to unlock</label>
+      <input id="dcModPinInput" type="password" maxlength="20"
         style="background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;padding:8px 12px;font-size:1.2rem;letter-spacing:0.3em;text-align:center;width:100%;"
         onkeydown="if(event.key==='Enter')dcConfirmModPin()"
         oninput="document.getElementById('dcModPinError').textContent=''">
@@ -5279,7 +5279,7 @@ function dcConfirmModPin() {
     dcRefreshNotesPanel();
     dcUpdateDraftBtn();
   } else {
-    document.getElementById('dcModPinError').textContent = 'Incorrect PIN. Try again.';
+    document.getElementById('dcModPinError').textContent = 'Incorrect Password. Try again.';
     document.getElementById('dcModPinInput').value = '';
     document.getElementById('dcModPinInput').focus();
   }
