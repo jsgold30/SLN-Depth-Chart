@@ -1259,6 +1259,190 @@
     }
     .dc-reset-btn:hover { background: #2d1010; }
   </style>
+  <!-- THEME PREVIEW: Warm Parchment -->
+  <style id="theme-preview">
+    /* ── Base ── */
+    body { background: #faf0d7 !important; color: #3a2e1a !important; }
+
+    /* ── Cards & layout ── */
+    .card { background: #fff8e8 !important; border-color: #e2cc90 !important; }
+    .card-title { color: #7c5a1a !important; border-color: #e2cc90 !important; }
+
+    /* ── All inputs / selects / textareas ── */
+    input, input[type="text"], input[type="password"], select, textarea {
+      background: #fdf6e3 !important; border-color: #d4b87a !important;
+      color: #3a2e1a !important;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #b45309 !important; }
+    select option { background: #fdf6e3 !important; color: #3a2e1a !important; }
+
+    /* ── Typography ── */
+    h1 { color: #b45309 !important; }
+    h2, h3 { color: #3a2e1a !important; }
+    .subtitle { color: #a07840 !important; }
+
+    /* ── Tabs — cleaner pill style ── */
+    .tab-nav { background: #e0c98a !important; border-color: #c4a05a !important; }
+    .tab-btn { color: #7c5a1a !important; background: transparent !important; border: none !important; }
+    .tab-btn:hover { color: #92400e !important; background: rgba(255,255,255,0.3) !important; }
+    .tab-btn.active { color: #92400e !important; background: #fff8e8 !important; box-shadow: 0 1px 4px rgba(100,60,0,0.18) !important; }
+
+    /* ── Buttons ── */
+    .btn-cyan  { background: #b45309 !important; color: #fff !important; }
+    .btn-cyan:hover { background: #92400e !important; }
+    .btn-green { background: #65a30d !important; color: #fff !important; }
+    .btn-green:hover { background: #4d7c0f !important; }
+    .btn-slate { background: #f5e8c8 !important; color: #7c5a1a !important; border: 1px solid #c4a05a !important; }
+    .btn-slate:hover { background: #edd9a3 !important; }
+
+    /* ── Spinner ── */
+    .spinner { border-color: #e2cc90 !important; border-top-color: #d97706 !important; }
+
+    /* ── Status messages ── */
+    .status-ok   { color: #4d7c0f !important; }
+    .status-err  { color: #b91c1c !important; }
+    .status-info { color: #a07840 !important; }
+
+    /* ── Position badges ── */
+    .pos-badge { background: #d97706 !important; color: #fff !important; }
+
+    /* ── Any element using the old near-white text colors ── */
+    * { color: inherit; }
+
+    /* Muted/secondary text — was #94a3b8, #64748b */
+    .card-title, .tm-section-label, .dc-order-col-hdr,
+    [style*="color:#94a3b8"], [style*="color: #94a3b8"],
+    [style*="color:#64748b"], [style*="color: #64748b"] {
+      color: #a07840 !important;
+    }
+
+    /* Near-white text that would vanish on cream — was #e2e8f0, #f1f5f9, #cbd5e1 */
+    [style*="color:#e2e8f0"], [style*="color: #e2e8f0"],
+    [style*="color:#f1f5f9"], [style*="color: #f1f5f9"],
+    [style*="color:#cbd5e1"], [style*="color: #cbd5e1"] {
+      color: #3a2e1a !important;
+    }
+
+    /* Dark backgrounds on inline-styled inputs / selects */
+    [style*="background:#0f172a"], [style*="background: #0f172a"],
+    [style*="background:#1e293b"], [style*="background: #1e293b"] {
+      background: #fdf6e3 !important;
+      border-color: #d4b87a !important;
+    }
+
+    /* ── Trade Machine panels ── */
+    .tm-side { background: #fff8e8 !important; border-color: #e2cc90 !important; }
+    .tm-player-row { border-color: #e8d9b0 !important; color: #3a2e1a !important; }
+    .tm-player-row:hover { background: #f5e8c8 !important; }
+    .tm-player-row.selected { background: #f5dfa8 !important; color: #3a2e1a !important; }
+    .tm-player-row.tf-row-selected { background: #f5e8c8 !important; outline: 2px solid #b45309 !important; box-shadow: inset 3px 0 0 #b45309 !important; color: #3a2e1a !important; }
+    .tm-salary { color: #16a34a !important; }
+    .tm-total-row { color: #3a2e1a !important; }
+    .tm-result { background: #fff8e8 !important; border-color: #e2cc90 !important; color: #3a2e1a !important; }
+    .tm-result-row { background: #fff8e8 !important; border-color: #e2cc90 !important; }
+    .tm-result-row:hover { background: #f5e8c8 !important; }
+    .tf-load-btn { background: #b45309 !important; color: #fff !important; }
+    /* cyan sending amounts → amber */
+    [style*="color:#38bdf8"], [style*="color: #38bdf8"] { color: #b45309 !important; }
+    /* team logo grid cells */
+    .tm-logo-cell { background: #e8d5a8 !important; border-color: #c4a05a !important; }
+    .tm-logo-cell:hover { background: #d4be88 !important; border-color: #b45309 !important; }
+    .tm-logo-cell.selected { background: #d4be88 !important; border-color: #b45309 !important; }
+    .tm-logo-abbr { color: #7c5a1a !important; }
+
+    /* ── Draft Center ── */
+    .dc-order-row { background: #fff8e8 !important; border-color: #e2cc90 !important; color: #3a2e1a !important; }
+    .dc-order-row:hover { background: #f5e8c8 !important; }
+    .dc-move-btn, .dc-order-del { background: #f5e8c8 !important; border-color: #d4b87a !important; color: #7c5a1a !important; }
+    .dc-move-btn:hover { border-color: #b45309 !important; color: #b45309 !important; }
+    .dc-order-del:hover { border-color: #b91c1c !important; color: #b91c1c !important; }
+    .dc-add-pick-modal, .dc-add-pick-overlay .dc-add-pick-modal { background: #fff8e8 !important; border-color: #e2cc90 !important; color: #3a2e1a !important; }
+    .dc-btn-confirm { background: #b45309 !important; color: #fff !important; }
+    .dc-btn-cancel { background: #f5e8c8 !important; color: #7c5a1a !important; border-color: #c4a05a !important; }
+    .dc-hop-add-btn { background: #f5e8c8 !important; border-color: #c4a05a !important; color: #7c5a1a !important; }
+    .cp-team, .cp-final { background: #f5e8c8 !important; border-color: #c4a05a !important; color: #7c5a1a !important; }
+    .cp-arr { color: #a07840 !important; }
+    .dc-add-round-btn { background: #f5e8c8 !important; border-color: #d4b87a !important; color: #7c5a1a !important; }
+    /* Draft results log table */
+    .dc-log-table th { background: #f5e8c8 !important; color: #7c5a1a !important; border-color: #e2cc90 !important; }
+    .dc-log-table td { color: #3a2e1a !important; border-color: #e8d9b0 !important; }
+    .dc-log-empty { color: #a07840 !important; }
+    /* Player pool table */
+    .dc-pool-table th { background: #f5e8c8 !important; color: #7c5a1a !important; border-color: #e2cc90 !important; }
+    .dc-pool-table td { color: #3a2e1a !important; border-color: #e8d9b0 !important; }
+    .dc-pool-table tr:hover td { background: #f5e8c8 !important; }
+    .dc-pool-table tr.dc-row-selected td { background: #f5dfa8 !important; }
+    .dc-pool-table tr.dc-row-selected:hover td { background: #edd9a3 !important; }
+    .dc-pool-table td[onclick]:hover { color: #b45309 !important; text-decoration-color: #b45309 !important; }
+    .dc-pool-table tr.dc-row-queued td:first-child { color: #b45309 !important; }
+    /* Filter buttons */
+    .dc-filter-btn { background: #f5e8c8 !important; border-color: #d4b87a !important; color: #7c5a1a !important; }
+    .dc-filter-btn.active { background: #b45309 !important; border-color: #b45309 !important; color: #fff !important; }
+    .dc-filter-btn:hover:not(.active) { background: #edd9a3 !important; color: #3a2e1a !important; }
+    /* Position badge in pool */
+    .dc-pos-badge { background: #f5dfa8 !important; color: #7c5a1a !important; }
+    /* Chain preview */
+    .dc-chain-preview { color: #a07840 !important; }
+    .dc-chain-preview .cp-team { color: #b45309 !important; }
+    .dc-chain-preview .cp-arr  { color: #a07840 !important; }
+    .dc-chain-preview .cp-final { color: #92400e !important; }
+
+    /* ── Switch team / logo grid (handled above via .tm-logo-cell) ── */
+
+    /* ── IR labels ── */
+    .ir-label { background: #fff8e8 !important; border-color: #e2cc90 !important; color: #3a2e1a !important; }
+    .ir-label:hover { border-color: #d4b87a !important; }
+
+    /* ── Team chip in header ── */
+    #myTeamChip { background: #fff8e8 !important; border-color: #e2cc90 !important; }
+    #myTeamChipName, #dcMyTeamName { color: #3a2e1a !important; }
+
+    /* ── Bold-check (B) buttons ── */
+    .bold-check { background: #f5e8c8 !important; border-color: #c4a05a !important; color: #7c5a1a !important; }
+    .bold-check.active { background: #d97706 !important; border-color: #b45309 !important; color: #fff !important; }
+
+    /* ── Draft Center — selected player panel ── */
+    .dc-selected-panel { background: #e8d5a8 !important; border-color: #c4a05a !important; }
+    .dc-notes-panel { background: #f5e8c8 !important; border-color: #c4a05a !important; border-top-color: #d4b87a !important; }
+    .dc-notes-ta { background: #fff8e8 !important; border-color: #d4b87a !important; color: #3a2e1a !important; }
+    .dc-notes-ta::placeholder { color: #a07840 !important; }
+    .dc-notes-ta:focus { border-color: #b45309 !important; }
+    .dc-notes-save-btn { background: #b45309 !important; }
+    .dc-notes-save-btn:hover { background: #92400e !important; }
+    .dc-notes-readonly { background: #fff8e8 !important; border-color: #d4b87a !important; color: #3a2e1a !important; }
+    .dc-notes-label { color: #a07840 !important; }
+    .dc-selected-name { color: #3a2e1a !important; }
+    .dc-selected-meta span { background: #fff8e8 !important; color: #7c5a1a !important; border: 1px solid #d4b87a; }
+    .dc-selected-meta span b { color: #3a2e1a !important; }
+    .dc-select-btn { background: #f5e8c8 !important; border-color: #c4a05a !important; color: #7c5a1a !important; }
+    .dc-select-btn:hover, .dc-select-btn.selected { background: #b45309 !important; border-color: #b45309 !important; color: #fff !important; }
+    .dc-selected-clear { color: #a07840 !important; }
+    .dc-selected-clear:hover { color: #b91c1c !important; }
+
+    /* ── Queue button ── */
+    .dc-queue-btn { background: #b45309 !important; border-color: #92400e !important; color: #fff !important; }
+    .dc-queue-btn:hover { background: #92400e !important; }
+    .dc-queue-btn.in-queue { background: #92400e !important; border-color: #b45309 !important; color: #fef3c7 !important; }
+
+    /* ── Queue panel items ── */
+    .dc-queue-panel { background: #fff8e8 !important; border-color: #e2cc90 !important; }
+    .dc-queue-item { border-color: #e8d9b0 !important; }
+    .dc-queue-name { color: #3a2e1a !important; }
+    .dc-queue-pos { color: #a07840 !important; }
+    .dc-queue-num { color: #a07840 !important; }
+    .dc-queue-drag { color: #c4a05a !important; }
+    .dc-queue-rm { color: #a07840 !important; }
+    .dc-queue-rm:hover { color: #b91c1c !important; }
+
+    /* ── Rescind / Undo / Clear All buttons ── */
+    .dc-rescind-btn { background: #fff8e8 !important; border-color: #c4a05a !important; color: #b91c1c !important; }
+    .dc-rescind-btn:hover { background: #f5e8c8 !important; }
+    .dc-reset-btn { background: #fff8e8 !important; border-color: #c4a05a !important; color: #b91c1c !important; margin-left: 0 !important; }
+    .dc-reset-btn:hover { background: #f5e8c8 !important; }
+
+    /* ── Draft order controls — align all on one row ── */
+    .dc-order-controls { align-items: center !important; }
+  </style>
 </head>
 <body>
 <div class="container">
