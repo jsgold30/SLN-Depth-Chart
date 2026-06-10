@@ -1482,6 +1482,31 @@
     .dc-clock-badge { color: #b45309 !important; background: rgba(180,83,9,0.1) !important; }
     /* Add Pick button inline override */
     [style*="background:#0ea5e9"] { background: #b45309 !important; border-color: #b45309 !important; }
+    /* Trade finder result cards */
+    .tf-result-card { background: #fff8e8 !important; border-color: #e2cc90 !important; }
+    .tf-result-card:hover { border-color: #c4a05a !important; background: #fdf6e3 !important; }
+    .tf-result-team { color: #3a2e1a !important; }
+    .tf-rp-chip { background: #f5e8c8 !important; color: #3a2e1a !important; }
+    .tf-rp-pos { color: #b45309 !important; }
+    .tf-match-exact { background: #d1fae5 !important; color: #065f46 !important; }
+    .tf-match-under { background: #fef3c7 !important; color: #92400e !important; }
+    .tf-match-over  { background: #ede9fe !important; color: #5b21b6 !important; }
+    .tf-delta { color: #a07840 !important; }
+    .tf-filter-btn { background: #f5e8c8 !important; border-color: #d4b87a !important; color: #7c5a1a !important; }
+    .tf-filter-btn.active { background: #b45309 !important; border-color: #92400e !important; color: #fff !important; }
+    .tf-player-chip { background: #f5e8c8 !important; border-color: #d4b87a !important; color: #3a2e1a !important; }
+    .tf-player-chip.selected { background: #fde8c8 !important; border-color: #b45309 !important; color: #7c2d12 !important; }
+    .tf-player-chip .tf-chip-salary { color: #16a34a !important; }
+    .tf-b-chip { background: #f5e8c8 !important; border-color: #d4b87a !important; color: #3a2e1a !important; }
+    .tf-b-chip:hover { background: #e8d5a8 !important; border-color: #c4a05a !important; }
+    .tf-b-chip.selected { background: #fde8c8 !important; border-color: #b45309 !important; color: #7c2d12 !important; }
+    .tf-empty { color: #a07840 !important; }
+    .tf-loading { color: #a07840 !important; }
+    .tf-spinner { border-color: #e8d5a8 !important; border-top-color: #b45309 !important; }
+    /* FA position filter buttons */
+    .fa-filter-btn { background: #f5e8c8 !important; border-color: #d4b87a !important; color: #7c5a1a !important; }
+    .fa-filter-btn:hover { background: #e8d5a8 !important; border-color: #c4a05a !important; color: #3a2e1a !important; }
+    .fa-filter-btn.active { background: #b45309 !important; border-color: #92400e !important; color: #fff !important; }
     /* Mobile depth chart rows */
     .dc-row { background: #fff8e8 !important; border-color: #e2cc90 !important; }
   </style>
@@ -5671,7 +5696,7 @@ async function tfPreloadAllRosters() {
           name: p.name, pos: p.pos, salary: p.salary || 0,
           in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
         })).filter(p => p.salary > 0);
-        if (mapped.some(p => p.in_rat)) tfAllRosters[t.abbr] = mapped;
+        if (mapped.length > 0) tfAllRosters[t.abbr] = mapped;
       }
     } catch(e) {}
     await new Promise(r => setTimeout(r, 400)); // 0.4s between teams
@@ -5927,7 +5952,7 @@ async function tfRun() {
             name: p.name, pos: p.pos, salary: p.salary || 0,
             in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
           })).filter(p => p.salary > 0);
-          if (mapped.some(p => p.in_rat)) tfAllRosters[t.abbr] = mapped;
+          if (mapped.length > 0) tfAllRosters[t.abbr] = mapped;
         }
       } catch(e) {}
       loaded++;

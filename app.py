@@ -13,11 +13,17 @@ except ImportError:
 
 SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
 
-def _fetch_url(url, timeout=20):
-    """Fetch a URL, routing through ScraperAPI if SCRAPER_API_KEY is set."""
+def _fetch_url(url, timeout=20, headers=None):
+    """Fetch a URL, routing through ScraperAPI if SCRAPER_API_KEY is set.
+    Pass headers= to forward cookies/auth (uses keep_headers=true with ScraperAPI)."""
     if SCRAPER_API_KEY:
         proxy_url = f'https://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={requests.utils.quote(url, safe="")}'
+        if headers:
+            proxy_url += '&keep_headers=true'
+            return requests.get(proxy_url, headers=headers, timeout=timeout)
         return requests.get(proxy_url, timeout=timeout)
+    if headers:
+        return _scraper.get(url, headers=headers, timeout=timeout)
     return _scraper.get(url, timeout=timeout)
 from bs4 import BeautifulSoup
 import re
@@ -523,7 +529,16 @@ def fetch_roster():
 def fetch_free_agents():
     url = 'https://www.simleaguenirvana.com/fa/fa-pos.htm'
     try:
-        resp = _fetch_url(url, timeout=20)
+        # FA page requires authentication — pass the stored SLN cookie
+        try:
+            _db = get_db()
+            _cookie_row = _db.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
+            _db.close()
+            _cookie = (_cookie_row[0] if _cookie_row else None) or os.environ.get('SLN_COOKIE', '')
+        except Exception:
+            _cookie = os.environ.get('SLN_COOKIE', '')
+        _headers = {'Cookie': _cookie} if _cookie else None
+        resp = _fetch_url(url, timeout=20, headers=_headers)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
 
