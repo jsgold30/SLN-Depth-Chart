@@ -2253,31 +2253,54 @@ function gradeGte(g, t) { return gradeVal(g) >= gradeVal(t); }
 function gradeLte(g, t) { return gradeVal(g) <= gradeVal(t); }
 
 // ─── Roster fetch with client-side CORS proxy fallback ───────────────────────
+async function _tryProxyFetch(url, parseEndpoint, bodyKey) {
+  const proxies = [
+    u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+    u => 'https://corsproxy.io/?' + encodeURIComponent(u),
+    u => 'https://thingproxy.freeboard.io/fetch/' + u,
+  ];
+  for (const makeProxy of proxies) {
+    try {
+      const proxyRes = await fetch(makeProxy(url));
+      if (!proxyRes.ok) continue;
+      const html = await proxyRes.text();
+      if (html.length < 500) continue; // probably a challenge page
+      const parseRes = await fetch(parseEndpoint, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({[bodyKey]: html})
+      });
+      const data = await parseRes.json();
+      if (!data.error) return data;
+    } catch (e) { /* try next */ }
+  }
+  return null;
+}
+
 async function fetchRosterWithFallback(url) {
-  // Try server-side fetch first (uses cache)
   const res = await fetch('/fetch_roster', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({url})
   });
   const data = await res.json();
-
-  // If the server got a 403 (Railway IP blocked), fetch from browser via CORS proxy
   if (data.error && data.error.includes('403')) {
-    try {
-      const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
-      const proxyRes = await fetch(proxyUrl);
-      if (!proxyRes.ok) throw new Error('proxy failed');
-      const html = await proxyRes.text();
-      const parseRes = await fetch('/parse_roster_html', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({html})
-      });
-      return await parseRes.json();
-    } catch (e) {
-      return data; // return original error if proxy also fails
-    }
+    const fallback = await _tryProxyFetch(url, '/parse_roster_html', 'html');
+    if (fallback) return fallback;
+  }
+  return data;
+}
+
+async function fetchSalaryRosterWithFallback(url) {
+  const res = await fetch('/fetch_salary_roster', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({url})
+  });
+  const data = await res.json();
+  if (data.error && data.error.includes('403')) {
+    const fallback = await _tryProxyFetch(url, '/parse_roster_html', 'html');
+    if (fallback) return fallback;
   }
   return data;
 }
@@ -4164,12 +4187,7 @@ async function loadTMTeam(side) {
   document.getElementById(`tmCapAfter${side}`).style.color = '#94a3b8';
 
   try {
-    const res  = await fetch('/fetch_salary_roster', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
-    });
-    const data = await res.json();
+    const data = await fetchSalaryRosterWithFallback(url);
     if (data.error) { statusEl.style.display = ''; statusEl.textContent = '⚠ ' + data.error; return; }
 
     const teamName = (data.team_name || (side === 'A' ? 'Team A' : 'Team B')).replace(/\s*Roster$/i, '').trim();
@@ -5631,12 +5649,9 @@ async function tfPreloadAllRosters() {
     if (t.abbr === outAbbr) continue;
     if (tfAllRosters[t.abbr]) continue; // already loaded
     try {
-      const res = await fetch('/fetch_salary_roster', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({url: TM_BASE + t.url})
-      });
-      if (res.ok) {
-        const d = await res.json();
+      const d = await fetchSalaryRosterWithFallback(TM_BASE + t.url);
+      if (d && !d.error) {
+        {
         if (d.players) {
           const mapped = d.players.map(p => ({
             name: p.name, pos: p.pos, salary: p.salary || 0,
@@ -5890,19 +5905,13 @@ async function tfRun() {
   if (needed.length) {
     for (const t of needed) {
       try {
-        const res = await fetch('/fetch_salary_roster', {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({url: TM_BASE + t.url})
-        });
-        if (res.ok) {
-          const d = await res.json();
-          if (d.players) {
-            const mapped = d.players.map(p => ({
-              name: p.name, pos: p.pos, salary: p.salary || 0,
-              in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
-            })).filter(p => p.salary > 0);
-            if (mapped.some(p => p.in_rat)) tfAllRosters[t.abbr] = mapped;
-          }
+        const d = await fetchSalaryRosterWithFallback(TM_BASE + t.url);
+        if (d && !d.error && d.players) {
+          const mapped = d.players.map(p => ({
+            name: p.name, pos: p.pos, salary: p.salary || 0,
+            in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
+          })).filter(p => p.salary > 0);
+          if (mapped.some(p => p.in_rat)) tfAllRosters[t.abbr] = mapped;
         }
       } catch(e) {}
       await new Promise(r => setTimeout(r, 1500)); // 1.5s between each to avoid rate limit
