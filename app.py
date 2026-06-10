@@ -1391,6 +1391,15 @@ def _startup_sync():
 threading.Thread(target=_startup_sync, daemon=True).start()
 
 
+@app.route('/api/status', methods=['GET'])
+def api_status():
+    key = SCRAPER_API_KEY
+    return jsonify({
+        'scraper_api': 'configured' if key else 'not set',
+        'scraper_api_key_preview': (key[:4] + '…' + key[-4:]) if key else None,
+    })
+
+
 @app.route('/api/picks', methods=['GET'])
 def get_picks():
     db = get_db()
