@@ -5650,15 +5650,12 @@ async function tfPreloadAllRosters() {
     if (tfAllRosters[t.abbr]) continue; // already loaded
     try {
       const d = await fetchSalaryRosterWithFallback(TM_BASE + t.url);
-      if (d && !d.error) {
-        {
-        if (d.players) {
-          const mapped = d.players.map(p => ({
-            name: p.name, pos: p.pos, salary: p.salary || 0,
-            in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
-          })).filter(p => p.salary > 0);
-          if (mapped.some(p => p.in_rat)) tfAllRosters[t.abbr] = mapped;
-        }
+      if (d && !d.error && d.players) {
+        const mapped = d.players.map(p => ({
+          name: p.name, pos: p.pos, salary: p.salary || 0,
+          in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
+        })).filter(p => p.salary > 0);
+        if (mapped.some(p => p.in_rat)) tfAllRosters[t.abbr] = mapped;
       }
     } catch(e) {}
     await new Promise(r => setTimeout(r, 1500)); // 1.5s between each team
