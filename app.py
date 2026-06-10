@@ -4,24 +4,12 @@ import time
 import requests
 try:
     import cloudscraper
-    _scraper = cloudscraper.create_scraper(
-        browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
-    )
+    _scraper = cloudscraper.create_scraper()
 except ImportError:
     import requests as _req
     class _FallbackScraper:
         def get(self, *a, **kw): return _req.get(*a, **kw)
     _scraper = _FallbackScraper()
-
-_SLN_HEADERS = {
-    'Referer': 'https://www.simleaguenirvana.com/',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.5',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'DNT': '1',
-    'Connection': 'keep-alive',
-    'Upgrade-Insecure-Requests': '1',
-}
 from bs4 import BeautifulSoup
 import re
 import sqlite3
@@ -487,7 +475,7 @@ def fetch_roster():
         except Exception:
             pass
 
-        resp = _scraper.get(url, timeout=20, headers=_SLN_HEADERS)
+        resp = _scraper.get(url, timeout=20)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
         result = _parse_roster_from_soup(soup)
@@ -526,7 +514,7 @@ def fetch_roster():
 def fetch_free_agents():
     url = 'https://www.simleaguenirvana.com/fa/fa-pos.htm'
     try:
-        resp = _scraper.get(url, timeout=20, headers=_SLN_HEADERS)
+        resp = _scraper.get(url, timeout=20)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
 
@@ -656,7 +644,7 @@ def fetch_salary_roster():
     try:
         resp = None
         for _attempt in range(3):
-            resp = _scraper.get(url, timeout=20, headers=_SLN_HEADERS)
+            resp = _scraper.get(url, timeout=20)
             if resp.status_code != 429:
                 break
             time.sleep(2 ** _attempt)  # 1s, 2s, 4s backoff
@@ -1202,7 +1190,7 @@ def _execute_picks_sync():
     owned_map = {}
     for roster_file, owner_abbr in ROSTER_MAP.items():
         try:
-            resp = _scraper.get(ROSTER_BASE + roster_file, timeout=15, headers=_SLN_HEADERS)
+            resp = _scraper.get(ROSTER_BASE + roster_file, timeout=15)
             if resp.status_code == 200:
                 picks = parse_roster_draft_picks(resp.text, owner_abbr, get_roster_pick_years())
                 owned_map[owner_abbr] = picks
@@ -1238,7 +1226,7 @@ def _execute_picks_sync():
     if cookie:
         try:
             auth_headers = {**pub_headers, 'Cookie': cookie}
-            resp = _scraper.get(SLN_THREAD_URL, timeout=15, headers={**_SLN_HEADERS, **auth_headers})
+            resp = _scraper.get(SLN_THREAD_URL, timeout=15, headers=auth_headers)
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 post_el = (soup.find('div', class_='content') or
