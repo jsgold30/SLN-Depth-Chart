@@ -1540,8 +1540,7 @@
       <div class="status-row-btns">
         <button class="btn btn-slate" id="undoBtn" onclick="undoLast()" disabled style="font-size:0.72rem;padding:4px 10px;">↩ Undo</button>
         <button class="btn btn-slate" id="tradeModeBtn" onclick="toggleTradePanel()" style="display:none;font-size:0.72rem;padding:4px 10px;">✏ Trade Mode</button>
-        <button class="btn btn-slate" onclick="randomizeDepthChart()" style="font-size:0.72rem;padding:4px 10px;">Randomize</button>
-        <button class="btn btn-green" onclick="optimizeDepthChart()" style="font-size:0.72rem;padding:4px 10px;">Optimize</button>
+
         <button class="btn btn-cyan" id="faBtn" onclick="toggleFAPanel()" style="font-size:0.72rem;padding:4px 10px;display:none;">＋ Free Agents</button>
       </div>
     </div>
@@ -2254,27 +2253,40 @@ function gradeLte(g, t) { return gradeVal(g) <= gradeVal(t); }
 
 // ─── Roster fetch with client-side CORS proxy fallback ───────────────────────
 async function _tryProxyFetch(url, parseEndpoint, bodyKey) {
+  const TIMEOUT = 8000;
   const proxies = [
     u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
     u => 'https://corsproxy.io/?' + encodeURIComponent(u),
-    u => 'https://thingproxy.freeboard.io/fetch/' + u,
   ];
-  for (const makeProxy of proxies) {
-    try {
-      const proxyRes = await fetch(makeProxy(url));
-      if (!proxyRes.ok) continue;
-      const html = await proxyRes.text();
-      if (html.length < 500) continue; // probably a challenge page
-      const parseRes = await fetch(parseEndpoint, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({[bodyKey]: html})
-      });
-      const data = await parseRes.json();
-      if (!data.error) return data;
-    } catch (e) { /* try next */ }
-  }
-  return null;
+  const fetchWithTimeout = proxyUrl => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), TIMEOUT);
+    return fetch(proxyUrl, {signal: ctrl.signal})
+      .then(r => { clearTimeout(t); return r; })
+      .catch(e => { clearTimeout(t); throw e; });
+  };
+  // Race all proxies — first valid HTML wins
+  const attempts = proxies.map(async makeProxy => {
+    const res = await fetchWithTimeout(makeProxy(url));
+    if (!res.ok) throw new Error('not ok');
+    const html = await res.text();
+    if (html.length < 500) throw new Error('too short');
+    return html;
+  });
+  let html = null;
+  try {
+    html = await Promise.any(attempts);
+  } catch (e) { return null; }
+  if (!html) return null;
+  try {
+    const parseRes = await fetch(parseEndpoint, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({[bodyKey]: html})
+    });
+    const data = await parseRes.json();
+    return data.error ? null : data;
+  } catch (e) { return null; }
 }
 
 async function fetchRosterWithFallback(url) {
@@ -2299,7 +2311,7 @@ async function fetchSalaryRosterWithFallback(url) {
   });
   const data = await res.json();
   if (data.error && data.error.includes('403')) {
-    const fallback = await _tryProxyFetch(url, '/parse_roster_html', 'html');
+    const fallback = await _tryProxyFetch(url, '/parse_salary_roster_html', 'html');
     if (fallback) return fallback;
   }
   return data;

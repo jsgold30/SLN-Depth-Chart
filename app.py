@@ -788,6 +788,106 @@ def fetch_salary_roster():
         return jsonify({'error': f'Error parsing salary data: {str(e)}'}), 500
 
 
+def _parse_salary_roster_from_soup(soup):
+    """Parse salary + abilities from a BeautifulSoup roster page. Returns the same
+    structure as fetch_salary_roster so client-side fallback works identically."""
+    team_name = ''
+    title_tag = soup.find('title')
+    if title_tag:
+        team_name = title_tag.get_text(strip=True)
+
+    players = []
+    for table in soup.find_all('table'):
+        rows = table.find_all('tr', recursive=False)
+        if not rows:
+            tbody = table.find('tbody', recursive=False)
+            if tbody:
+                rows = tbody.find_all('tr', recursive=False)
+        if not rows:
+            continue
+        header_row_index = None
+        year1_idx = None
+        for i, row in enumerate(rows):
+            cols = [c.get_text(strip=True).lower() for c in row.find_all('td')]
+            if 'name' in cols and 'year 1' in cols:
+                year1_idx = cols.index('year 1')
+                header_row_index = i
+                break
+        if header_row_index is None:
+            continue
+        for row in rows[header_row_index + 1:]:
+            name_tag = row.find('a')
+            if not name_tag:
+                continue
+            name = name_tag.get_text(strip=True)
+            if not name:
+                continue
+            td_cells = [c.get_text(strip=True) for c in row.find_all('td')]
+            if len(td_cells) <= year1_idx:
+                continue
+            salary = parse_salary(td_cells[year1_idx])
+            players.append({'name': name, 'salary': salary})
+        if players:
+            break
+
+    if not players:
+        raise ValueError('Could not find salary data (Year 1 column) on this page.')
+
+    try:
+        abilities_result = _parse_roster_from_soup(soup)
+        abilities_map = {p['name'].lower(): {
+            'in_rat': p.get('in_rating', ''), 'out': p.get('out', ''),
+            'hn': p.get('hn', ''), 'df': p.get('df', ''), 'reb': p.get('reb', ''),
+        } for p in abilities_result['players']}
+    except Exception:
+        abilities_map = {}
+
+    for p in players:
+        ab = abilities_map.get(p['name'].lower(), {})
+        p['in_rat'] = ab.get('in_rat', '')
+        p['out'] = ab.get('out', '')
+        p['hn'] = ab.get('hn', '')
+        p['df'] = ab.get('df', '')
+        p['reb'] = ab.get('reb', '')
+
+    cut_salary = 0
+    for table in soup.find_all('table'):
+        rows = table.find_all('tr', recursive=False)
+        if not rows:
+            tbody = table.find('tbody', recursive=False)
+            if tbody:
+                rows = tbody.find_all('tr', recursive=False)
+        for row in rows:
+            all_tds = [c.get_text(strip=True) for c in row.find_all('td')]
+            lower = [t.lower() for t in all_tds]
+            if 'cut players:' not in lower:
+                continue
+            total_pos = next((i for i, t in enumerate(lower) if t == 'total'), None)
+            if total_pos is not None and total_pos + 1 < len(all_tds):
+                cut_salary = parse_salary(all_tds[total_pos + 1])
+            break
+        if cut_salary:
+            break
+
+    total_salary = sum(p['salary'] for p in players) + cut_salary
+    return {'players': players, 'team_name': team_name, 'total_salary': total_salary}
+
+
+@app.route('/parse_salary_roster_html', methods=['POST'])
+def parse_salary_roster_html():
+    html = (request.json or {}).get('html', '').strip()
+    if not html:
+        return jsonify({'error': 'No HTML provided'}), 400
+    try:
+        soup = BeautifulSoup(html, 'html.parser')
+        result = _parse_salary_roster_from_soup(soup)
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Error parsing salary data: {str(e)}'}), 500
+
+
 # ── Static draft player pool (snapshot: 2026-06-02) ─────────────────────────
 # To update this list, re-fetch https://www.simleaguenirvana.com/draft/draftplayers-pot.htm
 DRAFT_PLAYER_POOL = [
