@@ -2252,6 +2252,36 @@ function gradeVal(g) { return GRADE_ORDER.indexOf((g||'').trim()); }
 function gradeGte(g, t) { return gradeVal(g) >= gradeVal(t); }
 function gradeLte(g, t) { return gradeVal(g) <= gradeVal(t); }
 
+// ─── Roster fetch with client-side CORS proxy fallback ───────────────────────
+async function fetchRosterWithFallback(url) {
+  // Try server-side fetch first (uses cache)
+  const res = await fetch('/fetch_roster', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({url})
+  });
+  const data = await res.json();
+
+  // If the server got a 403 (Railway IP blocked), fetch from browser via CORS proxy
+  if (data.error && data.error.includes('403')) {
+    try {
+      const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+      const proxyRes = await fetch(proxyUrl);
+      if (!proxyRes.ok) throw new Error('proxy failed');
+      const html = await proxyRes.text();
+      const parseRes = await fetch('/parse_roster_html', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({html})
+      });
+      return await parseRes.json();
+    } catch (e) {
+      return data; // return original error if proxy also fails
+    }
+  }
+  return data;
+}
+
 // ─── Load roster ─────────────────────────────────────────────────────────────
 async function loadRoster(restoring = false) {
   const url = document.getElementById('teamSelect').value.trim();
@@ -2261,12 +2291,7 @@ async function loadRoster(restoring = false) {
   document.getElementById('spinner').style.display = 'inline-block';
 
   try {
-    const res = await fetch('/fetch_roster', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({url})
-    });
-    const data = await res.json();
+    let data = await fetchRosterWithFallback(url);
 
     if (data.error) { setStatus(data.error, 'err'); return; }
 
@@ -3443,12 +3468,7 @@ async function loadTradeTeam() {
   document.getElementById('tradePlayerList').innerHTML = '';
 
   try {
-    const res  = await fetch('/fetch_roster', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({url})
-    });
-    const data = await res.json();
+    const data = await fetchRosterWithFallback(url);
     if (data.error) { document.getElementById('tradeStatus').textContent = data.error; return; }
 
     tradeRoster = data.players;
