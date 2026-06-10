@@ -490,7 +490,16 @@ def fetch_roster():
         except Exception:
             pass
 
-        resp = _fetch_url(url, timeout=20)
+        # Pass SLN cookie so auth-required roster pages load
+        try:
+            _rc = get_db()
+            _cr = _rc.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
+            _rc.close()
+            _ck = ((_cr[0] if _cr else None) or os.environ.get('SLN_COOKIE', '')).strip()
+        except Exception:
+            _ck = os.environ.get('SLN_COOKIE', '').strip()
+        _rh = {'Cookie': _ck} if _ck else None
+        resp = _fetch_url(url, timeout=20, headers=_rh)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
         result = _parse_roster_from_soup(soup)
@@ -534,9 +543,9 @@ def fetch_free_agents():
             _db = get_db()
             _cookie_row = _db.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
             _db.close()
-            _cookie = (_cookie_row[0] if _cookie_row else None) or os.environ.get('SLN_COOKIE', '')
+            _cookie = ((_cookie_row[0] if _cookie_row else None) or os.environ.get('SLN_COOKIE', '')).strip()
         except Exception:
-            _cookie = os.environ.get('SLN_COOKIE', '')
+            _cookie = os.environ.get('SLN_COOKIE', '').strip()
         _headers = {'Cookie': _cookie} if _cookie else None
         resp = _fetch_url(url, timeout=20, headers=_headers)
         resp.raise_for_status()
@@ -666,9 +675,18 @@ def fetch_salary_roster():
         pass
 
     try:
+        # Pass SLN cookie for auth-required pages
+        try:
+            _sc = get_db()
+            _scr = _sc.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
+            _sc.close()
+            _sck = ((_scr[0] if _scr else None) or os.environ.get('SLN_COOKIE', '')).strip()
+        except Exception:
+            _sck = os.environ.get('SLN_COOKIE', '').strip()
+        _sh = {'Cookie': _sck} if _sck else None
         resp = None
         for _attempt in range(3):
-            resp = _fetch_url(url, timeout=20)
+            resp = _fetch_url(url, timeout=20, headers=_sh)
             if resp.status_code != 429:
                 break
             time.sleep(2 ** _attempt)  # 1s, 2s, 4s backoff
