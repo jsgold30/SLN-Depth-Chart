@@ -10,6 +10,15 @@ except ImportError:
     class _FallbackScraper:
         def get(self, *a, **kw): return _req.get(*a, **kw)
     _scraper = _FallbackScraper()
+
+SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
+
+def _fetch_url(url, timeout=20):
+    """Fetch a URL, routing through ScraperAPI if SCRAPER_API_KEY is set."""
+    if SCRAPER_API_KEY:
+        proxy_url = f'https://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={requests.utils.quote(url, safe="")}'
+        return requests.get(proxy_url, timeout=timeout)
+    return _scraper.get(url, timeout=timeout)
 from bs4 import BeautifulSoup
 import re
 import sqlite3
@@ -475,7 +484,7 @@ def fetch_roster():
         except Exception:
             pass
 
-        resp = _scraper.get(url, timeout=20)
+        resp = _fetch_url(url, timeout=20)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
         result = _parse_roster_from_soup(soup)
@@ -514,7 +523,7 @@ def fetch_roster():
 def fetch_free_agents():
     url = 'https://www.simleaguenirvana.com/fa/fa-pos.htm'
     try:
-        resp = _scraper.get(url, timeout=20)
+        resp = _fetch_url(url, timeout=20)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
 
@@ -644,7 +653,7 @@ def fetch_salary_roster():
     try:
         resp = None
         for _attempt in range(3):
-            resp = _scraper.get(url, timeout=20)
+            resp = _fetch_url(url, timeout=20)
             if resp.status_code != 429:
                 break
             time.sleep(2 ** _attempt)  # 1s, 2s, 4s backoff
@@ -1290,7 +1299,7 @@ def _execute_picks_sync():
     owned_map = {}
     for roster_file, owner_abbr in ROSTER_MAP.items():
         try:
-            resp = _scraper.get(ROSTER_BASE + roster_file, timeout=15)
+            resp = _fetch_url(ROSTER_BASE + roster_file, timeout=15)
             if resp.status_code == 200:
                 picks = parse_roster_draft_picks(resp.text, owner_abbr, get_roster_pick_years())
                 owned_map[owner_abbr] = picks
