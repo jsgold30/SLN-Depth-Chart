@@ -5651,17 +5651,21 @@ let tfAllRosters = {};    // abbr -> [{name,salary,pos,in_rat,...}]
 let tfPosFilter = 'ALL';
 let tfPreloadStarted = false;
 
-// Pre-load all team salary rosters slowly in the background (1 per 1.5s)
-// so TF ratings are available by the time the user runs Trade Finder.
+// Pre-load all team salary rosters in the background.
+// Uses direct server fetch only (no proxy fallback) to avoid excessive delays.
 async function tfPreloadAllRosters() {
   if (tfPreloadStarted) return;
   tfPreloadStarted = true;
   const outAbbr = tmGetSideAbbr('A');
   for (const t of TM_TEAMS) {
     if (t.abbr === outAbbr) continue;
-    if (tfAllRosters[t.abbr]) continue; // already loaded
+    if (tfAllRosters[t.abbr]) continue;
     try {
-      const d = await fetchSalaryRosterWithFallback(TM_BASE + t.url);
+      const res = await fetch('/fetch_salary_roster', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url: TM_BASE + t.url})
+      });
+      const d = await res.json();
       if (d && !d.error && d.players) {
         const mapped = d.players.map(p => ({
           name: p.name, pos: p.pos, salary: p.salary || 0,
@@ -5670,7 +5674,7 @@ async function tfPreloadAllRosters() {
         if (mapped.some(p => p.in_rat)) tfAllRosters[t.abbr] = mapped;
       }
     } catch(e) {}
-    await new Promise(r => setTimeout(r, 1500)); // 1.5s between each team
+    await new Promise(r => setTimeout(r, 400)); // 0.4s between teams
   }
 }
 
@@ -5903,18 +5907,21 @@ async function tfRun() {
 
     matches.sort((a, b) => tfComboScore(b.players) - tfComboScore(a.players));
     tfLastResults = matches;
-    tfRenderResults(matches);
+    tfRenderResults(matches, null, null);
     return;
   }
 
-  resultsEl.innerHTML = '<div class="tf-loading"><div class="tf-spinner"></div>Loading team rosters…</div>';
-
-  // Load all rosters not yet cached — fetch one at a time to avoid rate-limiting SLN
   const needed = TM_TEAMS.filter(t => t.abbr !== outAbbr && !tfAllRosters[t.abbr]);
   if (needed.length) {
-    for (const t of needed) {
+    let loaded = 0;
+    resultsEl.innerHTML = `<div class="tf-loading"><div class="tf-spinner"></div>Loading rosters… (0/${needed.length})</div>`;
+    await Promise.all(needed.map(async t => {
       try {
-        const d = await fetchSalaryRosterWithFallback(TM_BASE + t.url);
+        const res = await fetch('/fetch_salary_roster', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({url: TM_BASE + t.url})
+        });
+        const d = await res.json();
         if (d && !d.error && d.players) {
           const mapped = d.players.map(p => ({
             name: p.name, pos: p.pos, salary: p.salary || 0,
@@ -5923,8 +5930,11 @@ async function tfRun() {
           if (mapped.some(p => p.in_rat)) tfAllRosters[t.abbr] = mapped;
         }
       } catch(e) {}
-      await new Promise(r => setTimeout(r, 1500)); // 1.5s between each to avoid rate limit
-    }
+      loaded++;
+      resultsEl.innerHTML = `<div class="tf-loading"><div class="tf-spinner"></div>Loading rosters… (${loaded}/${needed.length})</div>`;
+    }));
+  } else {
+    resultsEl.innerHTML = '<div class="tf-loading"><div class="tf-spinner"></div>Searching…</div>';
   }
 
   // Find matches across all teams
@@ -5942,7 +5952,9 @@ async function tfRun() {
   // Sort by combo rating quality (highest combined grades first)
   matches.sort((a, b) => tfComboScore(b.players) - tfComboScore(a.players));
   tfLastResults = matches;
-  tfRenderResults(matches);
+  const totalTeams = TM_TEAMS.filter(t => t.abbr !== outAbbr).length;
+  const loadedTeams = Object.keys(tfAllRosters).length;
+  tfRenderResults(matches, loadedTeams, totalTeams);
 }
 
 function tfFindCombos(players, minSal, maxSal) {
@@ -5972,7 +5984,7 @@ function tfFindCombos(players, minSal, maxSal) {
   return results;
 }
 
-function tfRenderResults(matches) {
+function tfRenderResults(matches, loadedTeams, totalTeams) {
   const resultsEl = document.getElementById('tfResults');
   const countEl = document.getElementById('tfResultCount');
 
@@ -5982,7 +5994,10 @@ function tfRenderResults(matches) {
   }
 
   if (!filtered.length) {
-    countEl.textContent = '0 matches found';
+    const rosterNote = (loadedTeams != null && loadedTeams < totalTeams)
+      ? ` (${loadedTeams}/${totalTeams} teams loaded — some rosters unavailable)`
+      : '';
+    countEl.textContent = '0 matches found' + rosterNote;
     resultsEl.innerHTML = '<div class="tf-empty">No salary matches found within the trade threshold.</div>';
     return;
   }
