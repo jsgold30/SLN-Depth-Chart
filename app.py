@@ -665,7 +665,7 @@ def fetch_salary_roster():
             fetched_at = cache_row[1]
             if isinstance(fetched_at, str):
                 fetched_at = datetime.fromisoformat(fetched_at)
-            if datetime.utcnow() - fetched_at < timedelta(hours=24):
+            if datetime.utcnow() - fetched_at < timedelta(hours=4):
                 cached_data = json.loads(cache_row[0])
                 # Bust old cache entries that don't have rating fields
                 players_list = cached_data.get('players', [])
@@ -1431,6 +1431,19 @@ def api_status():
         'scraper_api': 'configured' if key else 'not set',
         'scraper_api_key_preview': (key[:4] + '…' + key[-4:]) if key else None,
     })
+
+
+@app.route('/api/clear_salary_cache', methods=['POST'])
+def clear_salary_cache():
+    try:
+        conn = get_db()
+        result = conn.execute("DELETE FROM roster_cache WHERE team_url LIKE 'salary:%'")
+        deleted = result.rowcount
+        conn.commit()
+        conn.close()
+        return jsonify({'deleted': deleted, 'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/picks', methods=['GET'])
