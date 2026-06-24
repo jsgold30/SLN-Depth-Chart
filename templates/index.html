@@ -1801,54 +1801,54 @@
   <div class="card">
     <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
       Trade Machine
-      <button onclick="tmToggleAdminPin()" style="font-size:0.68rem;padding:3px 10px;background:#1e293b;color:#64748b;border:1px solid #334155;border-radius:6px;cursor:pointer;letter-spacing:0.04em;">Admin</button>
+      <button onclick="tmToggleAdminPin()" style="font-size:0.68rem;padding:3px 10px;background:#f5e8c8;color:#7c5a1a;border:1px solid #c4a05a;border-radius:6px;cursor:pointer;letter-spacing:0.04em;">Admin</button>
     </div>
     <!-- Admin PIN entry -->
-    <div id="tmAdminPinPanel" style="display:none;padding:10px 0 2px;border-bottom:1px solid #1e293b;margin-bottom:10px;">
+    <div id="tmAdminPinPanel" style="display:none;padding:10px 0 2px;border-bottom:1px solid #e2cc90;margin-bottom:10px;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <input type="password" id="tmAdminPinInput" placeholder="Password" maxlength="20"
           onkeydown="if(event.key==='Enter')tmCheckAdminPin()"
-          style="width:80px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:4px 8px;font-size:0.8rem;letter-spacing:0.2em;">
+          style="width:80px;background:#fdf6e3;color:#3a2e1a;border:1px solid #d4b87a;border-radius:6px;padding:4px 8px;font-size:0.8rem;letter-spacing:0.2em;">
         <button class="btn btn-slate" style="padding:3px 12px;font-size:0.73rem;" onclick="tmCheckAdminPin()">Unlock</button>
-        <span id="tmAdminPinError" style="font-size:0.72rem;color:#f87171;"></span>
+        <span id="tmAdminPinError" style="font-size:0.72rem;color:#b91c1c;"></span>
       </div>
     </div>
     <!-- Admin sync panel (unlocked) -->
-    <div id="tmAdminPanel" style="display:none;padding:10px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;margin-bottom:12px;flex-direction:column;gap:8px;">
+    <div id="tmAdminPanel" style="display:none;padding:10px 12px;background:#f5e8c8;border:1px solid #d4b87a;border-radius:8px;margin-bottom:12px;flex-direction:column;gap:8px;">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <span style="color:#94a3b8;font-size:0.75rem;font-weight:600;">Admin Settings</span>
-        <button onclick="tmCloseAdmin()" style="font-size:0.7rem;padding:2px 8px;background:transparent;color:#64748b;border:1px solid #334155;border-radius:4px;cursor:pointer;">✕ Close</button>
+        <span style="color:#7c5a1a;font-size:0.75rem;font-weight:600;">Admin Settings</span>
+        <button onclick="tmCloseAdmin()" style="font-size:0.7rem;padding:2px 8px;background:transparent;color:#a07840;border:1px solid #c4a05a;border-radius:4px;cursor:pointer;">✕ Close</button>
       </div>
       <!-- League Year -->
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="color:#94a3b8;font-size:0.72rem;font-weight:600;">Current League Year:</span>
+        <span style="color:#7c5a1a;font-size:0.72rem;font-weight:600;">Current League Year:</span>
         <input id="tmLeagueYearInput" type="number" min="2020" max="2060" value="{{ league_year }}"
-          style="width:80px;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:5px;padding:3px 8px;font-size:0.75rem;">
+          style="width:80px;background:#fdf6e3;color:#3a2e1a;border:1px solid #d4b87a;border-radius:5px;padding:3px 8px;font-size:0.75rem;">
         <button class="btn btn-green" style="padding:3px 10px;font-size:0.73rem;" onclick="tmSaveLeagueYear()">Save</button>
-        <span id="tmLeagueYearStatus" style="font-size:0.72rem;color:#94a3b8;"></span>
+        <span id="tmLeagueYearStatus" style="font-size:0.72rem;color:#a07840;"></span>
       </div>
-      <hr style="border-color:#334155;margin:2px 0;">
+      <hr style="border-color:#d4b87a;margin:2px 0;">
       <!-- Refresh Roster Cache -->
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <span style="color:#94a3b8;font-size:0.72rem;font-weight:600;">Trade Finder Rosters</span>
+        <span style="color:#7c5a1a;font-size:0.72rem;font-weight:600;">Trade Finder Rosters</span>
         <button class="btn btn-slate" style="padding:3px 10px;font-size:0.73rem;" onclick="tmFlushSalaryCache()">🔄 Refresh All Rosters</button>
-        <span id="tmFlushStatus" style="font-size:0.72rem;color:#94a3b8;"></span>
+        <span id="tmFlushStatus" style="font-size:0.72rem;color:#a07840;"></span>
       </div>
-      <hr style="border-color:#334155;margin:2px 0;">
+      <hr style="border-color:#d4b87a;margin:2px 0;">
       <!-- Owed Picks Paste -->
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <span style="color:#94a3b8;font-size:0.72rem;font-weight:600;">Sync Owed Picks</span>
+        <span style="color:#7c5a1a;font-size:0.72rem;font-weight:600;">Sync Owed Picks</span>
         <a href="https://simleaguenirvana.com/viewtopic.php?t=18" target="_blank"
-          style="font-size:0.72rem;color:#7dd3fc;text-decoration:none;">Open SLN Picks Page ↗</a>
+          style="font-size:0.72rem;color:#b45309;text-decoration:none;">Open SLN Picks Page ↗</a>
       </div>
-      <p style="color:#64748b;font-size:0.72rem;margin:0;">
+      <p style="color:#a07840;font-size:0.72rem;margin:0;">
         Log into SLN, open the owed picks page, select all text (Ctrl+A), copy (Ctrl+C), then paste below.
       </p>
       <textarea id="tmAdminPasteText" rows="6" placeholder="Paste the owed picks post content here…"
-        style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:8px;border-radius:6px;font-size:0.72rem;resize:vertical;width:100%;box-sizing:border-box;"></textarea>
+        style="background:#fdf6e3;border:1px solid #d4b87a;color:#3a2e1a;padding:8px;border-radius:6px;font-size:0.72rem;resize:vertical;width:100%;box-sizing:border-box;"></textarea>
       <div style="display:flex;align-items:center;gap:8px;">
         <button class="btn btn-green" style="padding:5px 14px;font-size:0.75rem;" onclick="tmSubmitPicksPaste()">Parse &amp; Save</button>
-        <span id="tmAdminPasteStatus" style="font-size:0.73rem;color:#94a3b8;"></span>
+        <span id="tmAdminPasteStatus" style="font-size:0.73rem;color:#a07840;"></span>
       </div>
     </div>
 
