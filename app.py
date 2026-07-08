@@ -360,16 +360,27 @@ def _sln_auto_login():
 
     for attempt in range(3):
         if attempt:
-            time.sleep(2)
+            time.sleep(3)
         try:
             session_num = random.randint(1, 9999)
             sapi = {'api_key': api_key, 'session_number': session_num}
 
-            # GET login page — ScraperAPI fetches via proxy IP X and stores phpBB
-            # session cookie in its internal jar for session_num
+            # GET login page via ScraperAPI
             get_resp = requests.get('https://api.scraperapi.com',
                                     params={**sapi, 'url': login_url},
                                     headers={'User-Agent': ua}, timeout=35)
+
+            # ScraperAPI passes phpBB's Set-Cookie headers through to us.
+            # Extract them so we can replay them on the POST — phpBB's form_token
+            # validation requires the same session cookie that was set on GET.
+            jar = {c.name: c.value for c in get_resp.cookies}
+            for raw_sc in get_resp.raw.headers.getlist('Set-Cookie'):
+                nv = raw_sc.split(';')[0].strip()
+                if '=' in nv:
+                    k, v = nv.split('=', 1)
+                    jar.setdefault(k.strip(), v.strip())
+            app.logger.info('SLN login attempt %d: GET cookies=%s', attempt + 1, list(jar.keys()))
+
             soup = BeautifulSoup(get_resp.text, 'html.parser')
             form = soup.find('form', id='login') or soup.find('form')
             hidden = {}
@@ -384,21 +395,31 @@ def _sln_auto_login():
             payload = {**hidden, 'username': username, 'password': password,
                        'autologin': 'on', 'login': 'Login'}
 
-            # POST credentials — ScraperAPI uses same proxy IP X + stored cookies
-            # so phpBB's form_token and session IP check both pass
+            # Small delay — phpBB bot-detection rejects forms submitted too quickly
+            time.sleep(2)
+
+            # POST credentials with the session cookie from GET, same session_number
+            # (same proxy IP), so phpBB's form_token + IP check both pass
+            post_headers = {
+                'User-Agent': ua,
+                'Referer': login_url,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+            if jar:
+                post_headers['Cookie'] = '; '.join(f'{k}={v}' for k, v in jar.items())
+
             post_resp = requests.post(
                 'https://api.scraperapi.com',
                 params={**sapi, 'url': post_target, 'keep_headers': 'true'},
                 data=payload,
-                headers={'User-Agent': ua, 'Referer': login_url,
-                         'Content-Type': 'application/x-www-form-urlencoded'},
+                headers=post_headers,
                 timeout=35,
             )
 
-            # Verify: if phpBB still shows a login form, login failed
             soup_post = BeautifulSoup(post_resp.text, 'html.parser')
             if soup_post.find('form', id='login'):
-                last_err = f'login form still present after POST (attempt {attempt+1})'
+                last_err = (f'login form still present after POST '
+                            f'(attempt {attempt+1}, cookies={list(jar.keys())})')
                 app.logger.warning('SLN login: %s', last_err)
                 continue
 
