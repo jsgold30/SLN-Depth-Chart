@@ -312,61 +312,66 @@ def mockup_team_select():
     return render_template('mockup_team_select.html')
 
 
+_sln_login_last_error = ''
+
 def _sln_auto_login():
     """Login to SLN via ScraperAPI sticky-session proxy so phpBB IP check passes.
-    Returns a logged-in requests.Session or None.
-    Both login and forum requests must come from the same IP; ScraperAPI's sticky
-    session (session_number param in proxy username) guarantees that.
+    Returns a logged-in requests.Session or None. Retries up to 3 times.
     ScraperAPI's proxy performs SSL interception, so verify=False is required.
     """
+    global _sln_login_last_error
     username = os.environ.get('SLN_USERNAME', '').strip()
     password = os.environ.get('SLN_PASSWORD', '').strip()
     if not username or not password:
+        _sln_login_last_error = 'SLN_USERNAME or SLN_PASSWORD not set'
         return None
     import random, urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-    session_num = random.randint(1, 9999)
-    s = requests.Session()
-    if SCRAPER_API_KEY:
-        proxy = f'http://scraperapi.session-{session_num}:{SCRAPER_API_KEY}@proxy.scraperapi.com:8001'
-        s.proxies.update({'http': proxy, 'https': proxy})
-        s.verify = False  # ScraperAPI proxy uses SSL interception
     base_url  = 'https://simleaguenirvana.com'
     login_url = f'{base_url}/ucp.php?mode=login'
     ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
     headers = {'User-Agent': ua, 'Referer': login_url}
-    try:
-        get_resp = s.get(login_url, headers=headers, timeout=20)
-        soup = BeautifulSoup(get_resp.text, 'html.parser')
-        form = soup.find('form', id='login') or soup.find('form')
-        hidden = {}
-        if form:
-            for inp in form.find_all('input', type='hidden'):
-                if inp.get('name'):
-                    hidden[inp['name']] = inp.get('value', '')
-        action = (form.get('action') or 'ucp.php?mode=login') if form else 'ucp.php?mode=login'
-        if action.startswith('./'):
-            action = action[2:]
-        post_url = f'{base_url}/{action}'
-        payload = {**hidden, 'username': username, 'password': password, 'autologin': 'on', 'login': 'Login'}
-        s.post(post_url, data=payload, headers=headers, timeout=20, allow_redirects=True)
-        cookies = {c.name: c.value for c in s.cookies}
-        uid_key = next((k for k in cookies if k.endswith('_u')), None)
-        if not uid_key or cookies.get(uid_key, '1') == '1':
-            app.logger.warning('SLN login: no valid uid cookie — credentials wrong or login page unreachable')
-            return None
-        cookie_str = '; '.join(f'{k}={v.strip()}' for k, v in cookies.items()).strip()
+    for attempt in range(3):
         try:
-            db = get_db()
-            db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
-            db.commit()
-            db.close()
-        except Exception:
-            pass
-        return s
-    except Exception as e:
-        app.logger.warning('SLN proxy login failed: %s', e)
-        return None
+            session_num = random.randint(1, 9999)
+            s = requests.Session()
+            if SCRAPER_API_KEY:
+                proxy = f'http://scraperapi.session-{session_num}:{SCRAPER_API_KEY}@proxy.scraperapi.com:8001'
+                s.proxies.update({'http': proxy, 'https': proxy})
+                s.verify = False
+            get_resp = s.get(login_url, headers=headers, timeout=30)
+            soup = BeautifulSoup(get_resp.text, 'html.parser')
+            form = soup.find('form', id='login') or soup.find('form')
+            hidden = {}
+            if form:
+                for inp in form.find_all('input', type='hidden'):
+                    if inp.get('name'):
+                        hidden[inp['name']] = inp.get('value', '')
+            action = (form.get('action') or 'ucp.php?mode=login') if form else 'ucp.php?mode=login'
+            if action.startswith('./'):
+                action = action[2:]
+            post_url = f'{base_url}/{action}'
+            payload = {**hidden, 'username': username, 'password': password, 'autologin': 'on', 'login': 'Login'}
+            s.post(post_url, data=payload, headers=headers, timeout=30, allow_redirects=True)
+            cookies = {c.name: c.value for c in s.cookies}
+            uid_key = next((k for k in cookies if k.endswith('_u')), None)
+            if uid_key and cookies.get(uid_key, '1') != '1':
+                cookie_str = '; '.join(f'{k}={v.strip()}' for k, v in cookies.items()).strip()
+                try:
+                    db = get_db()
+                    db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
+                    db.commit()
+                    db.close()
+                except Exception:
+                    pass
+                _sln_login_last_error = ''
+                return s
+            _sln_login_last_error = f'uid cookie missing or anonymous (attempt {attempt+1})'
+            app.logger.warning('SLN login attempt %d: uid cookie shows anonymous user', attempt + 1)
+        except Exception as e:
+            _sln_login_last_error = f'{type(e).__name__}: {e} (attempt {attempt+1})'
+            app.logger.warning('SLN login attempt %d failed: %s', attempt + 1, e)
+    return None
 
 
 def _parse_roster_from_soup(soup):
@@ -1406,7 +1411,7 @@ def _execute_picks_sync():
         except Exception as e:
             errors.append(f'Forum thread: {e}')
     else:
-        errors.append('No SLN session — skipped forum thread picks')
+        errors.append(f'Login failed ({_sln_login_last_error or "unknown"}) — skipped forum thread picks')
 
     db = get_db()
     db.execute(
@@ -1517,7 +1522,7 @@ def debug_forum():
         has_user = bool(os.environ.get('SLN_USERNAME'))
         has_pass = bool(os.environ.get('SLN_PASSWORD'))
         has_key  = bool(SCRAPER_API_KEY)
-        errors.append(f'Login failed — SLN_USERNAME={has_user} SLN_PASSWORD={has_pass} SCRAPER_API_KEY={has_key}. Check Railway logs for the exact error.')
+        errors.append(f'Login failed — SLN_USERNAME={has_user} SLN_PASSWORD={has_pass} SCRAPER_API_KEY={has_key} — {_sln_login_last_error or "no error captured"}')
     sas_owed = [p for p in parsed if p['from_abbr'] == 'SAS' or p['to_abbr'] == 'SAS']
     return jsonify({
         'login_ok': bool(sln_session),
