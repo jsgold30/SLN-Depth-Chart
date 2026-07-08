@@ -347,10 +347,10 @@ def _sln_auto_login():
     if not username or not password:
         _sln_login_last_error = 'SLN_USERNAME or SLN_PASSWORD not set'
         return None
-    api_key = os.environ.get('SCRAPER_API_KEY', '').strip()
+    _raw_key = os.environ.get('SCRAPER_API_KEY', '')
+    api_key = _raw_key.strip()
     if not api_key:
-        matching = [k for k in os.environ if 'SCRAPER' in k.upper()]
-        _sln_login_last_error = f'SCRAPER_API_KEY empty (env vars matching SCRAPER: {matching})'
+        _sln_login_last_error = f'SCRAPER_API_KEY empty (raw len={len(_raw_key)}, stripped len=0)'
         return None
     import random, time
     base_url  = 'https://simleaguenirvana.com'
