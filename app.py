@@ -317,21 +317,24 @@ _sln_login_last_error = ''
 
 class _SAPISession:
     """Wraps ScraperAPI API-endpoint calls behind a .get() interface.
-    All requests share the same session_number so ScraperAPI maintains
-    the same proxy IP and cookie jar across GET login → POST creds → forum fetch.
+    Carries an optional cookie string so the authenticated session is replayed
+    on every forum fetch (ScraperAPI API mode doesn't persist cookies between
+    requests automatically).
     """
-    def __init__(self, api_key, session_num):
+    def __init__(self, api_key, session_num, cookie=None):
         self._key = api_key
         self._snum = session_num
         self._ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        self._cookie = cookie
 
     def get(self, url, headers=None, timeout=30, **_):
-        return requests.get(
-            'https://api.scraperapi.com',
-            params={'api_key': self._key, 'session_number': self._snum, 'url': url},
-            headers={'User-Agent': self._ua},
-            timeout=timeout,
-        )
+        params = {'api_key': self._key, 'session_number': self._snum, 'url': url}
+        req_headers = {'User-Agent': self._ua}
+        if self._cookie:
+            params['keep_headers'] = 'true'
+            req_headers['Cookie'] = self._cookie
+        return requests.get('https://api.scraperapi.com', params=params,
+                            headers=req_headers, timeout=timeout)
 
 
 def _sln_auto_login():
@@ -382,7 +385,7 @@ def _sln_auto_login():
             if not BeautifulSoup(resp.text, 'html.parser').find('form', id='login'):
                 app.logger.info('SLN auth: stored cookie accepted (path 1)')
                 _sln_login_last_error = ''
-                return _SAPISession(api_key, session_num)
+                return _SAPISession(api_key, session_num, cookie=stored_cookie)
             app.logger.info('SLN auth: stored cookie rejected — trying _k path')
         except Exception as e:
             app.logger.warning('SLN auth path 1 failed: %s', e)
@@ -468,8 +471,16 @@ def _sln_auto_login():
                 app.logger.warning('SLN auth: %s', last_err)
                 continue
 
+            # Merge GET cookies with any new cookies set by the POST response
+            post_jar = {c.name: c.value for c in post_resp.cookies}
+            for raw_sc in post_resp.raw.headers.getlist('Set-Cookie'):
+                nv = raw_sc.split(';')[0].strip()
+                if '=' in nv:
+                    k, v = nv.split('=', 1)
+                    post_jar.setdefault(k.strip(), v.strip())
+            merged = '; '.join(f'{k}={v}' for k, v in {**jar, **post_jar}.items())
             _sln_login_last_error = ''
-            return _SAPISession(api_key, session_num)
+            return _SAPISession(api_key, session_num, cookie=merged or None)
 
         except Exception as e:
             last_err = f'{type(e).__name__}: {e} (path 3 attempt {attempt+1})'
