@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 import re
 import sqlite3
 import json
-import threading
+
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -1021,27 +1021,6 @@ def get_league_year():
         app.logger.warning("non-critical error suppressed: %s", e)
     return LEAGUE_YEAR_DEFAULT
 
-def get_roster_pick_years():
-    y = get_league_year()
-    return [y + 1]
-
-def get_forum_pick_years():
-    y = get_league_year()
-    return list(range(y + 1, y + 7))  # 6 years ahead: y+1 through y+6
-
-ROSTER_MAP = {
-    'roster1.htm': 'BOS', 'roster2.htm': 'MIA', 'roster3.htm': 'NJN',
-    'roster4.htm': 'NYK', 'roster5.htm': 'ORL', 'roster6.htm': 'PHI',
-    'roster7.htm': 'WAS', 'roster8.htm': 'ATL', 'roster9.htm': 'CHA',
-    'roster10.htm': 'CHI', 'roster11.htm': 'CLE', 'roster12.htm': 'DET',
-    'roster13.htm': 'IND', 'roster14.htm': 'MIL', 'roster15.htm': 'TOR',
-    'roster16.htm': 'DAL', 'roster17.htm': 'DEN', 'roster18.htm': 'HOU',
-    'roster19.htm': 'MIN', 'roster20.htm': 'SAS', 'roster21.htm': 'UTA',
-    'roster22.htm': 'VAN', 'roster23.htm': 'GSW', 'roster24.htm': 'LAC',
-    'roster25.htm': 'LAL', 'roster26.htm': 'PHX', 'roster27.htm': 'POR',
-    'roster28.htm': 'SAC', 'roster29.htm': 'SEA',
-}
-ROSTER_BASE = 'https://www.simleaguenirvana.com/rosters/'
 
 TEAM_NAME_TO_ABBR = {
     'boston celtics': 'BOS', 'miami heat': 'MIA', 'new jersey nets': 'NJN',
@@ -1083,96 +1062,6 @@ def find_abbr(text):
     return None
 
 
-def parse_roster_draft_picks(html, owner_abbr, target_years):
-    """Parse Draft Picks table from a roster page.
-    Returns list of {year, round, original_abbr} — picks the owner currently holds.
-    """
-    soup = BeautifulSoup(html, 'html.parser')
-    picks = []
-
-    # Find the anchor/element that is INSIDE the Draft Picks table.
-    # The pattern on SLN roster pages is: <a name="draft">Draft Picks</a>
-    # which is inside the first <td> of the table — so we use find_parent('table').
-    draft_anchor = soup.find('a', attrs={'name': 'draft'})
-    if draft_anchor:
-        table = draft_anchor.find_parent('table')
-    else:
-        # Fallback: find first <td>/<th> whose text is "Draft Picks" and get its parent table
-        table = None
-        for tag in soup.find_all(['td', 'th', 'b', 'strong', 'u']):
-            if tag.get_text(strip=True).lower() == 'draft picks':
-                table = tag.find_parent('table')
-                if table:
-                    break
-    if not table:
-        return picks
-
-    rows = table.find_all('tr')
-    if len(rows) < 2:
-        return picks
-
-    # Skip the title row ("Draft Picks") — find the row that has year headers
-    year_col_map = {}  # col_index -> year
-    year_row_idx = None
-    for ri, row in enumerate(rows):
-        col = 0
-        found = {}
-        for cell in row.find_all(['th', 'td']):
-            colspan = int(cell.get('colspan', 1))
-            txt = cell.get_text(strip=True)
-            m = re.search(r'\b(20[3-9]\d)\b', txt)
-            if m:
-                year = int(m.group(1))
-                for c in range(col, col + colspan):
-                    found[c] = year
-            col += colspan
-        if found:
-            year_col_map = found
-            year_row_idx = ri
-            break
-
-    if not year_col_map:
-        return picks
-
-    # Determine round/team column types per year section
-    # Within each year's colspan, first col = round, second = team
-    year_sections = {}  # year -> (round_col, team_col)
-    seen_year = {}
-    for c, year in sorted(year_col_map.items()):
-        if year not in seen_year:
-            seen_year[year] = c
-            year_sections[year] = (c, c + 1)
-
-    # Skip year-header row and any sub-header row(s) containing "round"/"team"
-    data_rows = rows[year_row_idx + 1:]
-    while data_rows:
-        cells_text = [c.get_text(strip=True).lower() for c in data_rows[0].find_all(['th', 'td'])]
-        if any(t in ('round', 'team', 'r', 't') for t in cells_text):
-            data_rows = data_rows[1:]
-        else:
-            break
-
-    for row in data_rows:
-        cells = row.find_all(['td', 'th'])
-        cell_texts = [c.get_text(strip=True) for c in cells]
-        for year, (round_col, team_col) in year_sections.items():
-            if year not in target_years:
-                continue
-            rnd_txt  = cell_texts[round_col]  if round_col  < len(cell_texts) else ''
-            team_txt = cell_texts[team_col]   if team_col   < len(cell_texts) else ''
-            if not rnd_txt or not team_txt:
-                continue
-            try:
-                rnd = int(rnd_txt)
-            except ValueError:
-                continue
-            if rnd not in (1, 2):
-                continue
-            orig = find_abbr(team_txt)
-            if orig:
-                picks.append({'year': year, 'round': rnd, 'original_abbr': orig})
-
-    return picks
 
 
 def parse_owed_picks_from_thread(post_text):
@@ -1293,36 +1182,27 @@ def get_picks():
 
 @app.route('/api/picks/from-paste', methods=['POST'])
 def picks_from_paste():
-    """Accept pasted text from the SLN owed-picks forum post.
-    Parses years 3-6 picks and merges them with whatever roster-page data is in the DB.
+    """Accept pasted text from the SLN owed-picks thread and save all parsed picks.
+    Replaces whatever is currently stored — paste is the source of truth.
     """
     body = request.get_json() or {}
     text = (body.get('text') or '').strip()
     if not text:
         return jsonify({'error': 'text required'}), 400
 
-    forum_picks = parse_owed_picks_from_thread(text)
-    if not forum_picks:
+    picks = parse_owed_picks_from_thread(text)
+    if not picks:
         return jsonify({'error': 'No picks found — make sure you copied the full post text'}), 400
 
     db = get_db()
-    row = db.execute('SELECT data FROM owed_picks WHERE id = 1').fetchone()
-    existing = json.loads(row[0]) if row else []
-
-    # Keep roster-page picks (years 2036-2037), fully replace forum-year picks with new paste
-    kept = [p for p in existing if p.get('year') in get_roster_pick_years()]
-    forum_to_add = [p for p in forum_picks if p['year'] in get_forum_pick_years()]
-    kept.extend(forum_to_add)
-    added = len(forum_to_add)
-
     db.execute(
         '''INSERT INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)
                ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data, updated_at=EXCLUDED.updated_at''',
-        (json.dumps(kept),)
+        (json.dumps(picks),)
     )
     db.commit()
     db.close()
-    return jsonify({'ok': True, 'added': added, 'total': len(kept)})
+    return jsonify({'ok': True, 'total': len(picks)})
 
 
 @app.route('/api/picks/update', methods=['POST'])
