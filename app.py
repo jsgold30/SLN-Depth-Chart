@@ -1377,31 +1377,50 @@ def _execute_picks_sync():
                         owed.append({'from_abbr': abbr, 'year': year, 'round': rnd, 'to_abbr': 'EXT'})
 
     # ── Step 2: Forum thread first post (years y+1 through y+6) ─────────────
-    # Auth runs here (after roster scraping) so a slow/failed login never
-    # blocks the roster picks from being saved.
-    sln_session = _sln_auto_login()
-    if sln_session:
+    # phpBB processes the _k autologin key on every request (not just homepage),
+    # so we send the stored cookie directly to the thread URL — no separate login step.
+    # Try no-auth first (thread may be publicly readable), then with stored cookie.
+    ua = pub_headers['User-Agent']
+    stored_cookie = os.environ.get('SLN_COOKIE', '').strip()
+    forum_resp = None
+    attempts = [('', 'no-auth')]
+    if stored_cookie:
+        attempts = [('', 'no-auth'), (stored_cookie, 'cookie')]
+    for cookie_val, label in attempts:
         try:
-            resp = sln_session.get(SLN_THREAD_URL, headers=pub_headers, timeout=25)
-            if resp.status_code == 200:
-                soup = BeautifulSoup(resp.text, 'html.parser')
-                post_el = (soup.find('div', class_='content') or
-                           soup.find('div', class_='postbody') or
-                           soup.find('div', class_='post'))
-                if post_el:
-                    forum_picks = parse_owed_picks_from_thread(post_el.get_text(separator='\n'))
-                    for o in forum_picks:
-                        if o['year'] in get_forum_pick_years():
-                            key = (o['from_abbr'], o['year'], o['round'], o['to_abbr'])
-                            if key not in seen:
-                                seen.add(key)
-                                owed.append(o)
+            hdrs = {'User-Agent': ua}
+            if cookie_val:
+                hdrs['Cookie'] = cookie_val
+            r = requests.get(SLN_THREAD_URL, headers=hdrs, timeout=25)
+            if r.status_code == 200:
+                soup_check = BeautifulSoup(r.text, 'html.parser')
+                if not soup_check.find('form', id='login'):
+                    forum_resp = r
+                    app.logger.info('SLN forum: success via %s', label)
+                    break
+                app.logger.info('SLN forum: login wall (%s)', label)
             else:
-                errors.append(f'Forum thread HTTP {resp.status_code}')
+                app.logger.info('SLN forum: HTTP %s (%s)', r.status_code, label)
         except Exception as e:
-            errors.append(f'Forum thread: {e}')
+            app.logger.warning('SLN forum %s: %s', label, e)
+
+    if forum_resp:
+        soup = BeautifulSoup(forum_resp.text, 'html.parser')
+        post_el = (soup.find('div', class_='content') or
+                   soup.find('div', class_='postbody') or
+                   soup.find('div', class_='post'))
+        if post_el:
+            forum_picks = parse_owed_picks_from_thread(post_el.get_text(separator='\n'))
+            for o in forum_picks:
+                if o['year'] in get_forum_pick_years():
+                    key = (o['from_abbr'], o['year'], o['round'], o['to_abbr'])
+                    if key not in seen:
+                        seen.add(key)
+                        owed.append(o)
+        else:
+            errors.append('Forum: no post content found (login wall or non-phpBB response)')
     else:
-        errors.append(f'Login failed ({_sln_login_last_error or "unknown"}) — skipped forum thread picks')
+        errors.append(f'Forum fetch failed — cookie set={bool(stored_cookie)}')
 
     db = get_db()
     db.execute(
@@ -1487,35 +1506,50 @@ def sync_picks():
 
 @app.route('/api/picks/debug-forum', methods=['GET'])
 def debug_forum():
-    """Temporary debug endpoint: shows raw forum post text and parsed picks."""
-    sln_session = _sln_auto_login()
-    errors = []
+    """Debug endpoint: shows what Railway actually gets back from the SLN forum thread."""
+    ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    stored_cookie = os.environ.get('SLN_COOKIE', '').strip()
+    attempts_log = []
     raw_text = ''
     parsed = []
-    if sln_session:
+
+    attempts = [('', 'no-auth')]
+    if stored_cookie:
+        attempts.append((stored_cookie, 'cookie'))
+
+    forum_resp = None
+    for cookie_val, label in attempts:
+        entry = {'label': label, 'url': SLN_THREAD_URL}
         try:
-            resp = sln_session.get(SLN_THREAD_URL, headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}, timeout=25)
-            if resp.status_code == 200:
-                soup = BeautifulSoup(resp.text, 'html.parser')
-                post_el = (soup.find('div', class_='content') or
-                           soup.find('div', class_='postbody') or
-                           soup.find('div', class_='post'))
-                if post_el:
-                    raw_text = post_el.get_text(separator='\n')
-                    parsed = parse_owed_picks_from_thread(raw_text)
-                else:
-                    errors.append('No post element found — page may still be showing login')
-            else:
-                errors.append(f'HTTP {resp.status_code}')
+            hdrs = {'User-Agent': ua}
+            if cookie_val:
+                hdrs['Cookie'] = cookie_val
+            r = requests.get(SLN_THREAD_URL, headers=hdrs, timeout=25)
+            entry['status'] = r.status_code
+            entry['has_login_form'] = bool(BeautifulSoup(r.text, 'html.parser').find('form', id='login'))
+            entry['html_preview'] = r.text[:300]
+            if r.status_code == 200 and not entry['has_login_form']:
+                forum_resp = r
+                entry['success'] = True
         except Exception as e:
-            errors.append(str(e))
-    else:
-        has_cookie = bool(os.environ.get('SLN_COOKIE'))
-        errors.append(f'Login failed — SLN_COOKIE={has_cookie} — {_sln_login_last_error or "no error captured"}')
+            entry['error'] = str(e)
+        attempts_log.append(entry)
+        if forum_resp:
+            break
+
+    if forum_resp:
+        soup = BeautifulSoup(forum_resp.text, 'html.parser')
+        post_el = (soup.find('div', class_='content') or
+                   soup.find('div', class_='postbody') or
+                   soup.find('div', class_='post'))
+        if post_el:
+            raw_text = post_el.get_text(separator='\n')
+            parsed = parse_owed_picks_from_thread(raw_text)
+
     sas_owed = [p for p in parsed if p['from_abbr'] == 'SAS' or p['to_abbr'] == 'SAS']
     return jsonify({
-        'login_ok': bool(sln_session),
-        'errors': errors,
+        'attempts': attempts_log,
+        'cookie_set': bool(stored_cookie),
         'raw_lines': raw_text.split('\n')[:200],
         'total_parsed': len(parsed),
         'sas_picks': sas_owed,
