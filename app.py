@@ -3,6 +3,10 @@ import os
 import time
 import requests
 
+# ScraperAPI is used ONLY for the forum thread fetch (1 request/sync ≈ 120/month).
+# Rosters use direct requests. Set SCRAPER_API_KEY in Railway to enable forum picks.
+SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '').strip()
+
 def _fetch_url(url, timeout=20, headers=None):
     """Fetch a URL directly."""
     ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
@@ -1377,32 +1381,48 @@ def _execute_picks_sync():
                         owed.append({'from_abbr': abbr, 'year': year, 'round': rnd, 'to_abbr': 'EXT'})
 
     # ── Step 2: Forum thread first post (years y+1 through y+6) ─────────────
-    # phpBB processes the _k autologin key on every request (not just homepage),
-    # so we send the stored cookie directly to the thread URL — no separate login step.
-    # Try no-auth first (thread may be publicly readable), then with stored cookie.
+    # Railway's IP is blocked by Cloudflare for simleaguenirvana.com (phpBB),
+    # so direct fetches fail. ScraperAPI is the fallback — used for this one
+    # request only (~120/month, well within the free tier of 5000/month).
     ua = pub_headers['User-Agent']
     stored_cookie = os.environ.get('SLN_COOKIE', '').strip()
+    import random
     forum_resp = None
-    attempts = [('', 'no-auth')]
-    if stored_cookie:
-        attempts = [('', 'no-auth'), (stored_cookie, 'cookie')]
-    for cookie_val, label in attempts:
+
+    # Path 1: direct (works if Cloudflare is lenient on this request)
+    for cookie_val, label in ([('', 'no-auth'), (stored_cookie, 'cookie')] if stored_cookie else [('', 'no-auth')]):
         try:
             hdrs = {'User-Agent': ua}
             if cookie_val:
                 hdrs['Cookie'] = cookie_val
-            r = requests.get(SLN_THREAD_URL, headers=hdrs, timeout=25)
-            if r.status_code == 200:
-                soup_check = BeautifulSoup(r.text, 'html.parser')
-                if not soup_check.find('form', id='login'):
-                    forum_resp = r
-                    app.logger.info('SLN forum: success via %s', label)
-                    break
-                app.logger.info('SLN forum: login wall (%s)', label)
-            else:
-                app.logger.info('SLN forum: HTTP %s (%s)', r.status_code, label)
+            r = requests.get(SLN_THREAD_URL, headers=hdrs, timeout=20)
+            if r.status_code == 200 and not BeautifulSoup(r.text, 'html.parser').find('form', id='login'):
+                forum_resp = r
+                app.logger.info('SLN forum: direct ok (%s)', label)
+                break
         except Exception as e:
-            app.logger.warning('SLN forum %s: %s', label, e)
+            app.logger.warning('SLN forum direct %s: %s', label, e)
+
+    # Path 2: ScraperAPI with stored cookie — bypasses Cloudflare via residential proxy
+    if not forum_resp and SCRAPER_API_KEY and stored_cookie:
+        try:
+            snum = random.randint(1, 9999)
+            r = requests.get(
+                'https://api.scraperapi.com',
+                params={'api_key': SCRAPER_API_KEY, 'session_number': snum,
+                        'url': SLN_THREAD_URL, 'keep_headers': 'true'},
+                headers={'User-Agent': ua, 'Cookie': stored_cookie},
+                timeout=30,
+            )
+            if r.status_code == 200 and not BeautifulSoup(r.text, 'html.parser').find('form', id='login'):
+                forum_resp = r
+                app.logger.info('SLN forum: ScraperAPI ok')
+            else:
+                app.logger.warning('SLN forum ScraperAPI: status=%s has_login=%s',
+                                   r.status_code,
+                                   bool(BeautifulSoup(r.text, 'html.parser').find('form', id='login')))
+        except Exception as e:
+            app.logger.warning('SLN forum ScraperAPI: %s', e)
 
     if forum_resp:
         soup = BeautifulSoup(forum_resp.text, 'html.parser')
@@ -1420,7 +1440,7 @@ def _execute_picks_sync():
         else:
             errors.append('Forum: no post content found (login wall or non-phpBB response)')
     else:
-        errors.append(f'Forum fetch failed — cookie set={bool(stored_cookie)}')
+        errors.append(f'Forum fetch failed — cookie={bool(stored_cookie)} scraper_key={bool(SCRAPER_API_KEY)}')
 
     db = get_db()
     db.execute(
@@ -1513,12 +1533,13 @@ def debug_forum():
     raw_text = ''
     parsed = []
 
-    attempts = [('', 'no-auth')]
+    import random
+    direct_attempts = [('', 'no-auth')]
     if stored_cookie:
-        attempts.append((stored_cookie, 'cookie'))
+        direct_attempts.append((stored_cookie, 'cookie'))
 
     forum_resp = None
-    for cookie_val, label in attempts:
+    for cookie_val, label in direct_attempts:
         entry = {'label': label, 'url': SLN_THREAD_URL}
         try:
             hdrs = {'User-Agent': ua}
@@ -1536,6 +1557,28 @@ def debug_forum():
         attempts_log.append(entry)
         if forum_resp:
             break
+
+    # ScraperAPI fallback — 1 request/sync, stays in free tier since rosters are direct now
+    if not forum_resp and SCRAPER_API_KEY and stored_cookie:
+        entry = {'label': 'scraperapi', 'url': SLN_THREAD_URL}
+        try:
+            snum = random.randint(1, 9999)
+            r = requests.get(
+                'https://api.scraperapi.com',
+                params={'api_key': SCRAPER_API_KEY, 'session_number': snum,
+                        'url': SLN_THREAD_URL, 'keep_headers': 'true'},
+                headers={'User-Agent': ua, 'Cookie': stored_cookie},
+                timeout=30,
+            )
+            entry['status'] = r.status_code
+            entry['has_login_form'] = bool(BeautifulSoup(r.text, 'html.parser').find('form', id='login'))
+            entry['html_preview'] = r.text[:300]
+            if r.status_code == 200 and not entry['has_login_form']:
+                forum_resp = r
+                entry['success'] = True
+        except Exception as e:
+            entry['error'] = str(e)
+        attempts_log.append(entry)
 
     if forum_resp:
         soup = BeautifulSoup(forum_resp.text, 'html.parser')
