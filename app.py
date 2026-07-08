@@ -1380,7 +1380,9 @@ def _execute_picks_sync():
     if cookie:
         try:
             auth_headers = {**pub_headers, 'Cookie': cookie}
-            resp = _fetch_url(SLN_THREAD_URL, timeout=15, headers=auth_headers)
+            # Must use direct connection — phpBB ties the session cookie to the
+            # IP that created it, so routing through ScraperAPI (different IP) fails.
+            resp = _scraper.get(SLN_THREAD_URL, headers=auth_headers, timeout=15)
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 post_el = (soup.find('div', class_='content') or
@@ -1494,7 +1496,7 @@ def debug_forum():
         try:
             pub_headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
             auth_headers = {**pub_headers, 'Cookie': cookie}
-            resp = _fetch_url(SLN_THREAD_URL, timeout=15, headers=auth_headers)
+            resp = _scraper.get(SLN_THREAD_URL, headers=auth_headers, timeout=15)
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 post_el = (soup.find('div', class_='content') or
