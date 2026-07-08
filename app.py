@@ -344,7 +344,7 @@ def _sln_auto_login():
         uid_key = next((k for k in cookies if k.endswith('_u')), None)
         if not uid_key or cookies.get(uid_key, '1') == '1':
             return None
-        cookie_str = '; '.join(f'{k}={v}' for k, v in cookies.items())
+        cookie_str = '; '.join(f'{k}={v.strip()}' for k, v in cookies.items()).strip()
         db = get_db()
         db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
         db.commit()
@@ -1332,6 +1332,7 @@ def _execute_picks_sync():
         cookie_row = db.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
         db.close()
         cookie = (cookie_row[0] if cookie_row else None) or os.environ.get('SLN_COOKIE', '')
+    cookie = cookie.strip() if cookie else ''
 
     owed = []
     errors = []
@@ -1551,7 +1552,7 @@ def sln_login():
             return jsonify({'error': msg}), 401
 
         # Build cookie header string and persist it
-        cookie_str = '; '.join(f'{k}={v}' for k, v in cookies.items())
+        cookie_str = '; '.join(f'{k}={v.strip()}' for k, v in cookies.items()).strip()
         db = get_db()
         db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
         db.commit()
