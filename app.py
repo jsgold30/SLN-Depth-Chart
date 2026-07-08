@@ -61,7 +61,12 @@ class _DBConn:
     def execute(self, sql, params=()):
         sql = self._adapt(sql)
         if self._is_pg:
-            self._cur.execute(sql, params)
+            # Don't pass empty params tuple — psycopg2 would try to format % chars
+            # in the SQL (e.g. LIKE 'salary:%') and raise IndexError
+            if params:
+                self._cur.execute(sql, params)
+            else:
+                self._cur.execute(sql)
             return self._cur
         else:
             return self._raw.execute(sql, params)
@@ -1078,7 +1083,7 @@ def get_roster_pick_years():
 
 def get_forum_pick_years():
     y = get_league_year()
-    return list(range(y + 2, y + 7))
+    return list(range(y + 1, y + 7))  # 6 years ahead: y+1 through y+6
 
 ROSTER_MAP = {
     'roster1.htm': 'BOS', 'roster2.htm': 'MIA', 'roster3.htm': 'NJN',
@@ -1316,13 +1321,17 @@ _sync_running = False
 
 
 def _execute_picks_sync():
-    """Core sync logic: scrapes roster pages (2036-2037) and forum thread (2038-2041).
+    """Core sync logic: scrapes roster pages (year+1) and forum thread (year+1 through year+6).
+    Auto-logins with SLN_USERNAME/SLN_PASSWORD to get a fresh cookie before scraping.
     Returns (owed_list, errors_list).
     """
-    db = get_db()
-    cookie_row = db.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
-    cookie = (cookie_row[0] if cookie_row else None) or os.environ.get('SLN_COOKIE', '')
-    db.close()
+    # Always try fresh login first so cookie never expires silently
+    cookie = _sln_auto_login()
+    if not cookie:
+        db = get_db()
+        cookie_row = db.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
+        db.close()
+        cookie = (cookie_row[0] if cookie_row else None) or os.environ.get('SLN_COOKIE', '')
 
     owed = []
     errors = []
@@ -1366,11 +1375,11 @@ def _execute_picks_sync():
                         seen.add(key)
                         owed.append({'from_abbr': abbr, 'year': year, 'round': rnd, 'to_abbr': 'EXT'})
 
-    # ── Step 2: Forum thread first post for years 2038-2041 ──────────────────
+    # ── Step 2: Forum thread first post (years y+1 through y+6) ─────────────
     if cookie:
         try:
             auth_headers = {**pub_headers, 'Cookie': cookie}
-            resp = _scraper.get(SLN_THREAD_URL, timeout=15, headers=auth_headers)
+            resp = _fetch_url(SLN_THREAD_URL, timeout=15, headers=auth_headers)
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 post_el = (soup.find('div', class_='content') or
@@ -1389,7 +1398,7 @@ def _execute_picks_sync():
         except Exception as e:
             errors.append(f'Forum thread: {e}')
     else:
-        errors.append('No SLN cookie — skipped years 2038-2041 from forum thread')
+        errors.append('No SLN cookie — skipped forum thread picks')
 
     db = get_db()
     db.execute(
@@ -1417,11 +1426,13 @@ def _bg_sync():
         _sync_running = False
 
 
-# Auto-sync picks when the app starts (non-blocking)
+# Auto-sync picks on startup, then every 6 hours (non-blocking)
 def _startup_sync():
     import time
-    time.sleep(5)
-    _bg_sync()
+    time.sleep(5)  # Wait for app to fully initialize
+    while True:
+        _bg_sync()
+        time.sleep(6 * 3600)
 
 threading.Thread(target=_startup_sync, daemon=True).start()
 

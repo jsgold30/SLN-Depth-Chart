@@ -1835,20 +1835,14 @@
         <span id="tmFlushStatus" style="font-size:0.72rem;color:#a07840;"></span>
       </div>
       <hr style="border-color:#d4b87a;margin:2px 0;">
-      <!-- Owed Picks Paste -->
+      <!-- Owed Picks Auto-Sync -->
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <span style="color:#7c5a1a;font-size:0.72rem;font-weight:600;">Sync Owed Picks</span>
-        <a href="https://simleaguenirvana.com/viewtopic.php?t=18" target="_blank"
-          style="font-size:0.72rem;color:#b45309;text-decoration:none;">Open SLN Picks Page ↗</a>
+        <span id="tmPicksSyncedAt" style="font-size:0.68rem;color:#a07840;"></span>
       </div>
-      <p style="color:#a07840;font-size:0.72rem;margin:0;">
-        Log into SLN, open the owed picks page, select all text (Ctrl+A), copy (Ctrl+C), then paste below.
-      </p>
-      <textarea id="tmAdminPasteText" rows="6" placeholder="Paste the owed picks post content here…"
-        style="background:#fdf6e3;border:1px solid #d4b87a;color:#3a2e1a;padding:8px;border-radius:6px;font-size:0.72rem;resize:vertical;width:100%;box-sizing:border-box;"></textarea>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <button class="btn btn-green" style="padding:5px 14px;font-size:0.75rem;" onclick="tmSubmitPicksPaste()">Parse &amp; Save</button>
-        <span id="tmAdminPasteStatus" style="font-size:0.73rem;color:#a07840;"></span>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-green" style="padding:5px 14px;font-size:0.75rem;" onclick="tmSyncPicksNow()">🔄 Sync Picks Now</button>
+        <span id="tmPicksSyncStatus" style="font-size:0.73rem;color:#a07840;"></span>
       </div>
     </div>
 
@@ -5659,7 +5653,7 @@ function tmCheckAdminPin() {
     tmAdminUnlocked = true;
     document.getElementById('tmAdminPinPanel').style.display = 'none';
     document.getElementById('tmAdminPanel').style.display = 'flex';
-    setTimeout(() => document.getElementById('tmAdminPasteText').focus(), 50);
+    tmLoadPicksSyncedAt();
   } else {
     document.getElementById('tmAdminPinError').textContent = 'Incorrect PIN.';
     document.getElementById('tmAdminPinInput').value = '';
@@ -6264,31 +6258,42 @@ async function tmSaveLeagueYear() {
   } catch(e) { status.style.color='#f87171'; status.textContent='Network error'; }
 }
 
-async function tmSubmitPicksPaste() {
-  const text   = document.getElementById('tmAdminPasteText').value.trim();
-  const status = document.getElementById('tmAdminPasteStatus');
-  if (!text) { status.style.color = '#f87171'; status.textContent = 'Paste the post content first.'; return; }
-  status.style.color = '#94a3b8';
-  status.textContent = 'Parsing…';
+async function tmLoadPicksSyncedAt() {
   try {
-    const res = await fetch('/api/picks/from-paste', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({text})
-    });
+    const res = await fetch('/api/picks');
+    if (!res.ok) return;
     const data = await res.json();
-    if (!res.ok) {
-      status.style.color = '#f87171';
-      status.textContent = data.error || 'Parse failed.';
+    const el = document.getElementById('tmPicksSyncedAt');
+    if (data.updated_at) {
+      const d = new Date(data.updated_at + 'Z');
+      el.textContent = `Last synced: ${d.toLocaleDateString()} ${d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} · ${data.owed?.length || 0} picks`;
     } else {
-      status.style.color = '#4ade80';
-      status.textContent = `✓ Saved ${data.added} picks (${data.total} total)`;
-      document.getElementById('tmAdminPasteText').value = '';
+      el.textContent = 'Never synced';
+    }
+  } catch(e) { console.warn('[tmLoadPicksSyncedAt]', e); }
+}
+
+async function tmSyncPicksNow() {
+  const status = document.getElementById('tmPicksSyncStatus');
+  const syncedAt = document.getElementById('tmPicksSyncedAt');
+  status.style.color = '#a07840';
+  status.textContent = 'Syncing… (this may take 15–30s)';
+  try {
+    const res = await fetch('/api/picks/sync', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || data.errors?.length) {
+      const errs = data.errors?.join('; ') || 'Sync failed';
+      status.style.color = '#b91c1c';
+      status.textContent = '⚠ ' + errs;
+    } else {
+      status.style.color = '#16a34a';
+      status.textContent = `✓ ${data.count} picks synced`;
+      syncedAt.textContent = 'Last synced: just now';
       tmLoadOwedPicks();
     }
   } catch(e) {
-    status.style.color = '#f87171';
-    status.textContent = 'Network error.';
+    status.style.color = '#b91c1c';
+    status.textContent = 'Network error — check connection.';
   }
 }
 
