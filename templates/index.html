@@ -6294,22 +6294,32 @@ async function tmSyncPicksNow() {
   const status = document.getElementById('tmPicksSyncStatus');
   const syncedAt = document.getElementById('tmPicksSyncedAt');
   status.style.color = '#a07840';
-  status.textContent = 'Syncing… (this may take 15–30s)';
+  status.textContent = 'Sync started… checking in 30s';
   try {
     const res = await fetch('/api/picks/sync', { method: 'POST' });
     const data = await res.json();
     if (data.league_year) tmApplyLeagueYear(data.league_year);
-    if (!res.ok || data.errors?.length) {
-      const errs = data.errors?.join('; ') || 'Sync failed';
-      status.style.color = '#b91c1c';
-      status.textContent = '⚠ ' + errs;
-    } else {
-      status.style.color = '#16a34a';
-      status.textContent = `✓ ${data.count} picks synced`;
-      syncedAt.textContent = 'Last synced: just now';
-      tmOwedPicks = data.owed || [];
-      ['A','B'].forEach(side => { if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side); });
-    }
+    // Sync runs in background — poll /api/picks after a delay for the result
+    let polls = 0;
+    const poll = setInterval(async () => {
+      polls++;
+      try {
+        const r2 = await fetch('/api/picks');
+        const d2 = await r2.json();
+        if (d2.league_year) tmApplyLeagueYear(d2.league_year);
+        const prevCount = tmOwedPicks.length;
+        tmOwedPicks = d2.owed || [];
+        ['A','B'].forEach(side => { if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side); });
+        if (polls >= 8 || tmOwedPicks.length !== prevCount) {
+          clearInterval(poll);
+          status.style.color = '#16a34a';
+          status.textContent = `✓ ${tmOwedPicks.length} picks loaded`;
+          if (d2.updated_at) syncedAt.textContent = 'Last synced: just now';
+        } else {
+          status.textContent = `Sync in progress… (${polls * 15}s)`;
+        }
+      } catch(_) {}
+    }, 15000);
   } catch(e) {
     status.style.color = '#b91c1c';
     status.textContent = 'Network error — check connection.';

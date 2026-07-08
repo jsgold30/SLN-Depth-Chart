@@ -1524,12 +1524,18 @@ def get_picks():
 
 @app.route('/api/picks/sync', methods=['POST'])
 def sync_picks():
-    """Sync owed picks:
-    - Years 2036-2037: scrape all 29 roster pages (public, no cookie needed)
-    - Years 2038-2041: scrape first post of SLN owed-picks thread (requires cookie)
+    """Trigger a background sync and return the current cached picks immediately.
+    The sync can take 60-120s (roster pages + ScraperAPI login + forum fetch),
+    so running it synchronously would exceed Railway's HTTP timeout.
+    The frontend's existing poll loop will pick up the updated data when done.
     """
-    owed, errors = _execute_picks_sync()
-    return jsonify({'ok': True, 'count': len(owed), 'owed': owed, 'errors': errors, 'league_year': get_league_year()})
+    threading.Thread(target=_bg_sync, daemon=True).start()
+    db = get_db()
+    row = db.execute('SELECT data, updated_at FROM owed_picks WHERE id = 1').fetchone()
+    db.close()
+    owed = json.loads(row[0]) if row else []
+    return jsonify({'ok': True, 'count': len(owed), 'owed': owed, 'errors': [],
+                    'syncing': True, 'league_year': get_league_year()})
 
 
 @app.route('/api/picks/debug-forum', methods=['GET'])
