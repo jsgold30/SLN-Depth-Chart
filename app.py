@@ -1481,6 +1481,47 @@ def sync_picks():
     return jsonify({'ok': True, 'count': len(owed), 'owed': owed, 'errors': errors, 'league_year': get_league_year()})
 
 
+@app.route('/api/picks/debug-forum', methods=['GET'])
+def debug_forum():
+    """Temporary debug endpoint: shows raw forum post text and parsed picks."""
+    cookie = _sln_auto_login()
+    if not cookie:
+        cookie = os.environ.get('SLN_COOKIE', '').strip()
+    errors = []
+    raw_text = ''
+    parsed = []
+    if cookie:
+        try:
+            pub_headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
+            auth_headers = {**pub_headers, 'Cookie': cookie}
+            resp = _fetch_url(SLN_THREAD_URL, timeout=15, headers=auth_headers)
+            if resp.status_code == 200:
+                soup = BeautifulSoup(resp.text, 'html.parser')
+                post_el = (soup.find('div', class_='content') or
+                           soup.find('div', class_='postbody') or
+                           soup.find('div', class_='post'))
+                if post_el:
+                    raw_text = post_el.get_text(separator='\n')
+                    parsed = parse_owed_picks_from_thread(raw_text)
+                else:
+                    errors.append('No post element found')
+            else:
+                errors.append(f'HTTP {resp.status_code}')
+        except Exception as e:
+            errors.append(str(e))
+    else:
+        errors.append('No cookie')
+    sas_owed = [p for p in parsed if p['from_abbr'] == 'SAS' or p['to_abbr'] == 'SAS']
+    return jsonify({
+        'cookie_ok': bool(cookie),
+        'errors': errors,
+        'raw_lines': raw_text.split('\n')[:200],
+        'total_parsed': len(parsed),
+        'sas_picks': sas_owed,
+        'all_parsed': parsed,
+    })
+
+
 @app.route('/api/picks/set-cookie', methods=['POST'])
 def set_sln_cookie():
     """Store the SLN session cookie for scraping."""
