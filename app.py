@@ -315,10 +315,9 @@ def mockup_team_select():
 _sln_login_last_error = ''
 
 def _sln_auto_login():
-    """Login to SLN via ScraperAPI API endpoint with sticky session number.
-    Uses manual cookie management so phpBB's session IP check passes
-    (same session_number = same proxy IP for GET, POST, and forum fetch).
-    Returns a callable fetch(url, timeout) -> Response, or None on failure.
+    """Login to SLN via ScraperAPI sticky-session proxy so phpBB IP check passes.
+    Returns a logged-in requests.Session or None.
+    ScraperAPI's proxy performs SSL interception, so verify=False is required.
     """
     global _sln_login_last_error
     username = os.environ.get('SLN_USERNAME', '').strip()
@@ -326,101 +325,55 @@ def _sln_auto_login():
     if not username or not password:
         _sln_login_last_error = 'SLN_USERNAME or SLN_PASSWORD not set'
         return None
+    # Read fresh from env — module-level SCRAPER_API_KEY may be stale on first deploy
     api_key = os.environ.get('SCRAPER_API_KEY', '').strip()
-    if not api_key:
-        _sln_login_last_error = 'SCRAPER_API_KEY not set'
-        return None
-    import random, urllib.parse
-    ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    import random, urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    session_num = random.randint(1, 9999)
+    s = requests.Session()
+    if api_key:
+        proxy = f'http://scraperapi.session-{session_num}:{api_key}@proxy.scraperapi.com:8001'
+        s.proxies.update({'http': proxy, 'https': proxy})
+        s.verify = False
     base_url  = 'https://simleaguenirvana.com'
     login_url = f'{base_url}/ucp.php?mode=login'
-
-    for attempt in range(3):
+    ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    headers = {'User-Agent': ua, 'Referer': login_url}
+    try:
+        get_resp = s.get(login_url, headers=headers, timeout=30)
+        soup = BeautifulSoup(get_resp.text, 'html.parser')
+        form = soup.find('form', id='login') or soup.find('form')
+        hidden = {}
+        if form:
+            for inp in form.find_all('input', type='hidden'):
+                if inp.get('name'):
+                    hidden[inp['name']] = inp.get('value', '')
+        action = (form.get('action') or 'ucp.php?mode=login') if form else 'ucp.php?mode=login'
+        if action.startswith('./'):
+            action = action[2:]
+        post_url = f'{base_url}/{action}'
+        payload = {**hidden, 'username': username, 'password': password, 'autologin': 'on', 'login': 'Login'}
+        s.post(post_url, data=payload, headers=headers, timeout=30, allow_redirects=True)
+        cookies = {c.name: c.value for c in s.cookies}
+        uid_key = next((k for k in cookies if k.endswith('_u')), None)
+        if not uid_key or cookies.get(uid_key, '1') == '1':
+            _sln_login_last_error = f'uid cookie missing or anonymous; got={list(cookies.keys())}'
+            app.logger.warning('SLN login: %s', _sln_login_last_error)
+            return None
+        cookie_str = '; '.join(f'{k}={v.strip()}' for k, v in cookies.items()).strip()
         try:
-            session_num = random.randint(1, 9999)
-
-            def _sa(url, method='GET', extra_headers=None, body=None):
-                params = {'api_key': api_key, 'url': url, 'session_number': session_num}
-                hdrs = {'User-Agent': ua}
-                if extra_headers:
-                    params['keep_headers'] = 'true'
-                    hdrs.update(extra_headers)
-                if method == 'POST':
-                    return requests.post('https://api.scraperapi.com', params=params,
-                                         headers=hdrs, data=body, timeout=35)
-                return requests.get('https://api.scraperapi.com', params=params,
-                                    headers=hdrs, timeout=35)
-
-            # Step 1: GET login page — capture phpBB session cookies
-            get_resp = _sa(login_url)
-            jar = {c.name: c.value for c in get_resp.cookies}
-            soup = BeautifulSoup(get_resp.text, 'html.parser')
-            form = soup.find('form', id='login') or soup.find('form')
-            hidden = {}
-            if form:
-                for inp in form.find_all('input', type='hidden'):
-                    if inp.get('name'):
-                        hidden[inp['name']] = inp.get('value', '')
-            action = (form.get('action') or 'ucp.php?mode=login') if form else 'ucp.php?mode=login'
-            if action.startswith('./'):
-                action = action[2:]
-            post_url = f'{base_url}/{action}'
-
-            # Step 2: POST credentials — send session cookies so form_token validates
-            cookie_hdr = '; '.join(f'{k}={v}' for k, v in jar.items())
-            payload = urllib.parse.urlencode(
-                {**hidden, 'username': username, 'password': password,
-                 'autologin': 'on', 'login': 'Login'}
-            )
-            post_resp = _sa(post_url, method='POST', extra_headers={
-                'Cookie': cookie_hdr,
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Referer': login_url,
-            }, body=payload)
-
-            # Merge cookies: POST response overrides GET cookies
-            jar.update({c.name: c.value for c in post_resp.cookies})
-
-            uid_key = next((k for k in jar if k.endswith('_u')), None)
-            if not uid_key or jar.get(uid_key, '1') == '1':
-                _sln_login_last_error = (
-                    f'uid cookie anonymous after POST (attempt {attempt+1}); '
-                    f'cookies={list(jar.keys())}'
-                )
-                app.logger.warning('SLN login %d: %s', attempt + 1, _sln_login_last_error)
-                continue
-
-            # Persist for diagnostics
-            cookie_str = '; '.join(f'{k}={v}' for k, v in jar.items())
-            try:
-                db = get_db()
-                db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) "
-                           "ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
-                db.commit(); db.close()
-            except Exception:
-                pass
-
-            # Return a fetch callable that uses the same session_number + cookies
-            def _make_fetcher(cookies, snum, key):
-                ck = '; '.join(f'{k}={v}' for k, v in cookies.items())
-                def fetch(url, timeout=30):
-                    return requests.get(
-                        'https://api.scraperapi.com',
-                        params={'api_key': key, 'url': url,
-                                'session_number': snum, 'keep_headers': 'true'},
-                        headers={'User-Agent': ua, 'Cookie': ck},
-                        timeout=timeout,
-                    )
-                return fetch
-
-            _sln_login_last_error = ''
-            return _make_fetcher(jar, session_num, api_key)
-
-        except Exception as e:
-            _sln_login_last_error = f'{type(e).__name__}: {e} (attempt {attempt+1})'
-            app.logger.warning('SLN login attempt %d failed: %s', attempt + 1, e)
-
-    return None
+            db = get_db()
+            db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
+            db.commit()
+            db.close()
+        except Exception:
+            pass
+        _sln_login_last_error = ''
+        return s
+    except Exception as e:
+        _sln_login_last_error = f'{type(e).__name__}: {e}'
+        app.logger.warning('SLN proxy login failed: %s', e)
+        return None
 
 
 def _parse_roster_from_soup(soup):
@@ -1441,7 +1394,7 @@ def _execute_picks_sync():
     # ── Step 2: Forum thread first post (years y+1 through y+6) ─────────────
     if sln_session:
         try:
-            resp = sln_session(SLN_THREAD_URL, timeout=25)
+            resp = sln_session.get(SLN_THREAD_URL, headers=pub_headers, timeout=25)
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 post_el = (soup.find('div', class_='content') or
@@ -1551,7 +1504,7 @@ def debug_forum():
     parsed = []
     if sln_session:
         try:
-            resp = sln_session(SLN_THREAD_URL, timeout=25)
+            resp = sln_session.get(SLN_THREAD_URL, headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}, timeout=25)
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 post_el = (soup.find('div', class_='content') or
