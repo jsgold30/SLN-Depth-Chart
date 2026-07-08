@@ -6086,7 +6086,7 @@ function tfRenderResults(matches, loadedTeams, totalTeams) {
   const show = filtered.slice(0, 20);
   tfLastShow = show;
   countEl.textContent = filtered.length > 20
-    ? `Top 20 of ${filtered.length} matches`
+    ? `Best 20 of ${filtered.length} matches`
     : filtered.length + ' match' + (filtered.length !== 1 ? 'es' : '') + ' found';
   resultsEl.innerHTML = '';
   show.forEach((m, i) => {
