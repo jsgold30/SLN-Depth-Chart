@@ -371,7 +371,8 @@ def _sln_auto_login():
     stored_cookie = os.environ.get('SLN_COOKIE', '').strip()
 
     # ── Path 1: stored SLN_COOKIE directly via ScraperAPI ────────────────────
-    # Works when phpBB has IP-based session tracking disabled (common config).
+    # Works when phpBB's IP-based session tracking is off (common).
+    # Fast — no login form needed.
     if stored_cookie:
         try:
             session_num = random.randint(1, 9999)
@@ -380,98 +381,58 @@ def _sln_auto_login():
                 params={'api_key': api_key, 'session_number': session_num,
                         'url': SLN_THREAD_URL, 'keep_headers': 'true'},
                 headers={'User-Agent': ua, 'Cookie': stored_cookie},
-                timeout=30,
+                timeout=15,
             )
             if not BeautifulSoup(resp.text, 'html.parser').find('form', id='login'):
                 app.logger.info('SLN auth: stored cookie accepted (path 1)')
                 _sln_login_last_error = ''
                 return _SAPISession(api_key, session_num, cookie=stored_cookie)
-            app.logger.info('SLN auth: stored cookie rejected — trying _k path')
+            app.logger.info('SLN auth: stored cookie rejected — trying login form')
         except Exception as e:
             app.logger.warning('SLN auth path 1 failed: %s', e)
 
-    # ── Path 2: autologin _k key via ScraperAPI proxy ────────────────────────
-    # phpBB's "remember me" key creates a new session on the current proxy IP
-    # without requiring a form POST or form_token.
-    if stored_cookie:
-        parts = {}
-        for p in stored_cookie.split(';'):
-            p = p.strip()
-            if '=' in p:
-                k, v = p.split('=', 1)
-                parts[k.strip()] = v.strip()
-        k_name = next((k for k in parts if k.endswith('_k')), None)
-        k_val  = parts.get(k_name, '') if k_name else ''
-        if k_name and k_val:
-            for attempt in range(2):
-                try:
-                    session_num = random.randint(1, 9999)
-                    proxy = f'http://scraperapi.session-{session_num}:{api_key}@proxy.scraperapi.com:8001'
-                    s = requests.Session()
-                    s.proxies.update({'http': proxy, 'https': proxy})
-                    s.verify = False
-                    s.cookies.set(k_name, k_val, domain='simleaguenirvana.com', path='/')
-                    s.get(f'{base_url}/', headers={'User-Agent': ua}, timeout=25)
-                    cookies = {c.name: c.value for c in s.cookies}
-                    uid_key = next((k for k in cookies if k.endswith('_u')), None)
-                    if uid_key and cookies.get(uid_key, '1') != '1':
-                        app.logger.info('SLN auth: _k autologin succeeded (path 2)')
-                        _sln_login_last_error = ''
-                        return s
-                    app.logger.info('SLN auth: _k path attempt %d uid=%s',
-                                    attempt + 1, cookies.get(uid_key, '?') if uid_key else 'none')
-                except Exception as e:
-                    app.logger.warning('SLN auth path 2 attempt %d failed: %s', attempt + 1, e)
-
-    # ── Path 3: full login form via ScraperAPI API endpoint ──────────────────
+    # ── Path 2: full login form via ScraperAPI API endpoint ──────────────────
+    # One attempt — keeps total auth time under ~30s on failure.
     last_err = 'all paths failed'
-    for attempt in range(3):
-        if attempt:
-            time.sleep(3)
-        try:
-            session_num = random.randint(1, 9999)
-            sapi = {'api_key': api_key, 'session_number': session_num}
+    try:
+        session_num = random.randint(1, 9999)
+        sapi = {'api_key': api_key, 'session_number': session_num}
 
-            get_resp = requests.get('https://api.scraperapi.com',
-                                    params={**sapi, 'url': login_url},
-                                    headers={'User-Agent': ua}, timeout=35)
-            jar = {c.name: c.value for c in get_resp.cookies}
-            for raw_sc in get_resp.raw.headers.getlist('Set-Cookie'):
-                nv = raw_sc.split(';')[0].strip()
-                if '=' in nv:
-                    k, v = nv.split('=', 1)
-                    jar.setdefault(k.strip(), v.strip())
-            app.logger.info('SLN path 3 attempt %d: GET cookies=%s', attempt + 1, list(jar.keys()))
+        get_resp = requests.get('https://api.scraperapi.com',
+                                params={**sapi, 'url': login_url},
+                                headers={'User-Agent': ua}, timeout=15)
+        jar = {c.name: c.value for c in get_resp.cookies}
+        for raw_sc in get_resp.raw.headers.getlist('Set-Cookie'):
+            nv = raw_sc.split(';')[0].strip()
+            if '=' in nv:
+                k, v = nv.split('=', 1)
+                jar.setdefault(k.strip(), v.strip())
+        app.logger.info('SLN path 2: GET cookies=%s', list(jar.keys()))
 
-            soup = BeautifulSoup(get_resp.text, 'html.parser')
-            form = soup.find('form', id='login') or soup.find('form')
-            hidden = {}
-            if form:
-                for inp in form.find_all('input', type='hidden'):
-                    if inp.get('name'):
-                        hidden[inp['name']] = inp.get('value', '')
-            action = (form.get('action') or 'ucp.php?mode=login') if form else 'ucp.php?mode=login'
-            if action.startswith('./'):
-                action = action[2:]
-            post_target = f'{base_url}/{action}'
-            payload = {**hidden, 'username': username, 'password': password,
-                       'autologin': 'on', 'login': 'Login'}
-            time.sleep(2)
-            post_headers = {'User-Agent': ua, 'Referer': login_url,
-                            'Content-Type': 'application/x-www-form-urlencoded'}
-            if jar:
-                post_headers['Cookie'] = '; '.join(f'{k}={v}' for k, v in jar.items())
-            post_resp = requests.post(
-                'https://api.scraperapi.com',
-                params={**sapi, 'url': post_target, 'keep_headers': 'true'},
-                data=payload, headers=post_headers, timeout=35,
-            )
-            if BeautifulSoup(post_resp.text, 'html.parser').find('form', id='login'):
-                last_err = f'path 3 POST still shows login form (attempt {attempt+1}, cookies={list(jar.keys())})'
-                app.logger.warning('SLN auth: %s', last_err)
-                continue
-
-            # Merge GET cookies with any new cookies set by the POST response
+        soup = BeautifulSoup(get_resp.text, 'html.parser')
+        form = soup.find('form', id='login') or soup.find('form')
+        hidden = {}
+        if form:
+            for inp in form.find_all('input', type='hidden'):
+                if inp.get('name'):
+                    hidden[inp['name']] = inp.get('value', '')
+        action = (form.get('action') or 'ucp.php?mode=login') if form else 'ucp.php?mode=login'
+        if action.startswith('./'):
+            action = action[2:]
+        post_target = f'{base_url}/{action}'
+        payload = {**hidden, 'username': username, 'password': password,
+                   'autologin': 'on', 'login': 'Login'}
+        time.sleep(1)
+        post_headers = {'User-Agent': ua, 'Referer': login_url,
+                        'Content-Type': 'application/x-www-form-urlencoded'}
+        if jar:
+            post_headers['Cookie'] = '; '.join(f'{k}={v}' for k, v in jar.items())
+        post_resp = requests.post(
+            'https://api.scraperapi.com',
+            params={**sapi, 'url': post_target, 'keep_headers': 'true'},
+            data=payload, headers=post_headers, timeout=15,
+        )
+        if not BeautifulSoup(post_resp.text, 'html.parser').find('form', id='login'):
             post_jar = {c.name: c.value for c in post_resp.cookies}
             for raw_sc in post_resp.raw.headers.getlist('Set-Cookie'):
                 nv = raw_sc.split(';')[0].strip()
@@ -481,10 +442,11 @@ def _sln_auto_login():
             merged = '; '.join(f'{k}={v}' for k, v in {**jar, **post_jar}.items())
             _sln_login_last_error = ''
             return _SAPISession(api_key, session_num, cookie=merged or None)
-
-        except Exception as e:
-            last_err = f'{type(e).__name__}: {e} (path 3 attempt {attempt+1})'
-            app.logger.warning('SLN auth path 3 attempt %d failed: %s', attempt + 1, e)
+        last_err = f'login form still present after POST (cookies={list(jar.keys())})'
+        app.logger.warning('SLN auth path 2: %s', last_err)
+    except Exception as e:
+        last_err = f'{type(e).__name__}: {e}'
+        app.logger.warning('SLN auth path 2 failed: %s', e)
 
     _sln_login_last_error = last_err
     return None
@@ -1458,12 +1420,10 @@ _sync_running = False
 
 def _execute_picks_sync():
     """Core sync logic: scrapes roster pages (year+1) and forum thread (year+1 through year+6).
+    Roster scraping runs first (no auth needed) so picks are never blocked
+    waiting for a slow or failing login attempt.
     Returns (owed_list, errors_list).
     """
-    # Login via ScraperAPI sticky session — both login and forum use the same
-    # proxy IP, satisfying phpBB's session IP validation.
-    sln_session = _sln_auto_login()
-
     owed = []
     errors = []
     seen = set()
@@ -1506,6 +1466,9 @@ def _execute_picks_sync():
                         owed.append({'from_abbr': abbr, 'year': year, 'round': rnd, 'to_abbr': 'EXT'})
 
     # ── Step 2: Forum thread first post (years y+1 through y+6) ─────────────
+    # Auth runs here (after roster scraping) so a slow/failed login never
+    # blocks the roster picks from being saved.
+    sln_session = _sln_auto_login()
     if sln_session:
         try:
             resp = sln_session.get(SLN_THREAD_URL, headers=pub_headers, timeout=25)
