@@ -469,7 +469,7 @@ def parse_roster_html():
 
 @app.route('/fetch_roster', methods=['POST'])
 def fetch_roster():
-    url = request.json.get('url', '').strip()
+    url = (request.get_json() or {}).get('url', '').strip()
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
 
@@ -650,7 +650,7 @@ def parse_salary(salary_str):
 
 @app.route('/fetch_salary_roster', methods=['POST'])
 def fetch_salary_roster():
-    url = request.json.get('url', '').strip()
+    url = (request.get_json() or {}).get('url', '').strip()
     if not url:
         return jsonify({'error': 'No URL provided'}), 400
 
@@ -678,9 +678,11 @@ def fetch_salary_roster():
         # Pass SLN cookie for auth-required pages
         try:
             _sc = get_db()
-            _scr = _sc.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
-            _sc.close()
-            _sck = ((_scr[0] if _scr else None) or os.environ.get('SLN_COOKIE', '')).strip()
+            try:
+                _scr = _sc.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
+                _sck = ((_scr[0] if _scr else None) or os.environ.get('SLN_COOKIE', '')).strip()
+            finally:
+                _sc.close()
         except Exception:
             _sck = os.environ.get('SLN_COOKIE', '').strip()
         _sh = {'Cookie': _sck} if _sck else None
@@ -759,15 +761,15 @@ def fetch_salary_roster():
                 'reb': p.get('reb', ''),
             } for p in abilities_result['players']}
             if not abilities_map:
-                print(f'[WARN] fetch_salary_roster: abilities_map empty after parse for {url}')
+                app.logger.warning('fetch_salary_roster: abilities_map empty after parse for %s', url)
         except Exception as e:
-            print(f'[WARN] fetch_salary_roster: abilities parsing failed for {url}: {e}')
+            app.logger.warning('fetch_salary_roster: abilities parsing failed for %s: %s', url, e)
             abilities_map = {}
 
         # Log any salary players that didn't match an abilities entry (name mismatch)
         unmatched = [p['name'] for p in players if not abilities_map.get(p['name'].lower())]
         if unmatched and abilities_map:
-            print(f'[WARN] fetch_salary_roster: {len(unmatched)} unmatched names for {url}: {unmatched[:5]}')
+            app.logger.warning('fetch_salary_roster: %d unmatched names for %s: %s', len(unmatched), url, unmatched[:5])
 
         # Merge ratings into salary players
         for p in players:

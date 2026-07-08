@@ -3217,7 +3217,7 @@ async function restoreState() {
       });
       const json = await res.json();
       if (json.data) state = json.data;
-    } catch(e) {}
+    } catch(e) { console.warn('[loadChart] failed:', e); }
   }
 
   // Fall back to localStorage
@@ -5726,7 +5726,7 @@ async function tfPreloadAllRosters() {
         })).filter(p => p.salary > 0);
         if (mapped.length > 0) tfAllRosters[t.abbr] = mapped;
       }
-    } catch(e) {}
+    } catch(e) { console.warn('[tfPreload] failed for', t.abbr, e); }
     await new Promise(r => setTimeout(r, 400)); // 0.4s between teams
   }
 }
@@ -6638,7 +6638,7 @@ async function dcPollServer() {
     dcRenderLog();
     dcRenderQueue();
     dcAutoSelectFromQueue();
-  } catch(e) {}
+  } catch(e) { console.warn('[dcRestoreState] failed:', e); }
 }
 </script>
 
