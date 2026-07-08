@@ -17,11 +17,11 @@ def _fetch_url(url, timeout=20, headers=None):
     """Fetch a URL, routing through ScraperAPI if SCRAPER_API_KEY is set.
     Pass headers= to forward cookies/auth (uses keep_headers=true with ScraperAPI)."""
     if SCRAPER_API_KEY:
-        proxy_url = f'https://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={requests.utils.quote(url, safe="")}'
+        params = {'api_key': SCRAPER_API_KEY, 'url': url}
         if headers:
-            proxy_url += '&keep_headers=true'
-            return requests.get(proxy_url, headers=headers, timeout=timeout)
-        return requests.get(proxy_url, timeout=timeout)
+            params['keep_headers'] = 'true'
+            return requests.get('https://api.scraperapi.com', params=params, headers=headers, timeout=timeout)
+        return requests.get('https://api.scraperapi.com', params=params, timeout=timeout)
     if headers:
         return _scraper.get(url, headers=headers, timeout=timeout)
     return _scraper.get(url, timeout=timeout)
@@ -487,8 +487,8 @@ def fetch_roster():
                     fetched_at = datetime.fromisoformat(fetched_at)
                 if datetime.utcnow() - fetched_at < timedelta(minutes=30):
                     return jsonify(json.loads(cache_row[0]))
-        except Exception:
-            pass
+        except Exception as e:
+            app.logger.warning("non-critical error suppressed: %s", e)
 
         # Pass SLN cookie so auth-required roster pages load
         try:
@@ -521,8 +521,8 @@ def fetch_roster():
                 )
             conn.commit()
             conn.close()
-        except Exception:
-            pass
+        except Exception as e:
+            app.logger.warning("non-critical error suppressed: %s", e)
 
         return jsonify(result)
 
@@ -671,8 +671,8 @@ def fetch_salary_roster():
                 players_list = cached_data.get('players', [])
                 if players_list and players_list[0].get('in_rat'):
                     return jsonify(cached_data)
-    except Exception:
-        pass
+    except Exception as e:
+        app.logger.warning("non-critical error suppressed: %s", e)
 
     try:
         # Pass SLN cookie for auth-required pages
@@ -817,8 +817,8 @@ def fetch_salary_roster():
                 )
             conn.commit()
             conn.close()
-        except Exception:
-            pass
+        except Exception as e:
+            app.logger.warning("non-critical error suppressed: %s", e)
 
         return jsonify(result)
 
@@ -1066,8 +1066,8 @@ def get_league_year():
         db.close()
         if row:
             return int(row[0])
-    except Exception:
-        pass
+    except Exception as e:
+        app.logger.warning("non-critical error suppressed: %s", e)
     return LEAGUE_YEAR_DEFAULT
 
 def get_roster_pick_years():
@@ -1409,8 +1409,8 @@ def _bg_sync():
         _sync_running = True
     try:
         _execute_picks_sync()
-    except Exception:
-        pass
+    except Exception as e:
+        app.logger.warning("non-critical error suppressed: %s", e)
     finally:
         _sync_running = False
 

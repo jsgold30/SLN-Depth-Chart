@@ -5892,6 +5892,31 @@ function tfSetPos(btn, pos) {
 let tfLastResults = [];
 let tfLastShow = [];
 
+function tfSpreadResults(matches) {
+  const DEFER_WINDOW = 5;
+  const spread = [];
+  const deferred = [];
+  const recentNames = () => new Set(spread.slice(-DEFER_WINDOW).flatMap(m => m.players.map(p => p.name)));
+  for (const m of matches) {
+    const names = recentNames();
+    if (m.players.some(p => names.has(p.name))) { deferred.push(m); continue; }
+    spread.push(m);
+    let flushed = true;
+    while (flushed) {
+      flushed = false;
+      for (let i = 0; i < deferred.length; i++) {
+        if (!deferred[i].players.some(p => recentNames().has(p.name))) {
+          spread.push(deferred.splice(i, 1)[0]);
+          flushed = true;
+          break;
+        }
+      }
+    }
+  }
+  spread.push(...deferred);
+  return spread;
+}
+
 function tfComboScore(combo) {
   // Sum grade values of in/out/hn/df/reb ratings stored directly on each player
   const TF_GRADES = ['F','D-','D','D+','C-','C','C+','B-','B','B+','A-','A','A+'];
@@ -5959,19 +5984,9 @@ async function tfRun() {
     }
 
     matches.sort((a, b) => tfComboScore(b.players) - tfComboScore(a.players));
-    // Spread duplicates same as multi-team path
-    const _spread = [], _def = [];
-    const _recent = () => new Set(_spread.slice(-5).flatMap(m => m.players.map(p => p.name)));
-    for (const m of matches) {
-      const _n = _recent();
-      if (m.players.some(p => _n.has(p.name))) { _def.push(m); continue; }
-      _spread.push(m);
-      let _f = true;
-      while (_f) { _f = false; for (let i=0;i<_def.length;i++) { if (!_def[i].players.some(p=>_recent().has(p.name))) { _spread.push(_def.splice(i,1)[0]); _f=true; break; } } }
-    }
-    _spread.push(..._def);
-    tfLastResults = _spread;
-    tfRenderResults(_spread, null, null);
+    const spread = tfSpreadResults(matches);
+    tfLastResults = spread;
+    tfRenderResults(spread, null, null);
     return;
   }
 
@@ -6016,35 +6031,7 @@ async function tfRun() {
   // Sort by combo rating quality (highest combined grades first)
   matches.sort((a, b) => tfComboScore(b.players) - tfComboScore(a.players));
 
-  // Deduplicate: spread results so repeated players don't appear back-to-back.
-  // Walk sorted list; if a result shares a player with one already shown in the
-  // last N results, defer it — prefer showing a fresh team first.
-  const DEFER_WINDOW = 5;
-  const spread = [];
-  const deferred = [];
-  const recentNames = () => new Set(spread.slice(-DEFER_WINDOW).flatMap(m => m.players.map(p => p.name)));
-  for (const m of matches) {
-    const names = recentNames();
-    const hasRepeat = m.players.some(p => names.has(p.name));
-    if (hasRepeat) { deferred.push(m); continue; }
-    spread.push(m);
-    // After placing a fresh result, flush any deferred that are now ok
-    let flushed = true;
-    while (flushed) {
-      flushed = false;
-      for (let i = 0; i < deferred.length; i++) {
-        const n2 = recentNames();
-        if (!deferred[i].players.some(p => n2.has(p.name))) {
-          spread.push(deferred.splice(i, 1)[0]);
-          flushed = true;
-          break;
-        }
-      }
-    }
-  }
-  // Append any remaining deferred at the end
-  spread.push(...deferred);
-
+  const spread = tfSpreadResults(matches);
   tfLastResults = spread;
   const totalTeams = TM_TEAMS.filter(t => t.abbr !== outAbbr).length;
   const loadedTeams = Object.keys(tfAllRosters).length;
