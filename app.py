@@ -2,29 +2,14 @@ from flask import Flask, render_template, request, jsonify, make_response
 import os
 import time
 import requests
-try:
-    import cloudscraper
-    _scraper = cloudscraper.create_scraper()
-except ImportError:
-    import requests as _req
-    class _FallbackScraper:
-        def get(self, *a, **kw): return _req.get(*a, **kw)
-    _scraper = _FallbackScraper()
-
-SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
 
 def _fetch_url(url, timeout=20, headers=None):
-    """Fetch a URL, routing through ScraperAPI if SCRAPER_API_KEY is set.
-    Pass headers= to forward cookies/auth (uses keep_headers=true with ScraperAPI)."""
-    if SCRAPER_API_KEY:
-        params = {'api_key': SCRAPER_API_KEY, 'url': url}
-        if headers:
-            params['keep_headers'] = 'true'
-            return requests.get('https://api.scraperapi.com', params=params, headers=headers, timeout=timeout)
-        return requests.get('https://api.scraperapi.com', params=params, timeout=timeout)
+    """Fetch a URL directly."""
+    ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    req_headers = {'User-Agent': ua}
     if headers:
-        return _scraper.get(url, headers=headers, timeout=timeout)
-    return _scraper.get(url, timeout=timeout)
+        req_headers.update(headers)
+    return requests.get(url, headers=req_headers, timeout=timeout)
 from bs4 import BeautifulSoup
 import re
 import sqlite3
@@ -1457,11 +1442,7 @@ threading.Thread(target=_startup_sync, daemon=True).start()
 
 @app.route('/api/status', methods=['GET'])
 def api_status():
-    key = SCRAPER_API_KEY
-    return jsonify({
-        'scraper_api': 'configured' if key else 'not set',
-        'scraper_api_key_preview': (key[:4] + '…' + key[-4:]) if key else None,
-    })
+    return jsonify({'status': 'ok'})
 
 
 @app.route('/api/clear_salary_cache', methods=['POST'])
