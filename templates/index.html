@@ -6762,49 +6762,285 @@ async function dcPollServer() {
 // Replace these entries with your actual FAQ content.
 // Format: { keywords: ['word', 'phrase', ...], question: 'Display Q?', answer: 'Full answer.' }
 const FAQ_DATA = [
+  // ── What is SLN / FBB ──────────────────────────────────────────────────
   {
-    keywords: ['trade', 'trades', 'how to trade', 'submit trade', 'propose', 'offer'],
-    question: 'How do I submit a trade?',
-    answer: 'Post your trade proposal in the Trade Offers thread on the SLN forum. The commissioner will review and process approved trades within 48 hours.'
+    keywords: ['what is sln', 'sim league nirvana', 'about sln', 'league history', 'started', 'origin', 'new to'],
+    question: 'What is Sim League Nirvana (SLN)?',
+    answer: 'SLN is a basketball simulation league using Fast Break Basketball (FBB), played by a curated group of real-life friends. Think NBA2K creator mode — but you\'re competing against 28 other GMs instead of a computer.\n\nThe league was built to be hyper-competitive and drama-free. The only rule that really matters: FOR THE LOVE OF THE GAME — DON\'T BE A DICK.'
   },
   {
-    keywords: ['draft', 'draft pick', 'draft order', 'draft day', 'pick order'],
-    question: 'How does the draft work?',
-    answer: 'The draft is held annually. Order is determined by reverse standings from the prior season. Each team has 60 seconds per selection.'
+    keywords: ['what is fbb', 'fast break basketball', 'simulation engine', 'how does it work', 'game engine'],
+    question: 'What is Fast Break Basketball (FBB)?',
+    answer: 'FBB is a text-based basketball sim engine from the early 2000s. It\'s flawed, outdated, and silly — but we love it. You build your roster, submit a depth chart and tactics, and the simmer runs the games. Only the simmer needs to own the software.\n\nFBB has CHARACTER. Learn to love it.'
   },
   {
-    keywords: ['salary', 'cap', 'salary cap', 'cap space', 'cap room', 'budget', 'cap hit'],
+    keywords: ['season format', 'how does season work', 'season length', '120 days', '82 games', 'how long'],
+    question: 'How does the SLN season work?',
+    answer: 'One FBB regular season = 120 sim days / 82 games. The simmer runs 5-10 days per real-life day. Playoffs mirror the real NBA (16 teams, best-of-7). After playoffs: draft → free agency → training camp.\n\nGoal: one full season per real-life month (~8-10 seasons per year). We started in 1997 and will hit present day in 2-3 years.'
+  },
+  {
+    keywords: ['gm responsibilities', 'what do i need to do', 'time commitment', 'obligations', 'how active', 'what is expected'],
+    question: 'What are my responsibilities as a GM?',
+    answer: 'GMs must:\n• Respond to trades and messages in a timely manner\n• Submit and maintain your depth chart and rotation\n• Be available for the draft every ~5-6 weeks (24-48 hrs, no live commitment needed)\n• Send free agent bids every ~4-5 weeks\n• Engage with the league — post, trade, love the life!\n\nTime commitment is more than a fantasy league. Know that going in.'
+  },
+  {
+    keywords: ['1997', 'creation draft', 'how we started', 'inaugural draft', 'beginning', 'kobe iverson nash'],
+    question: 'How did the league begin?',
+    answer: 'SLN started in 1997, right after the famous 1996 NBA draft class (Kobe, Iverson, Nash, Marbury, etc.). All 450 NBA players from that era were pooled into a 29-team, 12-round snake "Creation Draft." We\'ve been simming forward through history ever since — and the goal is to reach present day within 2-3 real-life years.'
+  },
+  {
+    keywords: ['dues', 'league dues', 'season dues', '$10', 'ashes pay', 'simmer pay', 'real money', 'real dollars'],
+    question: 'What are the league dues?',
+    answer: 'Every GM pays our Sim God (Ashes) $10 at the start of each season. This covers daily sims, draft files, and league moderation.\n\nPlaying for a real money pot has been discussed and will be revisited after 3-4 seasons once everyone has their bearings.'
+  },
+  {
+    keywords: ['most important rule', 'rules', "don't be a dick", 'for the love of the game', 'spirit', 'commish discretion'],
+    question: 'What is the most important rule?',
+    answer: '"FOR THE LOVE OF THE GAME — DON\'T BE A DICK."\n\nThis is competitive, but we\'re friends. Don\'t ruin relationships over a sim game. Don\'t be sketchy — even if something isn\'t explicitly forbidden, use common sense. The commish has full discretion to penalize shady behavior that violates the spirit of the rules.'
+  },
+
+  // ── Salary Cap ─────────────────────────────────────────────────────────
+  {
+    keywords: ['salary cap', 'soft cap', 'cap', '50 million', 'cap limit', 'over cap'],
     question: 'What is the salary cap?',
-    answer: 'The salary cap is set each season by the commissioner. Check the League Info thread on the SLN forum for the current cap figure and any offseason adjustments.'
+    answer: 'The soft salary cap is $50,000,000. If you\'re under the cap, you can sign players up to that space (max 6-year contract). If you\'re over the cap, you can still sign players using exceptions:\n• Mid-Level Exception (MLE): 1 yr / $4.5M\n• Low-Level Exception (LLE): 1 yr / $1.2M\n• Bird Rights (unlimited)\n• Coring Rights (120% of prior salary)'
   },
   {
-    keywords: ['waiver', 'waivers', 'free agent', 'free agents', 'pickup', 'claim', 'add player'],
-    question: 'How do waivers work?',
-    answer: 'Waiver claims are processed every Tuesday. Submit your claim in the Waivers thread on the forum before the weekly deadline.'
+    keywords: ['hard cap', '85 million', 'hard cap penalty', 'go over hard cap', 'hard cap violations'],
+    question: 'What is the hard cap and the penalty for going over?',
+    answer: 'The hard cap is $85,000,000. You cannot exceed this once the season starts (after Training Camp). If you go over, you have 48 hours to fix it.\n\nPenalty for failing:\n• Forfeit your next 2 first-round picks\n• Lose a player to waivers\n• Lose MLE and LLE\n• Lose ALL free agency privileges (including Bird Rights) for 2 years\n\nGoing over at the trade deadline = penalty is automatic.'
   },
   {
-    keywords: ['roster', 'roster size', 'how many players', 'roster limit', 'max players'],
-    question: 'What is the roster size limit?',
-    answer: 'Each team may carry up to 53 players on the active roster, plus 8 on IR.'
+    keywords: ['minimum cap', 'cap floor', '35 million', 'below minimum', 'min cap penalty'],
+    question: 'What is the minimum cap (cap floor)?',
+    answer: 'The minimum cap is $35,000,000. All teams must be above this at the start of the season. If you\'re below after free agency, you have 24 hours from when TC is posted to get over it.\n\nPenalty for failing: charged 15M in dead salary for the current year and the following 2 years.'
   },
   {
-    keywords: ['ir', 'injured reserve', 'injury', 'injured', 'place on ir'],
-    question: 'How does IR work?',
-    answer: 'Place an injured player on IR to free up a roster spot. IR-designated players cannot be activated until they meet the return criteria set by the commissioner.'
+    keywords: ['mle', 'mid level exception', 'mid-level', '4.5 million', 'exception'],
+    question: 'What is the Mid-Level Exception (MLE)?',
+    answer: 'The MLE is a 1-year / $4.5M contract for teams over the soft cap.\n• MLE players cannot be traded until Day 30\n• Can be extended up to 3 years before Day 60 (costs 1,000 RPs — 1 extension per season)\n• Any team that acquires an MLE player via trade (between Day 30-60) may also use this extension\n• Maximum 10 total MLE + LLE offers per year'
   },
   {
-    keywords: ['commissioner', 'commish', 'who runs', 'contact', 'reach out', 'message'],
-    question: 'How do I contact the commissioner?',
-    answer: 'You can reach the commissioner by posting in the Commissioner Thread on the SLN forum or via private message on the forum.'
+    keywords: ['lle', 'low level exception', 'low-level', '1.2 million'],
+    question: 'What is the Low-Level Exception (LLE)?',
+    answer: 'The LLE is a 1-year / $1.2M contract for teams over the soft cap. Minimum salary bids (which are similar) cannot exceed 2 years in length. You are limited to a maximum of 10 total MLE and LLE offers combined per year.'
   },
   {
-    keywords: ['schedule', 'games', 'matchup', 'when do we play', 'season schedule', 'regular season'],
-    question: 'Where can I find the season schedule?',
-    answer: 'The full season schedule is posted in the League Schedule thread on the SLN forum at the start of each season.'
+    keywords: ['bird rights', 'bird years', 'three seasons', 'consecutive', 'incumbent team resign'],
+    question: 'What are Bird Rights?',
+    answer: 'If a player goes 3+ full seasons without changing teams via free agency, they have Bird Rights. The incumbent team can re-sign them regardless of cap space.\n• Bird Rights contracts: up to 7 years / 12.5% annual raises\n• "Bird Years" on a player\'s page shows how many consecutive seasons they\'ve stayed\n• Note: Non-Bird contracts are max 6 years / 10% increases'
+  },
+  {
+    keywords: ['coring rights', 'coring', '120%', 'previous salary', 'returning player resign'],
+    question: 'What are Coring Rights?',
+    answer: 'A team can offer a returning player up to 120% of their prior season salary, for up to 6 years with max 10% annual raises. This applies to players who DON\'T have Bird Rights — it\'s used most often to re-sign MLE and LLE players after their 1-year deals expire.'
+  },
+  {
+    keywords: ['max bid', 'maximum salary', 'max contract', 'how much can i offer', 'starting salary'],
+    question: 'What are the maximum free agent bid amounts?',
+    answer: 'Max starting salaries by experience:\n• 1-6 years: $12.5M\n• 7+ years: $15M\n• 10+ years: $17.5M\n\nBird Rights contracts: up to 7 years / 12.5% raises\nNon-Bird contracts: up to 6 years / 10% raises\nMinimum salary bids: max 2 years'
+  },
+  {
+    keywords: ['minimum salary', 'vet min', 'minimum contract', 'minimum scale', 'scale'],
+    question: 'What is the minimum salary scale?',
+    answer: 'Minimum salaries by years of experience:\n0 yrs: $332,817\n1 yr: $465,850\n2 yrs: $540,850\n3 yrs: $565,850\n4 yrs: $590,850\n5 yrs: $653,350\n6 yrs: $715,850\n7 yrs: $778,350\n8 yrs: $840,850\n9 yrs: $965,850\n10+ yrs: $1,000,000'
+  },
+  {
+    keywords: ['fa bid format', 'submit bids', 'how to bid', 'free agent bids', 'bid format', 'alphabetical'],
+    question: 'How do I submit free agent bids?',
+    answer: 'List bids in alphabetical order by first name. For each player include: name, starting salary, length, and % increase per year.\n\nExample: Allan Houston, $10,500,000 — 4 years — 10% increases\n\nMax 10 total MLE + LLE offers per year. Make sure your bids are salary-cap legal before posting.'
+  },
+  {
+    keywords: ['front loaded', 'front load', 'frontload', 'declining salary', 'decreasing contract'],
+    question: 'Can I offer a front-loaded contract?',
+    answer: 'Yes! Teams can offer front-loaded contracts (e.g. $16.5M / $14M / $12.5M).\n• Allowed once every 3 seasons\n• Must decide IMMEDIATELY after signing — no waiting\n• Cost: 1,000 RPs for re-signings / 1,250 RPs for free agents\n• Use the normal signing format first; then message Ashes to declare it front-loaded'
+  },
+
+  // ── Reward Points ──────────────────────────────────────────────────────
+  {
+    keywords: ['reward points', 'rp', 'rps', 'currency', 'earn points', 'what are rps'],
+    question: 'What are Reward Points (RPs)?',
+    answer: 'RPs are the league\'s currency — you need them for camps, RFA tags, buyouts, extensions, and trades. They stay with the TEAM, not the GM. You cannot go negative, and you can only trade up to what you currently have.\n\nWays to earn RPs:\n• Articles / podcasts: 250-1,000 RPs (graded by moderator)\n• Playoffs: 400 (1st round) → 600 → 800 → 1,000 → 1,500 (champion)\n• GM of the Year: 1,000 RPs\n• Pickem, RFA signings, trades, league participation, and jobs'
+  },
+
+  // ── Reward Camps ───────────────────────────────────────────────────────
+  {
+    keywords: ['reward camp', 'camp', 'upgrade', 'improve player', 'upgrade points', '+24', 'player development'],
+    question: 'How do Reward Camps work?',
+    answer: 'Camps let you upgrade player ratings before Training Camp each off-season.\n\n• Career max: +24 total points across all attributes\n• Career max per attribute: +8 points\n• Exp 0-3: max +8 pts/off-season at 100 RPs each\n• Exp 4+: max +6 pts/off-season at 200 RPs each\n• Players 30+ years old OR 10+ years experience: NOT eligible\n• Ratings already at 85+: cannot be camped (list a backup attribute)\n• Team camp spending cap: 6,400 RPs total per season (across SLN + NDL)'
+  },
+  {
+    keywords: ['super camp', 'supercamp', '3200 rp', 'super upgrade', '+26'],
+    question: 'What is a Super Camp?',
+    answer: 'A Super Camp is a premium upgrade option:\n• Cost: 3,200 RPs\n• Grants +26 total upgrades, max +10 in any single attribute\n• Player must be in their 2nd or 3rd year (no Creation Draft players)\n• Player must NEVER have received any prior upgrades\n• Once supercamped, can NEVER be camped again\n• Player must be on active roster; they become NDL-ineligible\n• Worth it: 2 extra points and a higher ceiling vs. year-by-year camps'
+  },
+
+  // ── Trades ─────────────────────────────────────────────────────────────
+  {
+    keywords: ['trade rules', 'how to trade', 'salary matching', '15 percent', 'trade matching', 'what makes a trade work'],
+    question: 'What are the trade rules?',
+    answer: 'Key trade rules:\n• Over soft cap: incoming salary must be within 15% of outgoing salary (multiply the smaller side by 1.15)\n• Max 5 players OR picks from each side per transaction (split into 2 trades if needed)\n• MLE/LLE players cannot be traded until Day 30\n• Future picks: max 6 seasons in advance\n• RPs can be included: max 1,500 RPs per season via trade\n• Both parties must accept in the Trade Thread — not official until then\n• Commish can veto trades that hurt league integrity\n• Repeatedly posting illegal trades = RP penalty'
+  },
+  {
+    keywords: ['rp in trade', 'trade reward points', 'buy player with rp', 'trade rps'],
+    question: 'Can I trade Reward Points?',
+    answer: 'Yes. RPs can be sent as currency in trades. Teams may spend a maximum of 1,500 RPs per season via trade. You cannot send RPs you don\'t have — trades are voided if this rule is violated.'
+  },
+  {
+    keywords: ['contract buyout', 'buyout', 'buy out', 'waive player', 'cut contract', 'release player'],
+    question: 'How do contract buyouts work?',
+    answer: 'Buying out a contract means the player\'s salary won\'t count against your team after you waive them.\n• Cost: 250 RPs per $1M remaining on the contract\n• Max buyout contract length: 2 years (if the player earns more than $4.5M/yr)\n• Max 2 buyouts per season\n• Max spend: 5,000 RPs per season (covers up to $20M remaining)\n• Buyout must occur 24+ hours after TC starts to count toward the new league year'
+  },
+
+  // ── Restricted Free Agency ─────────────────────────────────────────────
+  {
+    keywords: ['rfa', 'restricted free agent', 'restricted free agency', 'offer sheet', 'matching rights', 'rfa tag'],
+    question: 'How does Restricted Free Agency (RFA) work?',
+    answer: 'Teams can designate one player per season coming off their rookie contract as an RFA. The incumbent team can then match any outside offer and keep the player.\n\n• RFA tag costs 1,500 RPs (available starting year 2000)\n• Can only use 1 tag every 3 years\n• No MLE or LLE bids allowed on RFAs\n• If you pass on matching: refunded 750 RPs\n• If your offer sheet gets matched by the incumbent: you receive 750 RPs\n• Tags must be declared before the previous season turns over\n• QO minimum = 250% of prior salary for 1st rounders / 350% for 2nd rounders'
+  },
+
+  // ── Depth Charts ───────────────────────────────────────────────────────
+  {
+    keywords: ['depth chart', 'dc', 'how to post', 'submit depth chart', 'rotation format', 'how to submit'],
+    question: 'How do I submit my depth chart?',
+    answer: 'Post in your team thread using this format:\n\nC - Starter / Backup / 3rd String\nPF - Starter / Backup / 3rd String\nSF - Starter / Backup / 3rd String\nSG - Starter / Backup / 3rd String\nPG - Starter / Backup / 3rd String\n\nIR: (up to 3)\n1. Player\n2. Player\n\nScoring Options:\n1. Player 1\n2. Player 2\n3. Player 3\n\nTactics: Pace / Trap / Pressure / Offense Focus\n\nIMPORTANT: Don\'t edit posts — always make a NEW post for changes. Bold your changes. Always submit a full DC.'
+  },
+  {
+    keywords: ['ir', 'injured reserve', 'how many ir spots', 'active roster', '12 players', 'max roster'],
+    question: 'How does IR work? How many players can I have active?',
+    answer: 'A depth chart can have a maximum of 12 active players (not counting IR). You can place up to 3 players on IR — they free up active roster spots.\n\nImportant: If you have blank spots in your DC after a trade or cut, Ashes will auto-fill them. Always submit a complete DC after any roster move.'
+  },
+  {
+    keywords: ['scoring options', 'key players', 'who to list as options', 'scoring options tips'],
+    question: 'Who should I list as scoring options?',
+    answer: 'List 3 players as your scoring options. These players get the ball more on offense and are more likely to attempt shots. Typically your best ball handlers and/or best scorers.\n\nNote: You cannot use scoring options to intentionally tank. You must list your actual best scorers — using bad players as options can be flagged as tanking.'
+  },
+
+  // ── Positional Eligibility ─────────────────────────────────────────────
+  {
+    keywords: ['positional eligibility', 'position rules', 'who can play where', 'play up', 'switching positions', 'eligibility'],
+    question: 'What are the positional eligibility rules?',
+    answer: 'Players can always "play up" to a bigger position (PG can play SG, SF can play C, etc.).\n\n• PF and C are fully interchangeable\n• PF/C can play SF if: B+ or worse rebounding AND C or better outside\n• SG and SF are interchangeable if: the player has B- or worse rebounding\n• No PF/C can play SG\n• ONLY players listed as PG on the roster can START at PG'
+  },
+  {
+    keywords: ['pg eligibility', 'move to pg', 'play point guard', 'non-pg at pg', 'pg requirements', 'handling requirements pg'],
+    question: 'How do I start a non-PG at Point Guard?',
+    answer: 'To move a player to PG (must meet ALL conditions):\n• Handle rating: "B" or higher\n• Handling stat: 65 or higher\n• Height: no taller than 6\'5"\n• Weight: no more than 200 lbs\n\nPenalty: player loses 20 points from their handling upon the move. Post the move in the transactions thread. If your starting PG gets hurt and backup isn\'t listed as PG, Ashes will fix the DC — if no PGs are available, Ashes will sign one regardless of Hard Cap implications.'
+  },
+
+  // ── Tactics ────────────────────────────────────────────────────────────
+  {
+    keywords: ['tactics', 'pace', 'trap', 'press', 'offense focus', 'strategy', 'settings', 'team strategy'],
+    question: 'How do team tactics work?',
+    answer: 'Choose one for each setting:\n• Pace (Very Fast/Fast/Normal/Slow/Very Slow): Faster = first good shot available; Slower = more patient, concentrated shot distribution\n• Trap (Always→Never): More trapping = more steals but more fouls and fatigue\n• Pressure/Press (Always→Never): More pressing = more wing steals but more fouls\n• Offense Focus (Inside/Outside/Balanced): Players attack more in your chosen area\n• Key Players (3): These players handle and score more'
+  },
+  {
+    keywords: ['what focus should i use', 'outside focus', 'inside focus', 'offense focus tips', 'should i use inside'],
+    question: 'What offense focus should I use?',
+    answer: 'Use OUTSIDE focus unless you have elite inside scorers. Reasons:\n• 3-pointers are worth more than 2s even in FBB\n• Centers and Power Forwards regularly shoot 37-42% in FBB — very inefficient\n• Only go Inside if you have bigs with HIGH Inside Scoring + Strength + Jump Shot\n\nExtra tip: Possessions matter enormously. Limit your own turnovers, force the opponent\'s turnovers, and rebound well.'
+  },
+
+  // ── Tanking ────────────────────────────────────────────────────────────
+  {
+    keywords: ['tanking', 'tank', 'lose on purpose', 'intentionally lose', 'lottery', 'rebuild', 'tank rules'],
+    question: 'What are the tanking rules?',
+    answer: 'The Tank Reset Rule ("Hanessian Rule") — in effect from 2025-26:\n• No Inside Offense focus while tanking\n• Must sign appropriate players to fill all DC positions\n• Must start your best players with reasonable scoring options\n• No experimenting after the trade deadline\n• You get 3 penalty-free lottery seasons. Year 4 in the lottery: pick drops 7 spots. Each subsequent lottery year: pick drops to #14.\n• Trying to circumvent this penalty via trades will result in additional penalties'
+  },
+
+  // ── Player Ratings Guide ───────────────────────────────────────────────
+  {
+    keywords: ['player ratings', 'what do ratings mean', 'inside outside handles defense rebounding', 'public ratings', 'six ratings'],
+    question: 'What do the six public player ratings mean?',
+    answer: 'The 6 public ratings and what drives them:\n• Inside: Inside Scoring + Strength + Jumping (Jumping is basically useless — a red herring!)\n• Outside: Jump Shot + 3P Shot (accurate and straightforward)\n• Handles: Ball Handling + Passing + Quickness (MISLEADING — overweights passing)\n• Defense: Perimeter D + Post D + Steals + Blocks + more (position-weighted)\n• Rebounding: Def Reb + Off Reb + Strength (accurate)\n• Potential: Scouted vs. True Potential — simmer can hide sleepers or create busts'
+  },
+  {
+    keywords: ['handles misleading', 'passing vs handling', 'turnovers', 'public handle rating', 'assists vs turnovers'],
+    question: 'Why is the Handle rating misleading?',
+    answer: 'The public Handle grade OVERWEIGHTS passing and UNDERWEIGHTS ball handling. In FBB, limiting turnovers matters way more than creating assists.\n\nPro tip: A player with an A+ handle rating averaging 12 assists and 4.5 turnovers will HURT you. Assists don\'t impact winning much in FBB — turnovers lose games. Prioritize the actual handling (ball-handling) stat over the public letter grade.'
+  },
+  {
+    keywords: ['inside scoring tips', 'center scoring', 'big men scoring', 'scoring benchmarks', 'inside rating guide'],
+    question: 'How should I evaluate Inside Scoring?',
+    answer: 'Inside Scoring drives scoring VOLUME — it\'s the most important under-the-hood stat. Key benchmarks:\n• PGs: 40+ = very good; 60+ = excellent; 80+ = elite\n• SG/SF/PF: 60+ = salvageable; 80+ = elite\n• Centers: 60-80 = 14-20 PPG range; 85-90+ = league-leading scoring\n\nNote: Jumping is built into the Inside rating but is virtually USELESS. A high Inside grade boosted by jumping doesn\'t translate to real production.'
+  },
+  {
+    keywords: ['steals blocks tips', 'defensive stats', 'blocks vs steals', 'which is better blocks or steals'],
+    question: 'How do Steals and Blocks work in FBB?',
+    answer: 'Steals > Blocks in value. Steals are ALWAYS turnovers; blocked shots can be recovered by the offense or go out of bounds.\n\n• C/PFs: naturally get more blocks; Wings get more steals\n• 50 rating ≈ 1 per game (for the expected position)\n• 70-90 rating ≈ 2-2.5 per game; 90+ = elite (3+ blocks for bigs)\n• Trap more → big man steals go up; Press more → wing steals go up (both increase fouls)\n\nPerimeter/Post Defense: below 50-60 in the relevant category means getting torched regularly.'
+  },
+  {
+    keywords: ['potential guide', 'true potential', 'scouted potential', 'will player improve', 'development potential'],
+    question: 'How does player Potential work?',
+    answer: 'Potential is a farce — it has two layers:\n• Scouted Potential (what we see): Correlates to True Potential, but the simmer can hide sleepers or manufacture busts\n• True Potential (simmer only): Determines how much a player improves each Training Camp. Higher = more likely to improve.\n\nLetter grade ranges: A=81-100, B=61-80, C=41-60, D=21-40, F=0-20\n\nThe ambiguity is intentional — it keeps things fresh and fun.'
+  },
+  {
+    keywords: ['rebounding tips', 'rebounding ratings', 'how to rebound', 'rebounding benchmarks'],
+    question: 'How does Rebounding work in FBB?',
+    answer: 'Rebounding benchmarks by position:\n• PG: 30-40 = good; 45+ = elite (hard capped at 50)\n• SG: Scale up by ~10 from PG (hard capped at 60)\n• SF: 50+ = decent; 65-80 = high value range\n• C/PF: below 60 = not cutting it; 80+ = elite; 85+ = truly dominant\n\nNote: Strength and quickness play a small role. Scoring options who are bigs tend to pull more rebounds too (e.g., Shaq outrebounds Rodman in FBB).'
+  },
+
+  // ── NDL ────────────────────────────────────────────────────────────────
+  {
+    keywords: ['ndl', 'development league', 'dev league', 'minor league', 'what is ndl'],
+    question: 'What is the NDL?',
+    answer: 'The NDL is the development league where young players improve faster than in SLN. It\'s most powerful for rookies and sophomores — the earlier you send a player down, the more development they get.\n\nNotable NDL success stories: Scoot Henderson, LaBaron Philon, Beckham Black, Nolan Traore, Jonathan Kuminga, Jaden Ivey, Isaiah Evans, Rui Hachimura, Otto Porter Jr. The juice is usually worth the squeeze.'
+  },
+  {
+    keywords: ['ndl eligible', 'who can go to ndl', 'delegate', 'delegation', 'ndl criteria', 'ndl requirements'],
+    question: 'Who is eligible for the NDL?',
+    answer: 'NDL eligibility criteria:\n• No stipulations (unless the stip allows NDL)\n• Not a lottery pick (1-13) unless stip says so\n• Must not have two flat-B grades or higher, or one flat-A grade or higher (B- is acceptable)\n• Cannot be on a 1-year contract\n• Must not have averaged 25+ MPG in SLN\n• Can only be delegated TWICE total\n• Must have 4 or fewer years of experience\n\nDelegate immediately after drafting to maximize development — if they improve to two B skills before TC, they can\'t go down.'
+  },
+  {
+    keywords: ['ndl gains', 'diminished gains', 'ndl development', 'how does ndl improve players'],
+    question: 'How does NDL player development work?',
+    answer: 'NDL players develop faster than on your SLN roster. Two rules to know:\n\n• Diminished Gains: If a player has two B skills or one flat-A skill, their gains are cut in half\n• Potential Boosts: Players still receive boosts after their rookie and sophomore seasons — but ONLY if delegated as a rookie. Waiting to send someone down reduces these benefits.\n\nBottom line: NDL is designed for rookies and sophomores. The later you wait, the weaker the tool.'
+  },
+  {
+    keywords: ['ndl contract expired', 'ndl player resign', 'keep ndl player', 'qualifying offer', 'qo ndl'],
+    question: 'How do I re-sign my NDL player when their contract expires?',
+    answer: 'NDL players do NOT re-sign on their own. Your options:\n\n1. Qualifying Offer (QO): 3-year deal at $4.5/$4.95/$5.4M (or $8/$9.2/$10.58M for diminished-gains players)\n2. Bird Rights re-sign: Can be cheaper, but leaves the player exposed to MLE poaching\n\nIf you do nothing, the player becomes a free agent any team can sign. Act fast!'
+  },
+  {
+    keywords: ['ndl trade', 'trade ndl player', 'ndl salary matching', 'ndl trade rules'],
+    question: 'How do NDL player trades work?',
+    answer: 'NDL salaries do NOT count toward trade salary matching — both sides must balance without including NDL salaries.\n\nYou cannot trade an NDL player for free; they must come with compensation (RPs, a 2nd-round pick, etc.) unless the receiving team has cap space.\n\nSwapping NDL contracts specifically to duck the Hard Cap will not be allowed.'
+  },
+
+  // ── Pickem ─────────────────────────────────────────────────────────────
+  {
+    keywords: ['pickem', 'pick em', 'trivia', 'guess', 'prizes', 'pickem prizes', 'pickem camps'],
+    question: 'How does Pickem work?',
+    answer: 'Questions about SLN or real-life sports are posted each season. Correct guesses earn RPs. Your final point total = your RP reward (floor 50 RPs, typical ceiling 225 RPs).\n\nTop 2 finishers get their choice of a special camp bonus (winner picks first):\n• Athletic Camp: +5 jumping, +3 quickness, +3 strength\n• Shooting Camp: +4 three-point, +4 jump shot\n• Defense Camp: +3 steals, +3 blocks, +2 post D, +2 perimeter D\n\nThese bonuses do NOT count toward a player\'s career +24 upgrade limit.'
+  },
+
+  // ── GMOTY ──────────────────────────────────────────────────────────────
+  {
+    keywords: ['gm of the year', 'gmoty', 'award', 'best gm', 'winner award', 'contract manipulation'],
+    question: 'What is the GM of the Year (GMOTY) award?',
+    answer: 'GMOTY earns 1,000 RPs. The winner also gets a special power: they can ADD or REMOVE one year from any existing contract after the season they win.\n\nThe GMOTY must make this contract decision BEFORE the playoffs/resignings of the next season.'
+  },
+
+  // ── League Jobs ────────────────────────────────────────────────────────
+  {
+    keywords: ['league jobs', 'jobs', 'rp god', 'article grader', 'draft moderator', 'roles', 'camp tracker'],
+    question: 'What league jobs are available?',
+    answer: 'League Jobs and their RP compensation:\n• Commissioner/Simmer (1): Paid in real $, no RPs\n• RP God (1): Tracks all RP totals — 600 RPs\n• Article Grader (1): Grades articles/podcasts — 1,000 RPs\n• Reward Camp Tracker (1): Tracks all camps — 600 RPs\n• Pick Em Tracker (1): Tracks Pickem — 500 RPs\n• Depth Chart Tracker / Tank Mod (1): Monitors DCs — 500 RPs\n• Draft Moderator (2): Runs the draft — 500 RPs each'
+  },
+
+  // ── Sim Schedule ───────────────────────────────────────────────────────
+  {
+    keywords: ['sim schedule', 'when are sims', 'schedule', 'how many sims', 'all star weekend', 'sim days'],
+    question: 'What is the sim schedule?',
+    answer: 'The 16-sim season schedule:\nSim 1: Days 1-10\nSim 2: Days 11-15\nSim 3: Days 16-20\nSim 4: Days 21-30\nSim 5: Days 31-35\nSim 6: Days 36-40\nSim 7: Days 41-50\nSim 8: Days 51-60 (All-Star Weekend)\nSim 9: Days 61-65\nSim 10: Days 66-70\nSim 11: Days 71-80\nSim 12: Days 81-85\nSim 13: Days 86-90\nSim 14: Days 91-99\nSim 15: Days 100-110\nSim 16: Days 111-120'
   }
 ];
 
-const FAQ_SUGGESTIONS = FAQ_DATA.slice(0, 4).map(f => f.question);
+const FAQ_SUGGESTIONS = [
+  'What is SLN and how does it work?',
+  'What is the salary cap?',
+  'How do Reward Camps work?',
+  'What are the trade rules?'
+];
 const FAQ_FALLBACK = "I don’t have an answer for that — I am but a humble chat bot, not a Sim God.";
 
 let faqHistory   = [];
@@ -6887,21 +7123,26 @@ function faqSend() {
 }
 
 function faqMatch(query) {
+  const STOP = new Set(['what','is','the','how','do','does','i','to','a','an','and','or','it','in','at','of','for','can','will','my','me','we','be','are','was','this','that','if','on','by','from','with','about','up','out','so','as','but','not','have','has','had','he','she','they','you','no','who','why','when','where','which','there','get','got','its','any','all','more','some','just','also','could','should','would','much','many','much','very']);
   const q      = query.toLowerCase();
-  const tokens = q.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(t => t.length > 1);
+  const tokens = q.replace(/[^\w\s]/g, ' ').split(/\s+/).filter(t => t.length > 1 && !STOP.has(t));
   let best = null, bestScore = 0;
   for (const entry of FAQ_DATA) {
     let score = 0;
     for (const kw of entry.keywords) {
-      if (q.includes(kw.toLowerCase())) { score += 3; continue; }
-      for (const kt of kw.toLowerCase().split(/\s+/)) {
+      // Exact phrase match — highest value
+      if (q.includes(kw.toLowerCase())) { score += 5; continue; }
+      // Token-level matching (stopwords filtered from keyword tokens too)
+      const kwTokens = kw.toLowerCase().split(/\s+/).filter(t => t.length > 1 && !STOP.has(t));
+      for (const kt of kwTokens) {
         if (tokens.includes(kt)) score += 2;
         else if (tokens.some(t => t.length > 3 && (t.includes(kt) || kt.includes(t)))) score += 1;
       }
     }
     if (score > bestScore) { bestScore = score; best = entry; }
   }
-  return (best && bestScore > 0) ? best.answer : FAQ_FALLBACK;
+  // Require a minimum score of 3 to avoid false positives on generic words
+  return (best && bestScore >= 3) ? best.answer : FAQ_FALLBACK;
 }
 
 function faqScrollBottom() {
@@ -6938,7 +7179,7 @@ function faqEscHtml(s) {
 </div>
 
 <!-- ── FAQ Chatbot Widget ── -->
-<button class="faq-btn" id="faqBtn" onclick="faqToggle()" aria-label="SLN FAQ">?</button>
+<button class="faq-btn" id="faqBtn" onclick="faqToggle()" aria-label="SLN FAQ">🤖🏀</button>
 <div class="faq-panel" id="faqPanel" role="dialog" aria-label="SLN FAQ">
   <div class="faq-header">
     <span>&#9876; SLN FAQ</span>
