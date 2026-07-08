@@ -6312,8 +6312,10 @@ async function tmPastePicksNow() {
     ['A','B'].forEach(side => { if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side); });
     status.style.color = '#16a34a';
     status.textContent = `✓ ${tmOwedPicks.length} picks loaded`;
-    document.getElementById('tmPicksSyncedAt').textContent = 'Last updated: just now';
-    document.getElementById('tmOwedPicksInput').value = '';
+    const _sat = document.getElementById('tmPicksSyncedAt');
+    if (_sat) _sat.textContent = 'Last updated: just now';
+    const _inp = document.getElementById('tmOwedPicksInput');
+    if (_inp) _inp.value = '';
   } catch(e) {
     status.style.color = '#b91c1c';
     status.textContent = `Error: ${e.message || 'check connection'}`;
