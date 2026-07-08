@@ -6316,7 +6316,7 @@ async function tmPastePicksNow() {
     document.getElementById('tmOwedPicksInput').value = '';
   } catch(e) {
     status.style.color = '#b91c1c';
-    status.textContent = 'Network error — check connection.';
+    status.textContent = `Error: ${e.message || 'check connection'}`;
   }
 }
 
