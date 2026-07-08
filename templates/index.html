@@ -1835,13 +1835,15 @@
         <span id="tmFlushStatus" style="font-size:0.72rem;color:#a07840;"></span>
       </div>
       <hr style="border-color:#d4b87a;margin:2px 0;">
-      <!-- Owed Picks Auto-Sync -->
+      <!-- Owed Picks Paste -->
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <span style="color:#7c5a1a;font-size:0.72rem;font-weight:600;">Sync Owed Picks</span>
+        <span style="color:#7c5a1a;font-size:0.72rem;font-weight:600;">Paste Owed Picks</span>
         <span id="tmPicksSyncedAt" style="font-size:0.68rem;color:#a07840;"></span>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-green" style="padding:5px 14px;font-size:0.75rem;" onclick="tmSyncPicksNow()">🔄 Sync Picks Now</button>
+      <div style="font-size:0.68rem;color:#a07840;margin-bottom:4px;">Copy the text of the owed picks post from the SLN forum and paste it below.</div>
+      <textarea id="tmOwedPicksInput" rows="5" style="width:100%;font-size:0.7rem;background:#fffdf5;border:1px solid #d4b87a;border-radius:4px;padding:6px;color:#3b2a0e;resize:vertical;box-sizing:border-box;" placeholder="Paste forum post text here…"></textarea>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+        <button class="btn btn-green" style="padding:5px 14px;font-size:0.75rem;" onclick="tmPastePicksNow()">Save Picks</button>
         <span id="tmPicksSyncStatus" style="font-size:0.73rem;color:#a07840;"></span>
       </div>
     </div>
@@ -6290,36 +6292,28 @@ async function tmLoadPicksSyncedAt() {
   } catch(e) { console.warn('[tmLoadPicksSyncedAt]', e); }
 }
 
-async function tmSyncPicksNow() {
+async function tmPastePicksNow() {
+  const text = (document.getElementById('tmOwedPicksInput').value || '').trim();
   const status = document.getElementById('tmPicksSyncStatus');
-  const syncedAt = document.getElementById('tmPicksSyncedAt');
+  if (!text) { status.style.color = '#b91c1c'; status.textContent = 'Paste the forum post text first.'; return; }
   status.style.color = '#a07840';
-  status.textContent = 'Sync started… checking in 30s';
+  status.textContent = 'Saving…';
   try {
-    const res = await fetch('/api/picks/sync', { method: 'POST' });
+    const res = await fetch('/api/picks/from-paste', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ text })
+    });
     const data = await res.json();
-    if (data.league_year) tmApplyLeagueYear(data.league_year);
-    // Sync runs in background — poll /api/picks after a delay for the result
-    let polls = 0;
-    const poll = setInterval(async () => {
-      polls++;
-      try {
-        const r2 = await fetch('/api/picks');
-        const d2 = await r2.json();
-        if (d2.league_year) tmApplyLeagueYear(d2.league_year);
-        const prevCount = tmOwedPicks.length;
-        tmOwedPicks = d2.owed || [];
-        ['A','B'].forEach(side => { if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side); });
-        if (polls >= 8 || tmOwedPicks.length !== prevCount) {
-          clearInterval(poll);
-          status.style.color = '#16a34a';
-          status.textContent = `✓ ${tmOwedPicks.length} picks loaded`;
-          if (d2.updated_at) syncedAt.textContent = 'Last synced: just now';
-        } else {
-          status.textContent = `Sync in progress… (${polls * 15}s)`;
-        }
-      } catch(_) {}
-    }, 15000);
+    if (!res.ok) { status.style.color = '#b91c1c'; status.textContent = data.error || 'Error saving picks.'; return; }
+    const r2 = await fetch('/api/picks');
+    const d2 = await r2.json();
+    if (d2.league_year) tmApplyLeagueYear(d2.league_year);
+    tmOwedPicks = d2.owed || [];
+    ['A','B'].forEach(side => { if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side); });
+    status.style.color = '#16a34a';
+    status.textContent = `✓ ${tmOwedPicks.length} picks loaded`;
+    document.getElementById('tmPicksSyncedAt').textContent = 'Last updated: just now';
+    document.getElementById('tmOwedPicksInput').value = '';
   } catch(e) {
     status.style.color = '#b91c1c';
     status.textContent = 'Network error — check connection.';
