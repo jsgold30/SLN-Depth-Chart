@@ -313,20 +313,27 @@ def mockup_team_select():
 
 
 def _sln_auto_login():
-    """Login to SLN using SLN_USERNAME/SLN_PASSWORD env vars. Returns cookie string or None."""
+    """Login to SLN via ScraperAPI sticky-session proxy so phpBB IP check passes.
+    Returns a logged-in requests.Session or None.
+    Both login and forum requests must come from the same IP; ScraperAPI's sticky
+    session (session_number param in proxy username) guarantees that.
+    """
     username = os.environ.get('SLN_USERNAME', '').strip()
     password = os.environ.get('SLN_PASSWORD', '').strip()
     if not username or not password:
         return None
+    import random
+    session_num = random.randint(1, 9999)
+    s = requests.Session()
+    if SCRAPER_API_KEY:
+        proxy = f'http://scraperapi.session-{session_num}:{SCRAPER_API_KEY}@proxy.scraperapi.com:8001'
+        s.proxies.update({'http': proxy, 'https': proxy})
     base_url  = 'https://simleaguenirvana.com'
     login_url = f'{base_url}/ucp.php?mode=login'
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        'Referer': login_url,
-    }
+    ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    headers = {'User-Agent': ua, 'Referer': login_url}
     try:
-        session = requests.Session()
-        get_resp = session.get(login_url, headers=headers, timeout=10)
+        get_resp = s.get(login_url, headers=headers, timeout=20)
         soup = BeautifulSoup(get_resp.text, 'html.parser')
         form = soup.find('form', id='login') or soup.find('form')
         hidden = {}
@@ -339,18 +346,23 @@ def _sln_auto_login():
             action = action[2:]
         post_url = f'{base_url}/{action}'
         payload = {**hidden, 'username': username, 'password': password, 'autologin': 'on', 'login': 'Login'}
-        session.post(post_url, data=payload, headers=headers, timeout=10, allow_redirects=True)
-        cookies = {c.name: c.value for c in session.cookies}
+        s.post(post_url, data=payload, headers=headers, timeout=20, allow_redirects=True)
+        cookies = {c.name: c.value for c in s.cookies}
         uid_key = next((k for k in cookies if k.endswith('_u')), None)
         if not uid_key or cookies.get(uid_key, '1') == '1':
             return None
+        # Persist cookie string for diagnostics
         cookie_str = '; '.join(f'{k}={v.strip()}' for k, v in cookies.items()).strip()
-        db = get_db()
-        db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
-        db.commit()
-        db.close()
-        return cookie_str
-    except Exception:
+        try:
+            db = get_db()
+            db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
+            db.commit()
+            db.close()
+        except Exception:
+            pass
+        return s   # Return the session — has cookies + proxy wired up
+    except Exception as e:
+        app.logger.warning('SLN proxy login failed: %s', e)
         return None
 
 
@@ -1322,23 +1334,16 @@ _sync_running = False
 
 def _execute_picks_sync():
     """Core sync logic: scrapes roster pages (year+1) and forum thread (year+1 through year+6).
-    Auto-logins with SLN_USERNAME/SLN_PASSWORD to get a fresh cookie before scraping.
     Returns (owed_list, errors_list).
     """
-    # Always try fresh login first so cookie never expires silently
-    cookie = _sln_auto_login()
-    if not cookie:
-        db = get_db()
-        cookie_row = db.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
-        db.close()
-        cookie = (cookie_row[0] if cookie_row else None) or os.environ.get('SLN_COOKIE', '')
-    cookie = cookie.strip() if cookie else ''
+    # Login via ScraperAPI sticky session — both login and forum use the same
+    # proxy IP, satisfying phpBB's session IP validation.
+    sln_session = _sln_auto_login()
 
     owed = []
     errors = []
     seen = set()
     pub_headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
-    auth_headers = {**pub_headers, 'Cookie': cookie} if cookie else pub_headers
 
     # ── Step 1: Roster pages for years 2036-2037 ─────────────────────────────
     owned_map = {}
@@ -1377,12 +1382,9 @@ def _execute_picks_sync():
                         owed.append({'from_abbr': abbr, 'year': year, 'round': rnd, 'to_abbr': 'EXT'})
 
     # ── Step 2: Forum thread first post (years y+1 through y+6) ─────────────
-    if cookie:
+    if sln_session:
         try:
-            auth_headers = {**pub_headers, 'Cookie': cookie}
-            # Must use direct connection — phpBB ties the session cookie to the
-            # IP that created it, so routing through ScraperAPI (different IP) fails.
-            resp = _scraper.get(SLN_THREAD_URL, headers=auth_headers, timeout=15)
+            resp = sln_session.get(SLN_THREAD_URL, headers=pub_headers, timeout=20)
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 post_el = (soup.find('div', class_='content') or
@@ -1401,7 +1403,7 @@ def _execute_picks_sync():
         except Exception as e:
             errors.append(f'Forum thread: {e}')
     else:
-        errors.append('No SLN cookie — skipped forum thread picks')
+        errors.append('No SLN session — skipped forum thread picks')
 
     db = get_db()
     db.execute(
@@ -1486,17 +1488,14 @@ def sync_picks():
 @app.route('/api/picks/debug-forum', methods=['GET'])
 def debug_forum():
     """Temporary debug endpoint: shows raw forum post text and parsed picks."""
-    cookie = _sln_auto_login()
-    if not cookie:
-        cookie = os.environ.get('SLN_COOKIE', '').strip()
+    sln_session = _sln_auto_login()
     errors = []
     raw_text = ''
     parsed = []
-    if cookie:
+    if sln_session:
         try:
             pub_headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
-            auth_headers = {**pub_headers, 'Cookie': cookie}
-            resp = _scraper.get(SLN_THREAD_URL, headers=auth_headers, timeout=15)
+            resp = sln_session.get(SLN_THREAD_URL, headers=pub_headers, timeout=20)
             if resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
                 post_el = (soup.find('div', class_='content') or
@@ -1506,16 +1505,16 @@ def debug_forum():
                     raw_text = post_el.get_text(separator='\n')
                     parsed = parse_owed_picks_from_thread(raw_text)
                 else:
-                    errors.append('No post element found')
+                    errors.append('No post element found — page may still be showing login')
             else:
                 errors.append(f'HTTP {resp.status_code}')
         except Exception as e:
             errors.append(str(e))
     else:
-        errors.append('No cookie')
+        errors.append('Login failed — check SLN_USERNAME, SLN_PASSWORD, SCRAPER_API_KEY env vars')
     sas_owed = [p for p in parsed if p['from_abbr'] == 'SAS' or p['to_abbr'] == 'SAS']
     return jsonify({
-        'cookie_ok': bool(cookie),
+        'login_ok': bool(sln_session),
         'errors': errors,
         'raw_lines': raw_text.split('\n')[:200],
         'total_parsed': len(parsed),
