@@ -4003,10 +4003,15 @@ let TM_LEAGUE_YEAR = {{ league_year }};
 let TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + 1 + i);
 
 function tmApplyLeagueYear(year) {
-  if (!year || year === TM_LEAGUE_YEAR) return;
-  TM_LEAGUE_YEAR = year;
-  TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + 1 + i);
-  ['A','B'].forEach(side => { if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side); });
+  if (!year) return;
+  if (year !== TM_LEAGUE_YEAR) {
+    TM_LEAGUE_YEAR = year;
+    TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + 1 + i);
+    ['A','B'].forEach(side => { if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side); });
+  }
+  // Always sync admin input to the authoritative server value
+  const inp = document.getElementById('tmLeagueYearInput');
+  if (inp && parseInt(inp.value) !== year) inp.value = year;
 }
 
 let tmPicksA = [];   // [{year, round, ownerAbbr, originalAbbr, label}]
@@ -6263,8 +6268,10 @@ async function tmSaveLeagueYear() {
     });
     const data = await res.json();
     if (!res.ok) { status.style.color='#f87171'; status.textContent=data.error||'Error'; return; }
-    status.style.color='#4ade80'; status.textContent='✓ Saved — reloading…';
-    setTimeout(() => window.location.reload(), 600);
+    status.style.color='#4ade80'; status.textContent='✓ Saved';
+    setTimeout(() => { status.textContent = ''; }, 3000);
+    // Update pick year range in-place — no page reload needed
+    tmApplyLeagueYear(year);
   } catch(e) { status.style.color='#f87171'; status.textContent='Network error'; }
 }
 
