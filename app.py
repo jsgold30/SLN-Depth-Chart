@@ -314,11 +314,32 @@ def mockup_team_select():
 
 _sln_login_last_error = ''
 
+
+class _SAPISession:
+    """Wraps ScraperAPI API-endpoint calls behind a .get() interface.
+    All requests share the same session_number so ScraperAPI maintains
+    the same proxy IP and cookie jar across GET login → POST creds → forum fetch.
+    """
+    def __init__(self, api_key, session_num):
+        self._key = api_key
+        self._snum = session_num
+        self._ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+
+    def get(self, url, headers=None, timeout=30, **_):
+        return requests.get(
+            'https://api.scraperapi.com',
+            params={'api_key': self._key, 'session_number': self._snum, 'url': url},
+            headers={'User-Agent': self._ua},
+            timeout=timeout,
+        )
+
+
 def _sln_auto_login():
-    """Login to SLN directly from Railway's IP (no proxy).
-    The session cookie phpBB creates is tied to Railway's IP, so the
-    subsequent forum fetch must also use this same session (Railway IP).
-    Returns a logged-in requests.Session or None.
+    """Login to SLN via ScraperAPI API endpoint with a sticky session_number.
+    ScraperAPI maintains the cookie jar server-side for each session_number,
+    so phpBB's form_token check (needs same IP + session cookie for GET→POST)
+    passes reliably — unlike the proxy approach which can split GET/POST across IPs.
+    Returns an _SAPISession on success, None on failure.
     """
     global _sln_login_last_error
     username = os.environ.get('SLN_USERNAME', '').strip()
@@ -326,46 +347,69 @@ def _sln_auto_login():
     if not username or not password:
         _sln_login_last_error = 'SLN_USERNAME or SLN_PASSWORD not set'
         return None
+    api_key = os.environ.get('SCRAPER_API_KEY', '').strip()
+    if not api_key:
+        _sln_login_last_error = 'SCRAPER_API_KEY not set'
+        return None
+    import random, time
     base_url  = 'https://simleaguenirvana.com'
     login_url = f'{base_url}/ucp.php?mode=login'
     ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-    hdrs = {'User-Agent': ua, 'Referer': login_url}
-    try:
-        s = requests.Session()
-        get_resp = s.get(login_url, headers=hdrs, timeout=30)
-        soup = BeautifulSoup(get_resp.text, 'html.parser')
-        form = soup.find('form', id='login') or soup.find('form')
-        hidden = {}
-        if form:
-            for inp in form.find_all('input', type='hidden'):
-                if inp.get('name'):
-                    hidden[inp['name']] = inp.get('value', '')
-        action = (form.get('action') or 'ucp.php?mode=login') if form else 'ucp.php?mode=login'
-        if action.startswith('./'):
-            action = action[2:]
-        post_url = f'{base_url}/{action}'
-        payload = {**hidden, 'username': username, 'password': password, 'autologin': 'on', 'login': 'Login'}
-        s.post(post_url, data=payload, headers=hdrs, timeout=30, allow_redirects=True)
-        cookies = {c.name: c.value for c in s.cookies}
-        uid_key = next((k for k in cookies if k.endswith('_u')), None)
-        uid_val = cookies.get(uid_key, '1') if uid_key else '1'
-        if not uid_key or uid_val == '1':
-            _sln_login_last_error = f'Login failed — uid={uid_val}; got={list(cookies.keys())}'
-            app.logger.warning('SLN login: %s', _sln_login_last_error)
-            return None
-        cookie_str = '; '.join(f'{k}={v.strip()}' for k, v in cookies.items()).strip()
+    last_err = 'no attempts made'
+
+    for attempt in range(3):
+        if attempt:
+            time.sleep(2)
         try:
-            db = get_db()
-            db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
-            db.commit(); db.close()
-        except Exception:
-            pass
-        _sln_login_last_error = ''
-        return s
-    except Exception as e:
-        _sln_login_last_error = f'{type(e).__name__}: {e}'
-        app.logger.warning('SLN login failed: %s', e)
-        return None
+            session_num = random.randint(1, 9999)
+            sapi = {'api_key': api_key, 'session_number': session_num}
+
+            # GET login page — ScraperAPI fetches via proxy IP X and stores phpBB
+            # session cookie in its internal jar for session_num
+            get_resp = requests.get('https://api.scraperapi.com',
+                                    params={**sapi, 'url': login_url},
+                                    headers={'User-Agent': ua}, timeout=35)
+            soup = BeautifulSoup(get_resp.text, 'html.parser')
+            form = soup.find('form', id='login') or soup.find('form')
+            hidden = {}
+            if form:
+                for inp in form.find_all('input', type='hidden'):
+                    if inp.get('name'):
+                        hidden[inp['name']] = inp.get('value', '')
+            action = (form.get('action') or 'ucp.php?mode=login') if form else 'ucp.php?mode=login'
+            if action.startswith('./'):
+                action = action[2:]
+            post_target = f'{base_url}/{action}'
+            payload = {**hidden, 'username': username, 'password': password,
+                       'autologin': 'on', 'login': 'Login'}
+
+            # POST credentials — ScraperAPI uses same proxy IP X + stored cookies
+            # so phpBB's form_token and session IP check both pass
+            post_resp = requests.post(
+                'https://api.scraperapi.com',
+                params={**sapi, 'url': post_target, 'keep_headers': 'true'},
+                data=payload,
+                headers={'User-Agent': ua, 'Referer': login_url,
+                         'Content-Type': 'application/x-www-form-urlencoded'},
+                timeout=35,
+            )
+
+            # Verify: if phpBB still shows a login form, login failed
+            soup_post = BeautifulSoup(post_resp.text, 'html.parser')
+            if soup_post.find('form', id='login'):
+                last_err = f'login form still present after POST (attempt {attempt+1})'
+                app.logger.warning('SLN login: %s', last_err)
+                continue
+
+            _sln_login_last_error = ''
+            return _SAPISession(api_key, session_num)
+
+        except Exception as e:
+            last_err = f'{type(e).__name__}: {e} (attempt {attempt+1})'
+            app.logger.warning('SLN login attempt %d failed: %s', attempt + 1, e)
+
+    _sln_login_last_error = last_err
+    return None
 
 
 def _parse_roster_from_soup(soup):
