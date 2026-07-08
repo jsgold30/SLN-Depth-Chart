@@ -3999,8 +3999,15 @@ function fmtSal(n) {
 }
 
 // ─── Draft Picks in Trade Machine ─────────────────────────────────────────────
-const TM_LEAGUE_YEAR = {{ league_year }};
-const TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + 1 + i); // 2037-2042
+let TM_LEAGUE_YEAR = {{ league_year }};
+let TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + 1 + i);
+
+function tmApplyLeagueYear(year) {
+  if (!year || year === TM_LEAGUE_YEAR) return;
+  TM_LEAGUE_YEAR = year;
+  TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + 1 + i);
+  ['A','B'].forEach(side => { if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side); });
+}
 
 let tmPicksA = [];   // [{year, round, ownerAbbr, originalAbbr, label}]
 let tmPicksB = [];
@@ -4013,6 +4020,7 @@ async function tmLoadOwedPicks() {
     const res = await fetch('/api/picks');
     if (!res.ok) return;
     const data = await res.json();
+    tmApplyLeagueYear(data.league_year);
     tmOwedPicks = data.owed || [];
     ['A','B'].forEach(side => {
       if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side);
@@ -4029,6 +4037,7 @@ async function tmLoadOwedPicks() {
           const d2 = await r2.json();
           if (!d2.syncing || attempts >= 12) {
             clearInterval(poll);
+            tmApplyLeagueYear(d2.league_year);
             tmOwedPicks = d2.owed || [];
             ['A','B'].forEach(side => {
               if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side);
@@ -6254,7 +6263,8 @@ async function tmSaveLeagueYear() {
     });
     const data = await res.json();
     if (!res.ok) { status.style.color='#f87171'; status.textContent=data.error||'Error'; return; }
-    status.style.color='#4ade80'; status.textContent='✓ Saved — reload to apply';
+    status.style.color='#4ade80'; status.textContent='✓ Saved — reloading…';
+    setTimeout(() => window.location.reload(), 600);
   } catch(e) { status.style.color='#f87171'; status.textContent='Network error'; }
 }
 
@@ -6281,6 +6291,7 @@ async function tmSyncPicksNow() {
   try {
     const res = await fetch('/api/picks/sync', { method: 'POST' });
     const data = await res.json();
+    if (data.league_year) tmApplyLeagueYear(data.league_year);
     if (!res.ok || data.errors?.length) {
       const errs = data.errors?.join('; ') || 'Sync failed';
       status.style.color = '#b91c1c';
@@ -6289,7 +6300,8 @@ async function tmSyncPicksNow() {
       status.style.color = '#16a34a';
       status.textContent = `✓ ${data.count} picks synced`;
       syncedAt.textContent = 'Last synced: just now';
-      tmLoadOwedPicks();
+      tmOwedPicks = data.owed || [];
+      ['A','B'].forEach(side => { if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side); });
     }
   } catch(e) {
     status.style.color = '#b91c1c';

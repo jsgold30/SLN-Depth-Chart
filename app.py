@@ -1465,9 +1465,10 @@ def get_picks():
     db = get_db()
     row = db.execute('SELECT data, updated_at FROM owed_picks WHERE id = 1').fetchone()
     db.close()
+    league_year = get_league_year()
     if row:
-        return jsonify({'owed': json.loads(row[0]), 'updated_at': row[1], 'syncing': False})
-    return jsonify({'owed': [], 'updated_at': None, 'syncing': False})
+        return jsonify({'owed': json.loads(row[0]), 'updated_at': row[1], 'syncing': False, 'league_year': league_year})
+    return jsonify({'owed': [], 'updated_at': None, 'syncing': False, 'league_year': league_year})
 
 
 @app.route('/api/picks/sync', methods=['POST'])
@@ -1477,7 +1478,7 @@ def sync_picks():
     - Years 2038-2041: scrape first post of SLN owed-picks thread (requires cookie)
     """
     owed, errors = _execute_picks_sync()
-    return jsonify({'ok': True, 'count': len(owed), 'owed': owed, 'errors': errors})
+    return jsonify({'ok': True, 'count': len(owed), 'owed': owed, 'errors': errors, 'league_year': get_league_year()})
 
 
 @app.route('/api/picks/set-cookie', methods=['POST'])
