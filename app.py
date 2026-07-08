@@ -315,10 +315,9 @@ def mockup_team_select():
 _sln_login_last_error = ''
 
 def _sln_auto_login():
-    """Login to SLN via ScraperAPI sticky-session proxy so phpBB IP check passes.
-    Retries up to 3 times with a fresh session_number each attempt, because
-    the proxy occasionally routes GET and POST through different IPs (making
-    phpBB's form_token check fail and returning uid=1/anonymous).
+    """Login to SLN directly from Railway's IP (no proxy).
+    The session cookie phpBB creates is tied to Railway's IP, so the
+    subsequent forum fetch must also use this same session (Railway IP).
     Returns a logged-in requests.Session or None.
     """
     global _sln_login_last_error
@@ -327,58 +326,46 @@ def _sln_auto_login():
     if not username or not password:
         _sln_login_last_error = 'SLN_USERNAME or SLN_PASSWORD not set'
         return None
-    api_key = os.environ.get('SCRAPER_API_KEY', '').strip()
-    import random, urllib3, time
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     base_url  = 'https://simleaguenirvana.com'
     login_url = f'{base_url}/ucp.php?mode=login'
     ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
     hdrs = {'User-Agent': ua, 'Referer': login_url}
-    last_err = 'no attempts made'
-    for attempt in range(3):
-        if attempt > 0:
-            time.sleep(2)
+    try:
+        s = requests.Session()
+        get_resp = s.get(login_url, headers=hdrs, timeout=30)
+        soup = BeautifulSoup(get_resp.text, 'html.parser')
+        form = soup.find('form', id='login') or soup.find('form')
+        hidden = {}
+        if form:
+            for inp in form.find_all('input', type='hidden'):
+                if inp.get('name'):
+                    hidden[inp['name']] = inp.get('value', '')
+        action = (form.get('action') or 'ucp.php?mode=login') if form else 'ucp.php?mode=login'
+        if action.startswith('./'):
+            action = action[2:]
+        post_url = f'{base_url}/{action}'
+        payload = {**hidden, 'username': username, 'password': password, 'autologin': 'on', 'login': 'Login'}
+        s.post(post_url, data=payload, headers=hdrs, timeout=30, allow_redirects=True)
+        cookies = {c.name: c.value for c in s.cookies}
+        uid_key = next((k for k in cookies if k.endswith('_u')), None)
+        uid_val = cookies.get(uid_key, '1') if uid_key else '1'
+        if not uid_key or uid_val == '1':
+            _sln_login_last_error = f'Login failed — uid={uid_val}; got={list(cookies.keys())}'
+            app.logger.warning('SLN login: %s', _sln_login_last_error)
+            return None
+        cookie_str = '; '.join(f'{k}={v.strip()}' for k, v in cookies.items()).strip()
         try:
-            session_num = random.randint(1, 9999)
-            s = requests.Session()
-            if api_key:
-                proxy = f'http://scraperapi.session-{session_num}:{api_key}@proxy.scraperapi.com:8001'
-                s.proxies.update({'http': proxy, 'https': proxy})
-                s.verify = False
-            get_resp = s.get(login_url, headers=hdrs, timeout=30)
-            soup = BeautifulSoup(get_resp.text, 'html.parser')
-            form = soup.find('form', id='login') or soup.find('form')
-            hidden = {}
-            if form:
-                for inp in form.find_all('input', type='hidden'):
-                    if inp.get('name'):
-                        hidden[inp['name']] = inp.get('value', '')
-            action = (form.get('action') or 'ucp.php?mode=login') if form else 'ucp.php?mode=login'
-            if action.startswith('./'):
-                action = action[2:]
-            post_url = f'{base_url}/{action}'
-            payload = {**hidden, 'username': username, 'password': password, 'autologin': 'on', 'login': 'Login'}
-            s.post(post_url, data=payload, headers=hdrs, timeout=30, allow_redirects=True)
-            cookies = {c.name: c.value for c in s.cookies}
-            uid_key = next((k for k in cookies if k.endswith('_u')), None)
-            uid_val = cookies.get(uid_key, '1') if uid_key else '1'
-            if uid_key and uid_val != '1':
-                cookie_str = '; '.join(f'{k}={v.strip()}' for k, v in cookies.items()).strip()
-                try:
-                    db = get_db()
-                    db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
-                    db.commit(); db.close()
-                except Exception:
-                    pass
-                _sln_login_last_error = ''
-                return s
-            last_err = f'uid anonymous after attempt {attempt+1} (session={session_num}); uid={uid_val}'
-            app.logger.warning('SLN login attempt %d: %s', attempt + 1, last_err)
-        except Exception as e:
-            last_err = f'{type(e).__name__}: {e} (attempt {attempt+1})'
-            app.logger.warning('SLN proxy login attempt %d failed: %s', attempt + 1, e)
-    _sln_login_last_error = last_err
-    return None
+            db = get_db()
+            db.execute("INSERT INTO settings (key, value) VALUES ('sln_cookie', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (cookie_str,))
+            db.commit(); db.close()
+        except Exception:
+            pass
+        _sln_login_last_error = ''
+        return s
+    except Exception as e:
+        _sln_login_last_error = f'{type(e).__name__}: {e}'
+        app.logger.warning('SLN login failed: %s', e)
+        return None
 
 
 def _parse_roster_from_soup(soup):
