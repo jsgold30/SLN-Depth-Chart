@@ -335,29 +335,93 @@ class _SAPISession:
 
 
 def _sln_auto_login():
-    """Login to SLN via ScraperAPI API endpoint with a sticky session_number.
-    ScraperAPI maintains the cookie jar server-side for each session_number,
-    so phpBB's form_token check (needs same IP + session cookie for GET→POST)
-    passes reliably — unlike the proxy approach which can split GET/POST across IPs.
-    Returns an _SAPISession on success, None on failure.
+    """Authenticate to SLN and return an _SAPISession for forum fetching.
+
+    Strategy (in order):
+    1. Stored SLN_COOKIE env var — fastest; works if phpBB has no IP-based
+       session tracking (many phpBB installs disable it).
+    2. Autologin _k key from SLN_COOKIE via proxy — phpBB's "remember me" key
+       creates a fresh session on the proxy IP without a login form POST.
+    3. Full API-endpoint login with manual cookie forwarding — slowest fallback.
+
+    All forum fetches go through the same ScraperAPI session_number, keeping
+    the proxy IP consistent with whatever session phpBB created.
     """
     global _sln_login_last_error
+    _raw_key = os.environ.get('SCRAPER_API_KEY', '')
+    api_key = _raw_key.strip()
+    if not api_key:
+        _sln_login_last_error = f'SCRAPER_API_KEY empty (raw len={len(_raw_key)})'
+        return None
     username = os.environ.get('SLN_USERNAME', '').strip()
     password = os.environ.get('SLN_PASSWORD', '').strip()
     if not username or not password:
         _sln_login_last_error = 'SLN_USERNAME or SLN_PASSWORD not set'
         return None
-    _raw_key = os.environ.get('SCRAPER_API_KEY', '')
-    api_key = _raw_key.strip()
-    if not api_key:
-        _sln_login_last_error = f'SCRAPER_API_KEY empty (raw len={len(_raw_key)}, stripped len=0)'
-        return None
-    import random, time
+
+    import random, time, urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
     base_url  = 'https://simleaguenirvana.com'
     login_url = f'{base_url}/ucp.php?mode=login'
-    ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-    last_err = 'no attempts made'
 
+    stored_cookie = os.environ.get('SLN_COOKIE', '').strip()
+
+    # ── Path 1: stored SLN_COOKIE directly via ScraperAPI ────────────────────
+    # Works when phpBB has IP-based session tracking disabled (common config).
+    if stored_cookie:
+        try:
+            session_num = random.randint(1, 9999)
+            resp = requests.get(
+                'https://api.scraperapi.com',
+                params={'api_key': api_key, 'session_number': session_num,
+                        'url': SLN_THREAD_URL, 'keep_headers': 'true'},
+                headers={'User-Agent': ua, 'Cookie': stored_cookie},
+                timeout=30,
+            )
+            if not BeautifulSoup(resp.text, 'html.parser').find('form', id='login'):
+                app.logger.info('SLN auth: stored cookie accepted (path 1)')
+                _sln_login_last_error = ''
+                return _SAPISession(api_key, session_num)
+            app.logger.info('SLN auth: stored cookie rejected — trying _k path')
+        except Exception as e:
+            app.logger.warning('SLN auth path 1 failed: %s', e)
+
+    # ── Path 2: autologin _k key via ScraperAPI proxy ────────────────────────
+    # phpBB's "remember me" key creates a new session on the current proxy IP
+    # without requiring a form POST or form_token.
+    if stored_cookie:
+        parts = {}
+        for p in stored_cookie.split(';'):
+            p = p.strip()
+            if '=' in p:
+                k, v = p.split('=', 1)
+                parts[k.strip()] = v.strip()
+        k_name = next((k for k in parts if k.endswith('_k')), None)
+        k_val  = parts.get(k_name, '') if k_name else ''
+        if k_name and k_val:
+            for attempt in range(2):
+                try:
+                    session_num = random.randint(1, 9999)
+                    proxy = f'http://scraperapi.session-{session_num}:{api_key}@proxy.scraperapi.com:8001'
+                    s = requests.Session()
+                    s.proxies.update({'http': proxy, 'https': proxy})
+                    s.verify = False
+                    s.cookies.set(k_name, k_val, domain='simleaguenirvana.com', path='/')
+                    s.get(f'{base_url}/', headers={'User-Agent': ua}, timeout=25)
+                    cookies = {c.name: c.value for c in s.cookies}
+                    uid_key = next((k for k in cookies if k.endswith('_u')), None)
+                    if uid_key and cookies.get(uid_key, '1') != '1':
+                        app.logger.info('SLN auth: _k autologin succeeded (path 2)')
+                        _sln_login_last_error = ''
+                        return s
+                    app.logger.info('SLN auth: _k path attempt %d uid=%s',
+                                    attempt + 1, cookies.get(uid_key, '?') if uid_key else 'none')
+                except Exception as e:
+                    app.logger.warning('SLN auth path 2 attempt %d failed: %s', attempt + 1, e)
+
+    # ── Path 3: full login form via ScraperAPI API endpoint ──────────────────
+    last_err = 'all paths failed'
     for attempt in range(3):
         if attempt:
             time.sleep(3)
@@ -365,21 +429,16 @@ def _sln_auto_login():
             session_num = random.randint(1, 9999)
             sapi = {'api_key': api_key, 'session_number': session_num}
 
-            # GET login page via ScraperAPI
             get_resp = requests.get('https://api.scraperapi.com',
                                     params={**sapi, 'url': login_url},
                                     headers={'User-Agent': ua}, timeout=35)
-
-            # ScraperAPI passes phpBB's Set-Cookie headers through to us.
-            # Extract them so we can replay them on the POST — phpBB's form_token
-            # validation requires the same session cookie that was set on GET.
             jar = {c.name: c.value for c in get_resp.cookies}
             for raw_sc in get_resp.raw.headers.getlist('Set-Cookie'):
                 nv = raw_sc.split(';')[0].strip()
                 if '=' in nv:
                     k, v = nv.split('=', 1)
                     jar.setdefault(k.strip(), v.strip())
-            app.logger.info('SLN login attempt %d: GET cookies=%s', attempt + 1, list(jar.keys()))
+            app.logger.info('SLN path 3 attempt %d: GET cookies=%s', attempt + 1, list(jar.keys()))
 
             soup = BeautifulSoup(get_resp.text, 'html.parser')
             form = soup.find('form', id='login') or soup.find('form')
@@ -394,41 +453,27 @@ def _sln_auto_login():
             post_target = f'{base_url}/{action}'
             payload = {**hidden, 'username': username, 'password': password,
                        'autologin': 'on', 'login': 'Login'}
-
-            # Small delay — phpBB bot-detection rejects forms submitted too quickly
             time.sleep(2)
-
-            # POST credentials with the session cookie from GET, same session_number
-            # (same proxy IP), so phpBB's form_token + IP check both pass
-            post_headers = {
-                'User-Agent': ua,
-                'Referer': login_url,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            }
+            post_headers = {'User-Agent': ua, 'Referer': login_url,
+                            'Content-Type': 'application/x-www-form-urlencoded'}
             if jar:
                 post_headers['Cookie'] = '; '.join(f'{k}={v}' for k, v in jar.items())
-
             post_resp = requests.post(
                 'https://api.scraperapi.com',
                 params={**sapi, 'url': post_target, 'keep_headers': 'true'},
-                data=payload,
-                headers=post_headers,
-                timeout=35,
+                data=payload, headers=post_headers, timeout=35,
             )
-
-            soup_post = BeautifulSoup(post_resp.text, 'html.parser')
-            if soup_post.find('form', id='login'):
-                last_err = (f'login form still present after POST '
-                            f'(attempt {attempt+1}, cookies={list(jar.keys())})')
-                app.logger.warning('SLN login: %s', last_err)
+            if BeautifulSoup(post_resp.text, 'html.parser').find('form', id='login'):
+                last_err = f'path 3 POST still shows login form (attempt {attempt+1}, cookies={list(jar.keys())})'
+                app.logger.warning('SLN auth: %s', last_err)
                 continue
 
             _sln_login_last_error = ''
             return _SAPISession(api_key, session_num)
 
         except Exception as e:
-            last_err = f'{type(e).__name__}: {e} (attempt {attempt+1})'
-            app.logger.warning('SLN login attempt %d failed: %s', attempt + 1, e)
+            last_err = f'{type(e).__name__}: {e} (path 3 attempt {attempt+1})'
+            app.logger.warning('SLN auth path 3 attempt %d failed: %s', attempt + 1, e)
 
     _sln_login_last_error = last_err
     return None
