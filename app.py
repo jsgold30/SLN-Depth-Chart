@@ -326,7 +326,8 @@ def _sln_auto_login():
     if not username or not password:
         _sln_login_last_error = 'SLN_USERNAME or SLN_PASSWORD not set'
         return None
-    if not SCRAPER_API_KEY:
+    api_key = os.environ.get('SCRAPER_API_KEY', '').strip()
+    if not api_key:
         _sln_login_last_error = 'SCRAPER_API_KEY not set'
         return None
     import random, urllib.parse
@@ -339,7 +340,7 @@ def _sln_auto_login():
             session_num = random.randint(1, 9999)
 
             def _sa(url, method='GET', extra_headers=None, body=None):
-                params = {'api_key': SCRAPER_API_KEY, 'url': url, 'session_number': session_num}
+                params = {'api_key': api_key, 'url': url, 'session_number': session_num}
                 hdrs = {'User-Agent': ua}
                 if extra_headers:
                     params['keep_headers'] = 'true'
@@ -400,12 +401,12 @@ def _sln_auto_login():
                 pass
 
             # Return a fetch callable that uses the same session_number + cookies
-            def _make_fetcher(cookies, snum):
+            def _make_fetcher(cookies, snum, key):
                 ck = '; '.join(f'{k}={v}' for k, v in cookies.items())
                 def fetch(url, timeout=30):
                     return requests.get(
                         'https://api.scraperapi.com',
-                        params={'api_key': SCRAPER_API_KEY, 'url': url,
+                        params={'api_key': key, 'url': url,
                                 'session_number': snum, 'keep_headers': 'true'},
                         headers={'User-Agent': ua, 'Cookie': ck},
                         timeout=timeout,
@@ -413,7 +414,7 @@ def _sln_auto_login():
                 return fetch
 
             _sln_login_last_error = ''
-            return _make_fetcher(jar, session_num)
+            return _make_fetcher(jar, session_num, api_key)
 
         except Exception as e:
             _sln_login_last_error = f'{type(e).__name__}: {e} (attempt {attempt+1})'
