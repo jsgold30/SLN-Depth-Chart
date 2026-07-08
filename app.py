@@ -317,17 +317,20 @@ def _sln_auto_login():
     Returns a logged-in requests.Session or None.
     Both login and forum requests must come from the same IP; ScraperAPI's sticky
     session (session_number param in proxy username) guarantees that.
+    ScraperAPI's proxy performs SSL interception, so verify=False is required.
     """
     username = os.environ.get('SLN_USERNAME', '').strip()
     password = os.environ.get('SLN_PASSWORD', '').strip()
     if not username or not password:
         return None
-    import random
+    import random, urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     session_num = random.randint(1, 9999)
     s = requests.Session()
     if SCRAPER_API_KEY:
         proxy = f'http://scraperapi.session-{session_num}:{SCRAPER_API_KEY}@proxy.scraperapi.com:8001'
         s.proxies.update({'http': proxy, 'https': proxy})
+        s.verify = False  # ScraperAPI proxy uses SSL interception
     base_url  = 'https://simleaguenirvana.com'
     login_url = f'{base_url}/ucp.php?mode=login'
     ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
@@ -350,8 +353,8 @@ def _sln_auto_login():
         cookies = {c.name: c.value for c in s.cookies}
         uid_key = next((k for k in cookies if k.endswith('_u')), None)
         if not uid_key or cookies.get(uid_key, '1') == '1':
+            app.logger.warning('SLN login: no valid uid cookie — credentials wrong or login page unreachable')
             return None
-        # Persist cookie string for diagnostics
         cookie_str = '; '.join(f'{k}={v.strip()}' for k, v in cookies.items()).strip()
         try:
             db = get_db()
@@ -360,7 +363,7 @@ def _sln_auto_login():
             db.close()
         except Exception:
             pass
-        return s   # Return the session — has cookies + proxy wired up
+        return s
     except Exception as e:
         app.logger.warning('SLN proxy login failed: %s', e)
         return None
@@ -1511,7 +1514,10 @@ def debug_forum():
         except Exception as e:
             errors.append(str(e))
     else:
-        errors.append('Login failed — check SLN_USERNAME, SLN_PASSWORD, SCRAPER_API_KEY env vars')
+        has_user = bool(os.environ.get('SLN_USERNAME'))
+        has_pass = bool(os.environ.get('SLN_PASSWORD'))
+        has_key  = bool(SCRAPER_API_KEY)
+        errors.append(f'Login failed — SLN_USERNAME={has_user} SLN_PASSWORD={has_pass} SCRAPER_API_KEY={has_key}. Check Railway logs for the exact error.')
     sas_owed = [p for p in parsed if p['from_abbr'] == 'SAS' or p['to_abbr'] == 'SAS']
     return jsonify({
         'login_ok': bool(sln_session),
