@@ -31,6 +31,12 @@ _SHEETS_CSV_URL  = ('https://docs.google.com/spreadsheets/d/'
                     '1T3whgGSEBuhyxuWypY9wSQc_wRTQH52jHMjIaS0ubgs'
                     '/export?format=csv&gid=0')
 
+def _clean_camp_text(s):
+    cleaned = re.sub(r'[^\x20-\x7E]', '', s)       # strip non-ASCII
+    cleaned = re.sub(r'\(\s*\)', '', cleaned)        # remove empty parens left behind
+    cleaned = re.sub(r'\s{2,}', ' ', cleaned).strip()
+    return cleaned
+
 def _parse_camp_csv(text):
     players = {}
     reader  = csv.DictReader(io.StringIO(text))
@@ -39,7 +45,7 @@ def _parse_camp_csv(text):
         if not name:
             continue
         key    = name.lower()
-        rating = (row.get('Rating') or '').strip()
+        rating = _clean_camp_text((row.get('Rating') or '').strip())
         year   = (row.get('Year')   or '').strip()
         total  = (row.get('Total')  or '').strip()
         if key not in players:
