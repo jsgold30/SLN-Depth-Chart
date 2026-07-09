@@ -7074,24 +7074,29 @@ let campDataReady  = false;
 
 function campLookup(query) {
   if (!campDataReady || !Object.keys(CAMP_DATA).length) return null;
-  const q       = query.toLowerCase().replace(/'/g, '').replace(/-/g, ' ');
-  const qTokens = q.split(/\s+/).filter(t => t.length > 1);
+  const norm    = s => s.toLowerCase().replace(/'/g, '').replace(/-/g, ' ').replace(/\./g, '');
+  const qTokens = norm(query).split(/\s+/).filter(t => t.length > 1);
   if (!qTokens.length) return null;
 
-  const full    = [];
+  const full    = []; // { player, tokenCount }
   const partial = [];
   for (const [key, player] of Object.entries(CAMP_DATA)) {
-    const norm       = key.replace(/'/g, '').replace(/-/g, ' ');
-    const nameTokens = norm.split(/\s+/).filter(t => t.length > 1);
+    const nameTokens = norm(key).split(/\s+/).filter(t => t.length > 1);
     const matched    = nameTokens.filter(t => qTokens.includes(t)).length;
-    if (matched === nameTokens.length) full.push(player);
+    if (matched === nameTokens.length) full.push({ player, tokenCount: nameTokens.length });
     else if (matched > 0)              partial.push(player);
   }
 
-  if (full.length === 1)    return formatCampHistory(full[0]);
-  if (full.length > 1)      return 'Multiple players found. Did you mean:\n'
-    + full.map(p => '• ' + p.name).join('\n')
-    + '\n\nType the full name to look up.';
+  if (full.length === 1) return formatCampHistory(full[0].player);
+  if (full.length > 1) {
+    // Prefer the most specific match (most name tokens) — handles Jr./Sr. vs base name
+    const maxTok     = Math.max(...full.map(f => f.tokenCount));
+    const mostSpec   = full.filter(f => f.tokenCount === maxTok);
+    if (mostSpec.length === 1) return formatCampHistory(mostSpec[0].player);
+    return 'Multiple players found. Did you mean:\n'
+      + full.map(f => '• ' + f.player.name).join('\n')
+      + '\n\nType the full name to look up.';
+  }
   if (partial.length === 1) return formatCampHistory(partial[0]);
   if (partial.length > 1)   return 'Multiple players found. Did you mean:\n'
     + partial.slice(0, 5).map(p => '• ' + p.name).join('\n')
