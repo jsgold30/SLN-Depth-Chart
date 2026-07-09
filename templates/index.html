@@ -6954,29 +6954,44 @@ const FAQ_DATA = [
     answer: 'The 6 public ratings and what drives them:\n• Inside: Inside Scoring + Strength + Jumping (Jumping is basically useless — a red herring!)\n• Outside: Jump Shot + 3P Shot (accurate and straightforward)\n• Handles: Ball Handling + Passing + Quickness (MISLEADING — overweights passing)\n• Defense: Perimeter D + Post D + Steals + Blocks + more (position-weighted)\n• Rebounding: Def Reb + Off Reb + Strength (accurate)\n• Potential: Scouted vs. True Potential — simmer can hide sleepers or create busts'
   },
   {
-    keywords: ['handles misleading', 'passing vs handling', 'turnovers', 'public handle rating', 'assists vs turnovers'],
-    question: 'Why is the Handle rating misleading?',
-    answer: 'The public Handle grade OVERWEIGHTS passing and UNDERWEIGHTS ball handling. In FBB, limiting turnovers matters way more than creating assists.\n\nPro tip: A player with an A+ handle rating averaging 12 assists and 4.5 turnovers will HURT you. Assists don\'t impact winning much in FBB — turnovers lose games. Prioritize the actual handling (ball-handling) stat over the public letter grade.'
+    keywords: ['outside rating', 'outside scoring', 'jump shot', '3 point rating', 'three point', 'outside grade breakdown', 'outside letter grade'],
+    question: 'How is the Outside rating calculated?',
+    answer: 'Outside = Jump Shot + 3P Shot (the combined number is what the letter grade represents).\n\nGrade thresholds:\nA+:  191–200\nA:   171–190\nA-:  151–170\nB+:  142–150\nB:   131–141\nB-:  122–130\nC+:  106–121\n\nNotable: the gap from B to A- is actually relatively small compared to the other jumps — a couple of well-placed camps can bridge it quickly.'
+  },
+  {
+    keywords: ['handles misleading', 'passing rating', 'passing turnovers', 'public handle rating', 'assists vs turnovers', 'handles grade passing'],
+    question: 'What does the Passing rating actually do?',
+    answer: 'Higher Passing = more turnovers. Bad passes sail into the crowd all the time in FBB — there\'s no way around it. Generally, high passing is not good.\n\nThe one exception: there\'s some value in slower paces or Inside/Balanced offenses. For Outside focus or fast pace, high passing is probably a net negative.\n\nThe Handles letter grade is ~90%+ determined by Passing — but the range from C+ to A- is laughably small. Once a player hits 60-65 Passing, their Handles grade is likely already A-. Don\'t be fooled by the letter.\n\nAlso worth knowing: Quickness is factored into the Handles grade in a weird way — raising Quickness can sometimes slightly lower the letter grade if Passing isn\'t above the threshold. It doesn\'t matter much in practice.'
+  },
+  {
+    keywords: ['handling stat', 'ball handling', 'handling rating', 'reduce turnovers', 'handling benchmarks', 'pg turnovers', 'handling pg'],
+    question: 'How does the Handling stat work?',
+    answer: 'Handling does one thing: reduces turnovers when the player has the ball. It\'s arguably the most important rating in the game.\n\nPosition caps: C is capped at 75; PF is capped at 80. Most other positions are solid around 60 handling.\n\nPGs are the exception — 60 handling is genuinely bad for a PG:\n• 60-70 handling = likely 3+ TPG\n• Lower Passing can offset (65 handling + 30 passing might be okay)\n• ~80 handling + good passing ≈ 2 TPG\n• 90+ is game-breaking — don\'t expect the simmer to ever create a PG starting there\n\nFor reading player notes on PGs, mentally work in the 60-75 range. Also: PG handling can jump dramatically in TC — PG Training Camps can be insane overall.'
   },
   {
     keywords: ['inside scoring tips', 'center scoring', 'big men scoring', 'scoring benchmarks', 'inside rating guide'],
     question: 'How should I evaluate Inside Scoring?',
-    answer: 'Inside Scoring drives scoring VOLUME — it\'s the most important under-the-hood stat. Key benchmarks:\n• PGs: 40+ = very good; 60+ = excellent; 80+ = elite\n• SG/SF/PF: 60+ = salvageable; 80+ = elite\n• Centers: 60-80 = 14-20 PPG range; 85-90+ = league-leading scoring\n\nNote: Jumping is built into the Inside rating but is virtually USELESS. A high Inside grade boosted by jumping doesn\'t translate to real production.'
+    answer: 'Inside Scoring is arguably the most important factor for scoring volume.\n\nPGs: even a low Inside rating still produces — PGs get their points regardless. 40+ is very good, 60+ is excellent, 80+ is elite. The differences are more pronounced as you go up.\n\nSG/SF/PF: 60+ is the "salvageable" threshold for scoring prospects. Truly elite scorers will be above 80.\n\nC: 60-80 Inside puts them in the 14-20 PPG range depending on strength and offense focus. You won\'t see ridiculous league-leading scoring from a C unless they\'re in the 85-90+ range.\n\nNote: Jumping is baked into the Inside rating but is virtually useless — a high Inside grade inflated by jumping doesn\'t translate to real production.'
   },
   {
-    keywords: ['steals blocks tips', 'defensive stats', 'blocks vs steals', 'which is better blocks or steals'],
+    keywords: ['positional defense', 'post defense', 'perimeter defense', 'post d', 'perimeter d', 'getting lit up defense'],
+    question: 'How important is Positional Defense (Post D / Perimeter D)?',
+    answer: 'Post Defense (for bigs) and Perimeter Defense (for wings) are important, but still a notch below Blocking and Stealing in overall defensive impact.\n\nThe simple rule: players below 50-60 in their relevant positional defense category will get lit up. That\'s just how it is.\n\nThat said, it\'s generally not recommended to invest RPs in positional defense unless the player\'s Blocks/Steals are already at a solid level — prioritize the stats that actively take the ball away first.'
+  },
+  {
+    keywords: ['steals blocks tips', 'defensive stats', 'blocks vs steals', 'which is better blocks or steals', 'blocks per game', 'steals per game', 'bpg spg'],
     question: 'How do Steals and Blocks work in FBB?',
-    answer: 'Steals > Blocks in value. Steals are ALWAYS turnovers; blocked shots can be recovered by the offense or go out of bounds.\n\n• C/PFs: naturally get more blocks; Wings get more steals\n• 50 rating ≈ 1 per game (for the expected position)\n• 70-90 rating ≈ 2-2.5 per game; 90+ = elite (3+ blocks for bigs)\n• Trap more → big man steals go up; Press more → wing steals go up (both increase fouls)\n\nPerimeter/Post Defense: below 50-60 in the relevant category means getting torched regularly.'
+    answer: 'Steals > Blocks in value. Steals are ALWAYS turnovers. Blocked shots can be recovered by the offense or go out of bounds — not a guaranteed stop.\n\nPosition matters a lot:\n• C/PFs naturally get more blocks; wings naturally get more steals\n• A big man with 50 blocking ≈ 1 BPG. A wing with 50 steals ≈ 1 SPG.\n• A PG with 50 blocks will NOT get 1 BPG — position fit is everything.\n\nBenchmarks (for the expected position):\n• 70-90 ≈ 2–2.5 per game\n• 80+ blocks (big man) → likely 2-2.5 BPG; 90+ = 3+ BPG virtually guaranteed\n• 60+ steals (big man) → ≈ 1 SPG; 80+ = elite steal production\n• Wings need 75-80+ in blocks to generate meaningful block numbers\n• Steals typically cap around 3 SPG regardless of rating\n\nTactics interaction:\n• Trap more → big man steals increase\n• Press more → wing steals increase\n• Both increase fouls and stamina usage'
   },
   {
     keywords: ['potential guide', 'true potential', 'scouted potential', 'will player improve', 'development potential'],
     question: 'How does player Potential work?',
-    answer: 'Potential is a farce — it has two layers:\n• Scouted Potential (what we see): Correlates to True Potential, but the simmer can hide sleepers or manufacture busts\n• True Potential (simmer only): Determines how much a player improves each Training Camp. Higher = more likely to improve.\n\nLetter grade ranges: A=81-100, B=61-80, C=41-60, D=21-40, F=0-20\n\nThe ambiguity is intentional — it keeps things fresh and fun.'
+    answer: 'Potential has two layers:\n• Scouted Potential (what you see): Correlates to True Potential, but the simmer can hide sleepers or manufacture busts\n• True Potential (simmer only): Determines how much a player improves each Training Camp. Higher = more likely to improve.\n\nLetter grade ranges:\nA:  81–100\nB:  61–80\nC:  41–60\nD:  21–40\nF:   0–20\n\nPotential is the only rating that can be below 5. The ambiguity between scouted and true is intentional — keeps things interesting.'
   },
   {
     keywords: ['rebounding tips', 'rebounding ratings', 'how to rebound', 'rebounding benchmarks'],
     question: 'How does Rebounding work in FBB?',
-    answer: 'Rebounding benchmarks by position:\n• PG: 30-40 = good; 45+ = elite (hard capped at 50)\n• SG: Scale up by ~10 from PG (hard capped at 60)\n• SF: 50+ = decent; 65-80 = high value range\n• C/PF: below 60 = not cutting it; 80+ = elite; 85+ = truly dominant\n\nNote: Strength and quickness play a small role. Scoring options who are bigs tend to pull more rebounds too (e.g., Shaq outrebounds Rodman in FBB).'
+    answer: 'Strength and quickness both play a role. For big men, being a scoring option and running Inside Focus also boosts rebounding — that\'s why Shaq will typically outrebound Rodman in FBB even though Rodman has a perfect rebounding rating.\n\nHard caps: PGs are hard capped at 50; SGs are hard capped at 60.\n\nBenchmarks:\n• PG: 30-40 = good rebounding PG; 45+ = elite\n• SG: scale up by ~10 from PG (hard capped at 60)\n• SF: 50s = decent; 65-80 = high value range\n• C/PF: below 60 won\'t cut it; 80+ = elite; 85+ = truly dominant\n\nNote: C/PFs have better rebounding development upside in Training Camp than other positions — worth keeping in mind if a big\'s rebounding starts low.'
   },
 
   // ── NDL ────────────────────────────────────────────────────────────────
