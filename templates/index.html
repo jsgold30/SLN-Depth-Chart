@@ -6836,9 +6836,19 @@ const FAQ_DATA = [
     answer: 'A team can offer a returning player up to 120% of their prior season salary, for up to 6 years with max 10% annual raises. This applies to players who DON\'T have Bird Rights — it\'s used most often to re-sign MLE and LLE players after their 1-year deals expire.'
   },
   {
-    keywords: ['max bid', 'maximum salary', 'max contract', 'how much can i offer', 'starting salary'],
+    keywords: ['free agency', 'free agent', 'when does fa start', 'fa process', 'fa rules', 'no bids', 'fa begin'],
+    question: 'How does free agency work?',
+    answer: 'FA can begin 24 hours after the draft ends, but won\'t start until all 29 GMs submit bids.\n\nHow to participate:\n• Send bids to Ashes AND post in the FA thread\n• If you have no bids, post "no bids" in the thread AND PM Ashes\n• Minimum salary bids are not allowed until Day 4/5\n\nFor RFA offers: after the sim in which the player signs, the incumbent team must decide immediately upon logging on — if no decision is made before the next FA sim, the incumbent loses the player.'
+  },
+  {
+    keywords: ['max bid', 'maximum salary', 'max contract', 'how much can i offer', 'starting salary', 'experience salary'],
     question: 'What are the maximum free agent bid amounts?',
-    answer: 'Max starting salaries by experience:\n• 1-6 years: $12.5M\n• 7+ years: $15M\n• 10+ years: $17.5M\n\nBird Rights contracts: up to 7 years / 12.5% raises\nNon-Bird contracts: up to 6 years / 10% raises\nMinimum salary bids: max 2 years'
+    answer: 'Max Y1 starting salaries by experience:\n• 1-6 years: $12,500,000\n• 7-9 years: $15,000,000\n• 10+ years: $17,500,000\n\nRemember: Hard Cap is $85M — all bids must be cap-legal.\n\nContract length / raises:\n• New team: up to 6 seasons, max 10% annual raise\n• Bird Rights re-sign (3+ bird years): up to 7 seasons, max 12.5% raise\n• Non-Bird re-sign: up to 6 seasons, max 10% raise\n\nMinimum bids not allowed until Day 4/5.'
+  },
+  {
+    keywords: ['contract rules', 'signing rules', 'new team signing', 'resign rules', 'bird resign', '120 percent', 'percent increase contract', 'coring resign'],
+    question: 'What are the full contract signing rules?',
+    answer: 'Signing with a NEW team:\n• Up to 6 seasons\n• Max 10% annual raise\n• Y1 max = lesser of cap room or experience max salary\n\nRe-signing WITH Bird Rights (3+ bird years):\n• Up to 7 seasons\n• Max 12.5% annual raise\n• Y1 = larger of experience max OR 120% of prior salary\n\nRe-signing WITHOUT Bird Rights:\n• Up to 6 seasons\n• Max 10% annual raise\n• Y1 = larger of cap room (up to experience max) OR 120% of prior salary\n• If prior salary is already at/above the experience max → Y1 capped at 105% of prior salary\n\nOver-cap exceptions:\n• MLE: 1-year / $4,500,000 (must have less than $4.5M cap space)\n• LLE: 1-year / $1,200,000 (must have less than $1.2M cap space)\n• Max 1 of each per season\n• MLE players cannot be traded until Day 30; can be extended up to 3 years before Day 60 at 0 RP cost'
   },
   {
     keywords: ['minimum salary', 'vet min', 'minimum contract', 'minimum scale', 'scale'],
@@ -6848,7 +6858,7 @@ const FAQ_DATA = [
   {
     keywords: ['fa bid format', 'submit bids', 'how to bid', 'free agent bids', 'bid format', 'alphabetical'],
     question: 'How do I submit free agent bids?',
-    answer: 'List bids in alphabetical order by first name. For each player include: name, starting salary, length, and % increase per year.\n\nExample: Allan Houston, $10,500,000 — 4 years — 10% increases\n\nMax 10 total MLE + LLE offers per year. Make sure your bids are salary-cap legal before posting.'
+    answer: 'Submit bids to Ashes in alphabetical order by first name using this format:\n\nPlayer Name -- Year 1 Value, Years, % Increase Per Year\n\nExample: Allan Houston -- $10,500,000, 4 years, 10%\n\nAlso post in the FA thread when you submit. If you have no bids, post "no bids" in the thread AND PM Ashes directly. Max 10 total MLE + LLE offers per season.'
   },
   {
     keywords: ['front loaded', 'front load', 'frontload', 'declining salary', 'decreasing contract'],
@@ -6894,9 +6904,9 @@ const FAQ_DATA = [
 
   // ── Restricted Free Agency ─────────────────────────────────────────────
   {
-    keywords: ['rfa', 'restricted free agent', 'restricted free agency', 'offer sheet', 'matching rights', 'rfa tag'],
+    keywords: ['rfa', 'restricted free agent', 'restricted free agency', 'offer sheet', 'matching rights', 'rfa tag', 'qualifying offer rfa', 'qo rfa'],
     question: 'How does Restricted Free Agency (RFA) work?',
-    answer: 'Teams can designate one player per season coming off their rookie contract as an RFA. The incumbent team can then match any outside offer and keep the player.\n\n• RFA tag costs 1,500 RPs (available starting year 2000)\n• Can only use 1 tag every 3 years\n• No MLE or LLE bids allowed on RFAs\n• If you pass on matching: refunded 750 RPs\n• If your offer sheet gets matched by the incumbent: you receive 750 RPs\n• Tags must be declared before the previous season turns over\n• QO minimum = 250% of prior salary for 1st rounders / 350% for 2nd rounders'
+    answer: 'Tag rules:\n• Cost: 1,500 RPs\n• 1 tag every 3 years\n• Must declare BEFORE the previous season turns over\n• No MLE or LLE bids allowed on RFAs\n• No distinction between 1st and 2nd rounders for tag cost\n\nQualifying Offer (QO) minimums:\n• 1st rounders (4th year): 250% of last year\'s salary\n• 2nd rounders (3rd year): 350% of last year\'s salary\n• QO is the minimum Y1 amount you can bid on your own RFA\n• If you don\'t send a bid, the QO is used automatically — player becomes UFA the following year\n• If bidding 0% increase, Y1 minimum = QO rounded up to nearest $100K\n• If bidding with a % increase, Y1 minimum = exact QO amount\n\nRP outcomes:\n• Incumbent passes on matching → refunded 750 RPs (net cost: 750 RPs)\n• Your offer sheet gets matched → you receive 750 RPs + cap space returned for future FA sims\n• Incumbent must decide immediately upon logging in post-sim; missing the next FA sim = player lost'
   },
 
   // ── Depth Charts ───────────────────────────────────────────────────────
