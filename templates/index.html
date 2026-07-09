@@ -7090,7 +7090,11 @@ let campDataReady  = false;
 function campLookup(query) {
   if (!campDataReady || !Object.keys(CAMP_DATA).length) return null;
   const norm    = s => s.toLowerCase().replace(/'/g, '').replace(/-/g, ' ').replace(/\./g, '');
-  const qTokens = norm(query).split(/\s+/).filter(t => t.length > 1);
+  const q       = norm(query);
+  // If query contains clear FAQ context words, skip player lookup
+  const FAQ_CTX = ['free agent','free agency','salary','contract','rules','cap','exception','buyout','trade','draft pick','reward camp','reward point','how do','how does','what is','what are','who is','tell me','explain'];
+  if (FAQ_CTX.some(p => q.includes(p))) return null;
+  const qTokens = q.split(/\s+/).filter(t => t.length > 1);
   if (!qTokens.length) return null;
 
   const full    = []; // { player, tokenCount }
