@@ -7062,6 +7062,50 @@ let faqHistory   = [];
 let faqFirstOpen = true;
 let faqPanelOpen = false;
 
+// ── Camp history data (loaded async at page start) ──
+let CAMP_DATA      = {};
+let campDataReady  = false;
+(function loadCampData() {
+  fetch('/api/camp-history')
+    .then(r => r.json())
+    .then(d => { CAMP_DATA = d.players || {}; campDataReady = true; })
+    .catch(() => { campDataReady = true; });
+})();
+
+function campLookup(query) {
+  if (!campDataReady || !Object.keys(CAMP_DATA).length) return null;
+  const q       = query.toLowerCase().replace(/'/g, '').replace(/-/g, ' ');
+  const qTokens = q.split(/\s+/).filter(t => t.length > 1);
+  if (!qTokens.length) return null;
+
+  const full    = [];
+  const partial = [];
+  for (const [key, player] of Object.entries(CAMP_DATA)) {
+    const norm       = key.replace(/'/g, '').replace(/-/g, ' ');
+    const nameTokens = norm.split(/\s+/).filter(t => t.length > 1);
+    const matched    = nameTokens.filter(t => qTokens.includes(t)).length;
+    if (matched === nameTokens.length) full.push(player);
+    else if (matched > 0)              partial.push(player);
+  }
+
+  if (full.length === 1)    return formatCampHistory(full[0]);
+  if (full.length > 1)      return 'Multiple players found. Did you mean:\n'
+    + full.map(p => '• ' + p.name).join('\n')
+    + '\n\nType the full name to look up.';
+  if (partial.length === 1) return formatCampHistory(partial[0]);
+  if (partial.length > 1)   return 'Multiple players found. Did you mean:\n'
+    + partial.slice(0, 5).map(p => '• ' + p.name).join('\n')
+    + '\n\nType the full name to look up.';
+  return null;
+}
+
+function formatCampHistory(player) {
+  const lines = [player.name, ''];
+  for (const e of player.entries) lines.push(e.year + '  ' + e.rating);
+  if (player.total) lines.push('', 'Total: ' + player.total);
+  return lines.join('\n');
+}
+
 function faqToggle() {
   faqPanelOpen = !faqPanelOpen;
   const panel = document.getElementById('faqPanel');
@@ -7114,7 +7158,7 @@ function faqAsk(idx) {
   faqRenderMessages();
   faqScrollBottom();
   setTimeout(() => {
-    faqHistory.push({ role: 'bot', text: faqMatch(q) });
+    faqHistory.push({ role: 'bot', text: campLookup(q) || faqMatch(q) });
     faqRenderMessages();
     faqScrollBottom();
   }, 220);
@@ -7131,7 +7175,7 @@ function faqSend() {
   faqRenderMessages();
   faqScrollBottom();
   setTimeout(() => {
-    faqHistory.push({ role: 'bot', text: faqMatch(text) });
+    faqHistory.push({ role: 'bot', text: campLookup(text) || faqMatch(text) });
     faqRenderMessages();
     faqScrollBottom();
   }, 220);

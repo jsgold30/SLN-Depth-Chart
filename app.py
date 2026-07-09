@@ -21,6 +21,35 @@ from datetime import datetime, timedelta
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(days=7)
 
+import csv
+import io
+
+_camp_cache      = None
+_camp_cache_time = 0
+_CAMP_CACHE_TTL  = 3600
+_SHEETS_CSV_URL  = ('https://docs.google.com/spreadsheets/d/'
+                    '1T3whgGSEBuhyxuWypY9wSQc_wRTQH52jHMjIaS0ubgs'
+                    '/export?format=csv&gid=0')
+
+def _parse_camp_csv(text):
+    players = {}
+    reader  = csv.DictReader(io.StringIO(text))
+    for row in reader:
+        name = (row.get('Name') or '').strip()
+        if not name:
+            continue
+        key    = name.lower()
+        rating = (row.get('Rating') or '').strip()
+        year   = (row.get('Year')   or '').strip()
+        total  = (row.get('Total')  or '').strip()
+        if key not in players:
+            players[key] = {'name': name, 'entries': [], 'total': None}
+        if rating and year:
+            players[key]['entries'].append({'year': year, 'rating': rating})
+        if total and total != 'N/A':
+            players[key]['total'] = total.replace('Total:', '').strip()
+    return players
+
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 DB_PATH = os.environ.get('DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'depth_charts.db'))
 USE_POSTGRES = bool(DATABASE_URL)
@@ -1235,6 +1264,23 @@ def settings_league_year():
     db.commit()
     db.close()
     return jsonify({'ok': True, 'league_year': year})
+
+
+@app.route('/api/camp-history', methods=['GET'])
+def camp_history():
+    global _camp_cache, _camp_cache_time
+    now = time.time()
+    if _camp_cache is not None and now - _camp_cache_time < _CAMP_CACHE_TTL:
+        return jsonify(_camp_cache)
+    try:
+        resp = _fetch_url(_SHEETS_CSV_URL, timeout=15)
+        resp.raise_for_status()
+        players = _parse_camp_csv(resp.text)
+        _camp_cache      = {'players': players}
+        _camp_cache_time = now
+        return jsonify(_camp_cache)
+    except Exception as e:
+        return jsonify({'error': str(e), 'players': {}}), 500
 
 
 if __name__ == '__main__':
