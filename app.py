@@ -1111,8 +1111,24 @@ def parse_owed_picks_from_thread(post_text):
     seen = set()
     current_year = None
 
+    def _add_swap(from_teams, rnd, qualifier, to_abbr, year):
+        if len(from_teams) < 2 or not qualifier:
+            return
+        idx = 1 if qualifier == 'better' else 0
+        from_abbr = find_abbr(from_teams[min(idx, len(from_teams) - 1)])
+        swap_partner = find_abbr(from_teams[min(1 - idx, len(from_teams) - 1)])
+        if from_abbr and swap_partner and from_abbr != to_abbr:
+            key = (from_abbr, year, rnd, to_abbr)
+            if key not in seen:
+                seen.add(key)
+                owed.append({
+                    'from_abbr': from_abbr, 'year': year, 'round': rnd,
+                    'to_abbr': to_abbr, 'qualifier': qualifier, 'swap_partner': swap_partner,
+                })
+
     for raw_line in post_text.replace('\r', '').split('\n'):
-        line = raw_line.strip()
+        # Strip leading asterisk (used as bullet in some formats)
+        line = raw_line.strip().lstrip('*').strip()
         if not line:
             continue
 
@@ -1123,6 +1139,30 @@ def parse_owed_picks_from_thread(post_text):
             continue
 
         if not current_year:
+            continue
+
+        # Combined swap format: "Better of X/Y 1st to A, Worse to B"
+        # Handles single-line encoding of both sides of a pick swap.
+        combined_m = re.match(r'^(better|worse)\s+of\s+', line, re.I)
+        if combined_m:
+            q1 = combined_m.group(1).lower()
+            rest = line[combined_m.end():]
+            tm = re.match(r'(.+?)\s+(1st|2nd)\s+to\s+(.+)', rest, re.I)
+            if tm:
+                teams_str = tm.group(1)
+                rnd = 1 if tm.group(2).lower() == '1st' else 2
+                remainder = tm.group(3)
+                comma_parts = remainder.split(',', 1)
+                sub_entries = [(q1, comma_parts[0].strip())]
+                if len(comma_parts) > 1:
+                    q2_m = re.match(r'\s*(worse|better)\s+to\s+(\S+)', comma_parts[1], re.I)
+                    if q2_m:
+                        sub_entries.append((q2_m.group(1).lower(), q2_m.group(2).strip()))
+                from_teams = [t.strip() for t in teams_str.split('/') if t.strip()]
+                for q, dest_raw in sub_entries:
+                    to_abbr = find_abbr(dest_raw.split()[0] if dest_raw else '')
+                    if to_abbr:
+                        _add_swap(from_teams, rnd, q, to_abbr, current_year)
             continue
 
         # Must contain 1st or 2nd
@@ -1141,36 +1181,24 @@ def parse_owed_picks_from_thread(post_text):
             continue
 
         from_part = re.sub(r'\s*\b(1st|2nd)\b.*', '', parts[0], flags=re.I).strip()
-        # to_part: stop at notes like "(", "*", " via "
+        # Strip "N of " prefix (e.g., "2 of BOS/NJ/ATL")
+        from_part = re.sub(r'^\d+\s+of\s+', '', from_part, flags=re.I).strip()
+
+        # to_part: stop at notes like "(", "*", " via ", or comma
         to_part = re.split(r'\s*[\(\*]|\s+via\s+|\s+\(', parts[1])[0].strip()
+        to_part = to_part.split(',')[0].strip()
 
         to_abbr = find_abbr(to_part)
         if not to_abbr:
             continue
 
         # Handle dual-team from like "SA/MIA"
-        from_teams = [t.strip() for t in from_part.split('/')]
+        from_teams = [t.strip() for t in from_part.split('/') if t.strip()]
 
         if len(from_teams) == 2 and qualifier:
             # Pick swap: "SA/MIA 1st to CHA (Worse)" / "SA/MIA 1st to ATL (Better)"
             # Worse → first team is from_abbr; Better → second team is from_abbr
-            # This ensures each team appears as from_abbr exactly once per swap pair,
-            # so each team's pick is correctly marked as owed away.
-            idx = 1 if qualifier == 'better' else 0
-            from_abbr = find_abbr(from_teams[idx])
-            swap_partner = find_abbr(from_teams[1 - idx])
-            if from_abbr and swap_partner and from_abbr != to_abbr:
-                key = (from_abbr, current_year, rnd, to_abbr)
-                if key not in seen:
-                    seen.add(key)
-                    owed.append({
-                        'from_abbr': from_abbr,
-                        'year': current_year,
-                        'round': rnd,
-                        'to_abbr': to_abbr,
-                        'qualifier': qualifier,
-                        'swap_partner': swap_partner,
-                    })
+            _add_swap(from_teams, rnd, qualifier, to_abbr, current_year)
         else:
             # Normal entry — one per team in the from-list
             for ft in from_teams:
