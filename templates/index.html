@@ -1608,6 +1608,15 @@
     }
     .faq-suggest-btn:hover { background: #f5e8c8; color: #92400e; }
 
+    .faq-disambig-btn {
+      display: inline-block; margin: 3px 4px 3px 0;
+      font-size: 0.78rem; padding: 4px 11px;
+      background: #fff8e8; border: 1px solid #c4a05a;
+      border-radius: 14px; color: #7c5a1a;
+      cursor: pointer; transition: background 0.12s;
+    }
+    .faq-disambig-btn:hover { background: #f5e8c8; color: #92400e; }
+
     .faq-input-row {
       display: flex; gap: 6px; padding: 8px 12px 12px;
       border-top: 1px solid #e2cc90; background: #fdf6e3; flex-shrink: 0;
@@ -7216,6 +7225,34 @@ function _findStatEntries(query) {
   return [];
 }
 
+function _findAmbiguousNames(query) {
+  const q = _normName(query);
+  const SKIP = new Set(['stats','stat','camps','camp','awards','award','roster','champion','champions']);
+  const nameTokens = q.split(/\s+/).filter(t => t.length > 1 && !SKIP.has(t) && !/^(?:19|20)[0-9]{2}$/.test(t));
+  if (!nameTokens.length) return [];
+  const seen = new Map();
+  for (const p of STAT_PLAYERS) {
+    if (!p || !p.name) continue;
+    const normN = _normName(p.name);
+    const nToks = normN.split(/\s+/).filter(t => t.length > 1);
+    if (nToks.some(t => nameTokens.includes(t)) && !seen.has(normN)) seen.set(normN, p.name);
+  }
+  if (seen.size > 1 && !_findStatEntries(query).length) return [...seen.values()].slice(0, 8);
+  return [];
+}
+
+function _buildDisambigHtml(names, origQuery) {
+  const yearM  = origQuery.match(/\b((?:19|20)[0-9]{2})\b/);
+  const yearStr = yearM ? ' ' + yearM[1] : '';
+  const kwM    = origQuery.toLowerCase().match(/\b(stats?|camps?|awards?)\b/);
+  const kwStr  = kwM ? ' ' + kwM[1] : '';
+  const btns   = names.map(n => {
+    const q = n + kwStr + yearStr;
+    return `<button class="faq-disambig-btn" onclick="faqSendQuery(${JSON.stringify(q)})">${n}</button>`;
+  }).join('');
+  return { html: 'Did you mean:<br>' + btns };
+}
+
 function statLookup(query) {
   if (!statDataReady) return null;
   const FAQ_CTX = ['free agent','free agency','salary','contract','rules','cap','exception','buyout','trade','draft pick','reward camp','reward point','how do','how does','what is','what are','who is','tell me','explain'];
@@ -7455,6 +7492,14 @@ function playerLookup(query) {
   if (wantsRoster)    return rosterLookup(query) || null;
   const specificAward = specificAwardLookup(query);
   if (specificAward)  return specificAward;
+
+  // Disambiguate when multiple players match but none uniquely
+  const yearOnlyAwards = wantsAwards && year && !_findStatEntries(query).length;
+  if (!yearOnlyAwards) {
+    const ambig = _findAmbiguousNames(query);
+    if (ambig.length > 0) return _buildDisambigHtml(ambig, query);
+  }
+
   if (wantsAwards) {
     if (year && !_findStatEntries(query).length) return yearAwardsLookup(year) || null;
     return playerAwardsLookup(query) || (year ? yearAwardsLookup(year) : null) || null;
@@ -7501,7 +7546,7 @@ function faqRenderMessages() {
   const el = document.getElementById('faqMessages');
   if (!el) return;
   el.innerHTML = faqHistory.map(m =>
-    `<div class="faq-msg ${m.role}">${faqEscHtml(m.text)}</div>`
+    `<div class="faq-msg ${m.role}">${m.html ? m.text : faqEscHtml(m.text)}</div>`
   ).join('');
 }
 
@@ -7513,6 +7558,14 @@ function faqRenderSuggestions() {
   ).join('');
 }
 
+function _faqPushResult(result) {
+  if (result && typeof result === 'object' && result.html) {
+    faqHistory.push({ role: 'bot', text: result.html, html: true });
+  } else {
+    faqHistory.push({ role: 'bot', text: result });
+  }
+}
+
 function faqAsk(idx) {
   const q = FAQ_SUGGESTIONS[idx];
   if (!q) return;
@@ -7522,7 +7575,7 @@ function faqAsk(idx) {
   faqRenderMessages();
   faqScrollBottom();
   setTimeout(() => {
-    faqHistory.push({ role: 'bot', text: playerLookup(q) || faqMatch(q) });
+    _faqPushResult(playerLookup(q) || faqMatch(q));
     faqRenderMessages();
     faqScrollBottom();
   }, 220);
@@ -7539,10 +7592,16 @@ function faqSend() {
   faqRenderMessages();
   faqScrollBottom();
   setTimeout(() => {
-    faqHistory.push({ role: 'bot', text: playerLookup(text) || faqMatch(text) });
+    _faqPushResult(playerLookup(text) || faqMatch(text));
     faqRenderMessages();
     faqScrollBottom();
   }, 220);
+}
+
+function faqSendQuery(q) {
+  const inp = document.getElementById('faqInput');
+  if (inp) inp.value = q;
+  faqSend();
 }
 
 function faqMatch(query) {
