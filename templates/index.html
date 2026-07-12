@@ -7351,7 +7351,7 @@ function playerLookup(query) {
   const wantsStats    = /\bstats?\b/.test(q);
   const wantsCamps    = /\bcamps?\b/.test(q);
   const wantsAwards   = /\bawards?\b/.test(q);
-  const wantsChampion = /\bchampion\b/.test(q);
+  const wantsChampion = /\bchampions?\b/.test(q);
   const hasYear       = /\b20[0-9]{2}\b/.test(q);
 
   if (wantsChampion)                     return championLookup(query) || null;
