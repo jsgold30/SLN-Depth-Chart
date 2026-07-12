@@ -7281,8 +7281,8 @@ function _buildDisambigHtml(names, origQuery) {
   const kwM    = origQuery.toLowerCase().match(/\b(stats?|camps?|awards?)\b/);
   const kwStr  = kwM ? ' ' + kwM[1] : '';
   const btns   = names.map(n => {
-    const q = n + kwStr + yearStr;
-    return `<button class="faq-disambig-btn" onclick="faqSendQuery(${JSON.stringify(q)})">${n}</button>`;
+    const q = (n + kwStr + yearStr).replace(/"/g, '&quot;');
+    return `<button class="faq-disambig-btn" data-q="${q}" onclick="faqSendQuery(this.dataset.q)">${n}</button>`;
   }).join('');
   return { html: 'Did you mean:<br>' + btns };
 }
