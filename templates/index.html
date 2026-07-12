@@ -7464,8 +7464,9 @@ function playerLookup(query) {
 
   const camps = campLookup(query);
   const stats = statLookup(query);
+  const roster = rosterLookup(query);
   if (camps && stats) return camps + '\n\n' + stats;
-  return camps || stats || null;
+  return camps || stats || roster || null;
 }
 
 
