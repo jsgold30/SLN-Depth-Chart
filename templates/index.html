@@ -735,6 +735,39 @@
     }
 
     /* ── Player stat hover tooltip (desktop only) ── */
+    /* Context menu button + dropdown */
+    .ctx-btn {
+      width: 22px; height: 22px;
+      background: #1e293b; border: 1px solid #334155; border-radius: 50%;
+      color: #64748b; font-size: 0.9rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0; padding: 0 0 2px 0;
+      letter-spacing: -2px; transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .ctx-btn:hover { background: #334155; color: #e2e8f0; }
+    .ctx-btn.bold-active { border-color: #f59e0b; color: #f59e0b; }
+    .ctx-menu {
+      display: none; position: absolute;
+      right: 0; top: calc(100% + 4px);
+      background: #0f172a; border: 1px solid #334155;
+      border-radius: 8px; z-index: 102; min-width: 138px; overflow: hidden;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+    .ctx-menu.open { display: block; }
+    .ctx-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px; font-size: 0.75rem; color: #e2e8f0;
+      cursor: pointer; border-bottom: 1px solid #1e293b; transition: background 0.1s;
+      user-select: none;
+    }
+    .ctx-item:last-child { border-bottom: none; }
+    .ctx-item:hover { background: #1e293b; }
+    .ctx-item.ctx-item-active { color: #f59e0b; }
+    .ctx-item.ctx-item-disabled { color: #475569; cursor: default; pointer-events: none; }
+    .ctx-icon { font-size: 0.7rem; font-weight: 900; width: 14px; text-align: center; flex-shrink: 0; }
+    /* Bold border on select when bold is active */
+    .slot-sel-row select.slot-bolded { border: 2px solid #f59e0b; }
+
     .i-btn {
       width: 18px; height: 18px; border-radius: 50%;
       background: #1e293b; border: 1px solid #475569;
@@ -1482,6 +1515,17 @@
     /* ── Stat (i) button — match bold-check style ── */
     .i-btn { background: #f5e8c8 !important; border-color: #c4a05a !important; color: #7c5a1a !important; }
     .i-btn:hover, .i-btn.active { background: #d97706 !important; border-color: #b45309 !important; color: #fff !important; }
+
+    /* ── Context menu button + dropdown ── */
+    .ctx-btn { background: #f5e8c8 !important; border-color: #c4a05a !important; color: #7c5a1a !important; }
+    .ctx-btn:hover { background: #e8d5a0 !important; color: #3a2e1a !important; }
+    .ctx-btn.bold-active { border-color: #b45309 !important; color: #b45309 !important; }
+    .ctx-menu { background: #fff8e8 !important; border-color: #c4a05a !important; box-shadow: 0 6px 20px rgba(100,60,0,0.15) !important; }
+    .ctx-item { color: #3a2e1a !important; border-bottom-color: #e2cc90 !important; }
+    .ctx-item:hover { background: #f5e8c8 !important; }
+    .ctx-item.ctx-item-active { color: #b45309 !important; }
+    .ctx-item.ctx-item-disabled { color: #c4a05a !important; }
+    .slot-sel-row select.slot-bolded { border: 2px solid #b45309 !important; }
 
     /* ── Stat popover ── */
     .stat-popover { background: #fff8e8 !important; border-color: #d4b87a !important; box-shadow: 0 6px 20px rgba(100,60,0,0.15) !important; }
@@ -2609,24 +2653,22 @@ function buildPositionRows() {
       const selRow = document.createElement('div');
       selRow.className = 'slot-sel-row';
 
-      // Bold button (leftmost)
+      // Hidden bold checkbox — kept for state save/load and bb() output
       const boldLabel = document.createElement('label');
       boldLabel.className = 'bold-check';
       boldLabel.id = `boldlabel_${pos}_${slot}`;
-      boldLabel.textContent = 'B';
+      boldLabel.style.display = 'none';
       const boldCb = document.createElement('input');
       boldCb.type = 'checkbox';
       boldCb.id = `bold_${pos}_${slot}`;
-      boldCb.addEventListener('mousedown', () => pushUndo());
       boldCb.addEventListener('change', () => toggleBoldLabel(`boldlabel_${pos}_${slot}`));
       boldLabel.prepend(boldCb);
       selRow.appendChild(boldLabel);
 
-      // Info button
+      // Hidden i-btn — kept for toggleStatPopover compatibility
       const iBtn = document.createElement('button');
       iBtn.className = 'i-btn hidden';
       iBtn.id = `ibtn_${pos}_${slot}`;
-      iBtn.textContent = '#';
       iBtn.type = 'button';
       iBtn.addEventListener('click', () => toggleStatPopover(pos, slot));
       selRow.appendChild(iBtn);
@@ -2637,7 +2679,39 @@ function buildPositionRows() {
       sel.addEventListener('change', () => onSlotChange(pos, slot));
       selRow.appendChild(sel);
 
+      // Context menu trigger button (···)
+      const ctxBtn = document.createElement('button');
+      ctxBtn.className = 'ctx-btn';
+      ctxBtn.id = `ctxbtn_${pos}_${slot}`;
+      ctxBtn.type = 'button';
+      ctxBtn.textContent = '···';
+      ctxBtn.setAttribute('aria-label', 'Player options');
+      ctxBtn.addEventListener('mousedown', e => e.stopPropagation());
+      ctxBtn.addEventListener('click', e => { e.stopPropagation(); toggleCtxMenu(pos, slot); });
+      selRow.appendChild(ctxBtn);
+
       wrap.appendChild(selRow);
+
+      // Context menu dropdown
+      const ctxMenu = document.createElement('div');
+      ctxMenu.className = 'ctx-menu';
+      ctxMenu.id = `ctxmenu_${pos}_${slot}`;
+
+      const boldItem = document.createElement('div');
+      boldItem.className = 'ctx-item';
+      boldItem.id = `ctx-bold_${pos}_${slot}`;
+      boldItem.innerHTML = '<span class="ctx-icon">B</span>Bold';
+      boldItem.addEventListener('click', e => { e.stopPropagation(); ctxToggleBold(pos, slot); });
+      ctxMenu.appendChild(boldItem);
+
+      const statsItem = document.createElement('div');
+      statsItem.className = 'ctx-item ctx-item-disabled';
+      statsItem.id = `ctx-stats_${pos}_${slot}`;
+      statsItem.innerHTML = '<span class="ctx-icon">#</span>View stats';
+      statsItem.addEventListener('click', e => { e.stopPropagation(); ctxViewStats(pos, slot); });
+      ctxMenu.appendChild(statsItem);
+
+      wrap.appendChild(ctxMenu);
 
       const warn = document.createElement('div');
       warn.className = 'slot-warn';
@@ -2854,8 +2928,56 @@ function toggleBoldLabel(labelId) {
   const lbl = document.getElementById(labelId);
   if (!lbl) return;
   const cb = lbl.querySelector('input[type="checkbox"]');
-  lbl.classList.toggle('active', cb && cb.checked);
+  const isActive = cb && cb.checked;
+  lbl.classList.toggle('active', isActive);
+  const slotId = labelId.replace('boldlabel_', '');
+  const sel = document.getElementById(slotId);
+  if (sel) sel.classList.toggle('slot-bolded', isActive);
+  const ctxBtn = document.getElementById(`ctxbtn_${slotId}`);
+  if (ctxBtn) ctxBtn.classList.toggle('bold-active', isActive);
+  const boldItem = document.getElementById(`ctx-bold_${slotId}`);
+  if (boldItem) boldItem.classList.toggle('ctx-item-active', isActive);
   saveState();
+}
+
+function toggleCtxMenu(pos, slot) {
+  const menu = document.getElementById(`ctxmenu_${pos}_${slot}`);
+  if (!menu) return;
+  const isOpen = menu.classList.contains('open');
+  document.querySelectorAll('.ctx-menu.open').forEach(m => m.classList.remove('open'));
+  if (!isOpen) menu.classList.add('open');
+}
+
+function ctxToggleBold(pos, slot) {
+  const cb = document.getElementById(`bold_${pos}_${slot}`);
+  if (!cb) return;
+  pushUndo();
+  cb.checked = !cb.checked;
+  toggleBoldLabel(`boldlabel_${pos}_${slot}`);
+  const menu = document.getElementById(`ctxmenu_${pos}_${slot}`);
+  if (menu) menu.classList.remove('open');
+}
+
+function ctxViewStats(pos, slot) {
+  const menu = document.getElementById(`ctxmenu_${pos}_${slot}`);
+  if (menu) menu.classList.remove('open');
+  toggleStatPopover(pos, slot);
+}
+
+function syncBoldVisuals() {
+  POSITIONS.forEach(pos => {
+    for (let slot = 0; slot < 3; slot++) {
+      const cb = document.getElementById(`bold_${pos}_${slot}`);
+      if (!cb) continue;
+      const isActive = cb.checked;
+      const sel = document.getElementById(`${pos}_${slot}`);
+      if (sel) sel.classList.toggle('slot-bolded', isActive);
+      const ctxBtn = document.getElementById(`ctxbtn_${pos}_${slot}`);
+      if (ctxBtn) ctxBtn.classList.toggle('bold-active', isActive);
+      const boldItem = document.getElementById(`ctx-bold_${pos}_${slot}`);
+      if (boldItem) boldItem.classList.toggle('ctx-item-active', isActive);
+    }
+  });
 }
 
 function bb(value, boldId) {
@@ -3078,26 +3200,30 @@ function toggleStatPopover(pos, slot) {
   iBtn.classList.add('active');
 }
 
-// Close popover when clicking outside
+// Close popovers and ctx menus when clicking outside
 document.addEventListener('click', e => {
   if (!e.target.closest('.slot-wrap')) {
     document.querySelectorAll('.stat-popover.show').forEach(p => p.classList.remove('show'));
     document.querySelectorAll('.i-btn.active').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.ctx-menu.open').forEach(m => m.classList.remove('open'));
   }
 });
 
-// Update i-btn visibility when slot changes
+// Update stats menu item availability when slot changes
 function updateIBtn(pos, slot) {
-  const sel  = document.getElementById(`${pos}_${slot}`);
-  const iBtn = document.getElementById(`ibtn_${pos}_${slot}`);
-  const pop  = document.getElementById(`popover_${pos}_${slot}`);
+  const sel       = document.getElementById(`${pos}_${slot}`);
+  const iBtn      = document.getElementById(`ibtn_${pos}_${slot}`);
+  const pop       = document.getElementById(`popover_${pos}_${slot}`);
+  const statsItem = document.getElementById(`ctx-stats_${pos}_${slot}`);
   if (!iBtn) return;
   if (sel.value) {
     iBtn.classList.remove('hidden');
+    if (statsItem) statsItem.classList.remove('ctx-item-disabled');
   } else {
     iBtn.classList.add('hidden');
     pop.classList.remove('show');
     iBtn.classList.remove('active');
+    if (statsItem) statsItem.classList.add('ctx-item-disabled');
   }
 }
 
@@ -3165,6 +3291,7 @@ function applyState(state) {
 
   refreshAllDropdowns();
   enforceIRLimit();
+  syncBoldVisuals();
 }
 
 // ─── Reset to last generated state ───────────────────────────────────────────
@@ -3434,6 +3561,7 @@ async function restoreState() {
       if (boldLabel) boldLabel.classList.toggle('active', bold.checked);
     }
   });
+  syncBoldVisuals();
 }
 
 // ─── Randomize depth chart ────────────────────────────────────────────────────
