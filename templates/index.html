@@ -7117,6 +7117,7 @@ let campDataReady  = false;
 
 let STAT_PLAYERS   = [];  // flat array of {season, name, team, pos, age, ppg, ...}
 let STAT_SEASONS   = [];  // [{key, label, order, played}]
+let STAT_CHAMPS    = {};  // season key -> roster number of champion
 let statDataReady  = false;
 (function loadStatData() {
   fetch('/api/stat-book')
@@ -7124,6 +7125,7 @@ let statDataReady  = false;
     .then(d => {
       STAT_SEASONS = d.seasons || [];
       STAT_PLAYERS = Object.values(d.players || {});
+      STAT_CHAMPS  = d.champs || {};
       statDataReady = true;
     })
     .catch(() => { statDataReady = true; });
@@ -7248,24 +7250,116 @@ function statLookup(query) {
   const pct = v => (v != null && v !== 0) ? ('.' + Math.round(v * 1000).toString().padStart(3, '0')) : '---';
   const f1  = v => v != null ? (+v).toFixed(1) : '---';
 
-  return [
+  const lines = [
     entry.name + ' — ' + yr + ' Stats (' + entry.team + ')',
     'PPG ' + f1(entry.ppg) + ' · RPG ' + f1(entry.rpg) + ' · APG ' + f1(entry.apg) + ' · SPG ' + f1(entry.spg) + ' · BPG ' + f1(entry.bpg),
     'FG% ' + pct(entry.fgp) + ' · FT% ' + pct(entry.ftp) + ' · 3P% ' + pct(entry.tpp) + ' · G ' + entry.g + ' · MPG ' + f1(entry.mpg),
-  ].join('\n');
+  ];
+  if (entry.awards && entry.awards.length) lines.push('🏅 ' + entry.awards.join(' · '));
+  return lines.join('\n');
 }
 
-// Routes FAQ player queries: "camps" -> camp only, "stats" -> stat only, neither -> both
+// "awards [year]" -> all award winners for that season
+function yearAwardsLookup(year) {
+  if (!statDataReady) return null;
+  const season = STAT_SEASONS.find(s => s.order === year);
+  if (!season) return null;
+
+  const players = STAT_PLAYERS.filter(p => p.season === season.key && p.awards && p.awards.length);
+  if (!players.length) return year + ' — No awards data found.';
+
+  const AWARD_LABELS = {
+    'MVP':              'MVP',
+    'DPOY':             'DPOY',
+    'ROY':              'ROY',
+    '6th Man':          '6th Man',
+    'All-League 1st':   'First Team All-SLN',
+    'All-League 2nd':   'Second Team All-SLN',
+    'All-League 3rd':   'Third Team All-SLN',
+    'All-Defensive 1st':'First Team All-Defense',
+    'All-Defensive 2nd':'Second Team All-Defense',
+    'All-Rookie 1st':   'First Team All-Rookie',
+    'All-Rookie 2nd':   'Second Team All-Rookie',
+  };
+  const AWARD_ORDER = Object.keys(AWARD_LABELS);
+
+  // Build map: award -> [player names]
+  const map = {};
+  for (const p of players) {
+    for (const a of p.awards) {
+      if (!map[a]) map[a] = [];
+      map[a].push(p.name);
+    }
+  }
+
+  const lines = [year + ' Season Awards', ''];
+  for (const key of AWARD_ORDER) {
+    if (map[key]) lines.push(AWARD_LABELS[key] + ': ' + map[key].join(', '));
+  }
+  return lines.join('\n');
+}
+
+// "[player] awards" -> career awards for that player
+function playerAwardsLookup(query) {
+  if (!statDataReady) return null;
+  const entries = _findStatEntries(query);
+  if (!entries.length) return null;
+
+  const withAwards = entries
+    .filter(p => p.awards && p.awards.length)
+    .map(p => {
+      const s = STAT_SEASONS.find(s => s.key === p.season);
+      return { year: s ? s.order : 0, awards: p.awards };
+    })
+    .sort((a, b) => b.year - a.year);
+
+  const name = entries[0].name;
+  if (!withAwards.length) return name + ' — No awards on record.';
+
+  const lines = [name + ' — Career Awards'];
+  for (const { year, awards } of withAwards) lines.push(year + ': ' + awards.join(', '));
+  return lines.join('\n');
+}
+
+// "champion [year]" -> champion team for that year
+function championLookup(query) {
+  if (!statDataReady) return null;
+  const ym = query.match(/\b(20[0-9]{2})\b/);
+  if (!ym) return null;
+  const year = parseInt(ym[1]);
+
+  const season = STAT_SEASONS.find(s => s.order === year);
+  if (!season) return null;
+
+  const champRn = STAT_CHAMPS[season.key];
+  if (!champRn) return year + ' — No champion on record.';
+
+  // Find any player from that season with that roster number to get team name
+  const champPlayer = STAT_PLAYERS.find(p => p.season === season.key && p.rn === champRn);
+  if (!champPlayer) return year + ' — Champion data unavailable.';
+
+  return year + ' Champion: ' + champPlayer.team + ' 🏆';
+}
+
+// Routes FAQ player queries: "awards [year]" -> season awards, "[player] awards" -> career awards,
+// "champion [year]" -> champion, "stats" -> stats, "camps" -> camps, neither -> camps + stats
 function playerLookup(query) {
   const q = query.toLowerCase();
   const FAQ_CTX = ['free agent','free agency','salary','contract','rules','cap','exception','buyout','trade','draft pick','reward camp','reward point','how do','how does','what is','what are','who is','tell me','explain'];
   if (FAQ_CTX.some(p => q.includes(p))) return null;
 
-  const wantsStats = /\bstats?\b/.test(q);
-  const wantsCamps = /\bcamps?\b/.test(q);
+  const wantsStats    = /\bstats?\b/.test(q);
+  const wantsCamps    = /\bcamps?\b/.test(q);
+  const wantsAwards   = /\bawards?\b/.test(q);
+  const wantsChampion = /\bchampion\b/.test(q);
+  const hasYear       = /\b20[0-9]{2}\b/.test(q);
 
-  if (wantsStats && !wantsCamps) return statLookup(query) || null;
-  if (wantsCamps && !wantsStats) return campLookup(query) || null;
+  if (wantsChampion)                     return championLookup(query) || null;
+  if (wantsAwards && hasYear && !_findStatEntries(query).length)
+                                         return yearAwardsLookup(parseInt(q.match(/\b(20[0-9]{2})\b/)[1])) || null;
+  if (wantsAwards)                       return playerAwardsLookup(query) || yearAwardsLookup(parseInt((q.match(/\b(20[0-9]{2})\b/)||[])[1])) || null;
+  if (wantsStats && !wantsCamps)         return statLookup(query) || null;
+  if (wantsCamps && !wantsStats)         return campLookup(query) || null;
 
   const camps = campLookup(query);
   const stats = statLookup(query);
