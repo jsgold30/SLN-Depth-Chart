@@ -415,6 +415,15 @@
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
+    /* Stat Book tab: break out of container padding so iframe fills full width */
+    #tabStatBook {
+      margin-left: -230px;
+      margin-right: -230px;
+    }
+    @media (max-width: 1100px) { #tabStatBook { margin-left: -48px; margin-right: -48px; } }
+    @media (max-width: 860px)  { #tabStatBook { margin-left: -16px; margin-right: -16px; } }
+    @media (max-width: 700px)  { #tabStatBook { margin-left: -12px; margin-right: -12px; } }
+
     /* ── Trade Machine ── */
     .tm-columns {
       display: grid;
