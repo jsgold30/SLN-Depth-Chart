@@ -7292,9 +7292,17 @@ function yearAwardsLookup(year) {
     }
   }
 
-  const lines = [year + ' Season Awards', ''];
-  for (const key of AWARD_ORDER) {
-    if (map[key]) lines.push(AWARD_LABELS[key] + ': ' + map[key].join(', '));
+  const GROUPS = [
+    ['MVP', 'DPOY', 'ROY', '6th Man'],
+    ['All-League 1st', 'All-League 2nd', 'All-League 3rd'],
+    ['All-Defensive 1st', 'All-Defensive 2nd'],
+    ['All-Rookie 1st', 'All-Rookie 2nd'],
+  ];
+
+  const lines = [year + ' Season Awards'];
+  for (const group of GROUPS) {
+    const groupLines = group.filter(k => map[k]).map(k => AWARD_LABELS[k] + ': ' + map[k].join(', '));
+    if (groupLines.length) { lines.push(''); lines.push(...groupLines); }
   }
   return lines.join('\n');
 }
