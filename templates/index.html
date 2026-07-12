@@ -705,7 +705,7 @@
         font-size: 0.8rem;
       }
 
-      .slot-wrap { margin-bottom: 8px; min-width: 0; }
+      .slot-wrap { margin-bottom: 4px; min-width: 0; }
       .slot-sel-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
       .slot-sel-row select { flex: 1; min-width: 0; width: auto; font-size: 0.85rem; padding: 10px 12px; }
       .slot-sel-row .bold-check { flex-shrink: 0; }
@@ -737,15 +737,15 @@
     /* ── Player stat hover tooltip (desktop only) ── */
     /* Context menu button + dropdown */
     .ctx-btn {
-      width: 22px; height: 22px;
-      background: #1e293b; border: 1px solid #334155; border-radius: 50%;
-      color: #64748b; font-size: 0.9rem; font-weight: 700;
+      width: 20px; height: 20px;
+      background: transparent; border: none; border-radius: 4px;
+      color: #475569; font-size: 1rem; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer; flex-shrink: 0; padding: 0 0 2px 0;
-      letter-spacing: -2px; transition: background 0.15s, border-color 0.15s, color 0.15s;
+      cursor: pointer; flex-shrink: 0; padding: 0;
+      transition: background 0.15s, color 0.15s;
     }
     .ctx-btn:hover { background: #334155; color: #e2e8f0; }
-    .ctx-btn.bold-active { border-color: #f59e0b; color: #f59e0b; }
+    .ctx-btn.bold-active { color: #f59e0b; background: rgba(245,158,11,0.1); }
     .ctx-menu {
       display: none; position: absolute;
       right: 0; top: calc(100% + 4px);
@@ -779,7 +779,7 @@
     }
     .i-btn:hover, .i-btn.active { background: #38bdf8; border-color: #38bdf8; color: #0f172a; }
     .i-btn:focus { outline: none; }
-    .i-btn.hidden { opacity: 0; pointer-events: none; }
+    .i-btn.hidden { display: none; }
 
     .stat-popover {
       display: none; position: absolute;
@@ -1517,9 +1517,9 @@
     .i-btn:hover, .i-btn.active { background: #d97706 !important; border-color: #b45309 !important; color: #fff !important; }
 
     /* ── Context menu button + dropdown ── */
-    .ctx-btn { background: #f5e8c8 !important; border-color: #c4a05a !important; color: #7c5a1a !important; }
+    .ctx-btn { background: transparent !important; border: none !important; color: #9c7a3a !important; }
     .ctx-btn:hover { background: #e8d5a0 !important; color: #3a2e1a !important; }
-    .ctx-btn.bold-active { border-color: #b45309 !important; color: #b45309 !important; }
+    .ctx-btn.bold-active { background: rgba(180,83,9,0.1) !important; color: #b45309 !important; }
     .ctx-menu { background: #fff8e8 !important; border-color: #c4a05a !important; box-shadow: 0 6px 20px rgba(100,60,0,0.15) !important; }
     .ctx-item { color: #3a2e1a !important; border-bottom-color: #e2cc90 !important; }
     .ctx-item:hover { background: #f5e8c8 !important; }
@@ -2684,7 +2684,7 @@ function buildPositionRows() {
       ctxBtn.className = 'ctx-btn';
       ctxBtn.id = `ctxbtn_${pos}_${slot}`;
       ctxBtn.type = 'button';
-      ctxBtn.textContent = '···';
+      ctxBtn.textContent = '⋮';
       ctxBtn.setAttribute('aria-label', 'Player options');
       ctxBtn.addEventListener('mousedown', e => e.stopPropagation());
       ctxBtn.addEventListener('click', e => { e.stopPropagation(); toggleCtxMenu(pos, slot); });
@@ -3217,10 +3217,8 @@ function updateIBtn(pos, slot) {
   const statsItem = document.getElementById(`ctx-stats_${pos}_${slot}`);
   if (!iBtn) return;
   if (sel.value) {
-    iBtn.classList.remove('hidden');
     if (statsItem) statsItem.classList.remove('ctx-item-disabled');
   } else {
-    iBtn.classList.add('hidden');
     pop.classList.remove('show');
     iBtn.classList.remove('active');
     if (statsItem) statsItem.classList.add('ctx-item-disabled');
