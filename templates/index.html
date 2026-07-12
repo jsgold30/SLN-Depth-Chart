@@ -2607,6 +2607,7 @@ async function loadRoster(restoring = false) {
     await restoreState();
     refreshAllDropdowns();
     enforceIRLimit();
+    syncBoldVisuals();
 
     // If trade panel is open, refresh it for the new roster
     removedPlayers = []; // reset removed players on new roster load
@@ -2992,7 +2993,8 @@ function validateSlot(pos, slot) {
   const warn = document.getElementById(`warn_${pos}_${slot}`);
   if (!sel || !warn) return;
 
-  sel.className = '';
+  const wasBolded = sel.classList.contains('slot-bolded');
+  sel.className = wasBolded ? 'slot-bolded' : '';
   warn.textContent = '';
   warn.classList.remove('show');
 
@@ -3006,9 +3008,9 @@ function validateSlot(pos, slot) {
     : player.eligible_backup[pos];
 
   if (isElig) {
-    sel.className = 'is-valid';
+    sel.classList.add('is-valid');
   } else {
-    sel.className = 'is-invalid';
+    sel.classList.add('is-invalid');
     warn.textContent = '⚠ ' + getViolationReason(player, pos, slot);
     warn.classList.add('show');
   }
