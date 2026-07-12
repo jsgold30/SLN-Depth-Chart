@@ -347,14 +347,15 @@
     }
     .tactic-tooltip {
       display: none; position: absolute;
-      left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
+      left: 0; bottom: calc(100% + 6px);
       background: #1e293b; color: #e2e8f0;
       font-size: 0.68rem; line-height: 1.45;
       padding: 7px 10px; border-radius: 6px;
-      width: 210px; white-space: normal;
+      width: 250px; white-space: normal;
       z-index: 200; pointer-events: none;
       box-shadow: 0 4px 12px rgba(0,0,0,0.35);
     }
+    .tactics-grid .tactic-item:nth-child(even) .tactic-tooltip { left: auto; right: 0; }
     .tactic-info:hover .tactic-tooltip { display: block; }
 
     /* Trade editor */
