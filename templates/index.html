@@ -7352,14 +7352,16 @@ function playerLookup(query) {
   const wantsCamps    = /\bcamps?\b/.test(q);
   const wantsAwards   = /\bawards?\b/.test(q);
   const wantsChampion = /\bchampions?\b/.test(q);
-  const hasYear       = /\b20[0-9]{2}\b/.test(q);
+  const yearM         = q.match(/\b(20[0-9]{2})\b/);
+  const year          = yearM ? parseInt(yearM[1]) : null;
 
-  if (wantsChampion)                     return championLookup(query) || null;
-  if (wantsAwards && hasYear && !_findStatEntries(query).length)
-                                         return yearAwardsLookup(parseInt(q.match(/\b(20[0-9]{2})\b/)[1])) || null;
-  if (wantsAwards)                       return playerAwardsLookup(query) || yearAwardsLookup(parseInt((q.match(/\b(20[0-9]{2})\b/)||[])[1])) || null;
-  if (wantsStats && !wantsCamps)         return statLookup(query) || null;
-  if (wantsCamps && !wantsStats)         return campLookup(query) || null;
+  if (wantsChampion)  return championLookup(query) || null;
+  if (wantsAwards) {
+    if (year && !_findStatEntries(query).length) return yearAwardsLookup(year) || null;
+    return playerAwardsLookup(query) || (year ? yearAwardsLookup(year) : null) || null;
+  }
+  if (wantsStats && !wantsCamps) return statLookup(query) || null;
+  if (wantsCamps && !wantsStats) return campLookup(query) || null;
 
   const camps = campLookup(query);
   const stats = statLookup(query);
