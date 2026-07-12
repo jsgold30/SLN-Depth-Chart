@@ -335,7 +335,27 @@
     .tactic-sel-row { display: flex; align-items: center; gap: 6px; }
     .tactic-sel-row select { flex: 1; min-width: 0; width: auto; }
     .tactic-sel-row .bold-check { flex-shrink: 0; }
-    .tactic-hint { font-size: 0.68rem; color: #94a3b8; margin-top: 5px; line-height: 1.4; }
+    .tactic-label-row { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+    .tactic-label-row label { margin-bottom: 0; }
+    .tactic-info {
+      position: relative; cursor: default;
+      font-size: 0.6rem; font-weight: 700; color: #b45309;
+      border: 1px solid #c4a05a; border-radius: 50%;
+      width: 13px; height: 13px; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      line-height: 1;
+    }
+    .tactic-tooltip {
+      display: none; position: absolute;
+      left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
+      background: #1e293b; color: #e2e8f0;
+      font-size: 0.68rem; line-height: 1.45;
+      padding: 7px 10px; border-radius: 6px;
+      width: 210px; white-space: normal;
+      z-index: 200; pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    }
+    .tactic-info:hover .tactic-tooltip { display: block; }
 
     /* Trade editor */
     .trade-panel {
@@ -1826,7 +1846,10 @@
         <div class="card-title">Tactics</div>
         <div class="tactics-grid">
           <div class="tactic-item">
-            <label>Pace</label>
+            <div class="tactic-label-row">
+              <label>Pace</label>
+              <span class="tactic-info">i<span class="tactic-tooltip">Faster = first good shot available; Slower = more patient, concentrated shot distribution</span></span>
+            </div>
             <div class="tactic-sel-row">
               <label class="bold-check" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')">B</label>
               <select id="t_pace" onmousedown="pushUndo()" onchange="saveState()">
@@ -1835,10 +1858,12 @@
                 <option>Slow</option><option>Very Slow</option>
               </select>
             </div>
-            <div class="tactic-hint">Faster = first good shot; Slower = patient, concentrated shot distribution</div>
           </div>
           <div class="tactic-item">
-            <label>Trap</label>
+            <div class="tactic-label-row">
+              <label>Trap</label>
+              <span class="tactic-info">i<span class="tactic-tooltip">More trapping = more steals, but more fouls &amp; fatigue</span></span>
+            </div>
             <div class="tactic-sel-row">
               <label class="bold-check" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')">B</label>
               <select id="t_trap" onmousedown="pushUndo()" onchange="saveState()">
@@ -1847,10 +1872,12 @@
                 <option>Sometimes</option><option>Never</option>
               </select>
             </div>
-            <div class="tactic-hint">More trapping = more steals, but more fouls &amp; fatigue</div>
           </div>
           <div class="tactic-item">
-            <label>Pressure</label>
+            <div class="tactic-label-row">
+              <label>Pressure</label>
+              <span class="tactic-info">i<span class="tactic-tooltip">More pressing = more wing steals, but more fouls</span></span>
+            </div>
             <div class="tactic-sel-row">
               <label class="bold-check" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')">B</label>
               <select id="t_pressure" onmousedown="pushUndo()" onchange="saveState()">
@@ -1859,10 +1886,12 @@
                 <option>Sometimes</option><option>Never</option>
               </select>
             </div>
-            <div class="tactic-hint">More pressing = more wing steals, but more fouls</div>
           </div>
           <div class="tactic-item">
-            <label>Offense Focus</label>
+            <div class="tactic-label-row">
+              <label>Offense Focus</label>
+              <span class="tactic-info">i<span class="tactic-tooltip">Players attack more in your chosen area (Inside / Outside / Balanced)</span></span>
+            </div>
             <div class="tactic-sel-row">
               <label class="bold-check" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')">B</label>
               <select id="t_offense" onmousedown="pushUndo()" onchange="saveState()">
@@ -1871,7 +1900,6 @@
                 <option>Outside</option>
               </select>
             </div>
-            <div class="tactic-hint">Players attack more in your chosen area</div>
           </div>
         </div>
       </div>
