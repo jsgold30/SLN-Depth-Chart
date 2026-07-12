@@ -31,6 +31,10 @@ _SHEETS_CSV_URL  = ('https://docs.google.com/spreadsheets/d/'
                     '1T3whgGSEBuhyxuWypY9wSQc_wRTQH52jHMjIaS0ubgs'
                     '/export?format=csv&gid=0')
 
+_stat_cache      = None
+_stat_cache_time = 0
+_STAT_BOOK_URL   = 'https://storied-creponne-7d87ff.netlify.app/'
+
 def _clean_camp_text(s):
     cleaned = re.sub(r'[^\x20-\x7E]', '', s)       # strip non-ASCII
     cleaned = re.sub(r'\(\s*\)', '', cleaned)        # remove empty parens left behind
@@ -1315,6 +1319,27 @@ def camp_history():
         return jsonify(_camp_cache)
     except Exception as e:
         return jsonify({'error': str(e), 'players': {}}), 500
+
+
+@app.route('/api/stat-book', methods=['GET'])
+def stat_book():
+    global _stat_cache, _stat_cache_time
+    now = time.time()
+    if _stat_cache is not None and now - _stat_cache_time < _CAMP_CACHE_TTL:
+        return jsonify(_stat_cache)
+    try:
+        resp = _fetch_url(_STAT_BOOK_URL, timeout=20)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        tag = soup.find('script', {'type': 'application/json'})
+        if not tag:
+            return jsonify({'error': 'data not found', 'seasons': [], 'players': []}), 500
+        data = json.loads(tag.string)
+        _stat_cache      = data
+        _stat_cache_time = now
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e), 'seasons': [], 'players': []}), 500
 
 
 if __name__ == '__main__':

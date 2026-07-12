@@ -1651,6 +1651,7 @@
     <button class="tab-btn active" id="tabBtnDepth" onclick="switchTab('depth')">⛹ Depth Chart</button>
     <button class="tab-btn" id="tabBtnTrade" onclick="switchTab('trade')">⇄ Trade Machine</button>
     <button class="tab-btn" id="tabBtnDraft" onclick="switchTab('draft')">🏀 Draft Center</button>
+    <button class="tab-btn" id="tabBtnStatBook" onclick="switchTab('statbook')">📊 Stat Book</button>
   </div>
 
   <!-- ── TAB 1: Depth Chart Builder ── -->
@@ -2265,6 +2266,16 @@
 
   </div><!-- /tabDraft -->
 
+  <!-- ── TAB 4: Stat Book ── -->
+  <div class="tab-panel" id="tabStatBook" style="padding:0;">
+    <iframe id="statBookFrame"
+      src="about:blank"
+      style="width:100%;height:calc(100vh - 80px);border:none;display:block;"
+      loading="lazy"
+      title="SLN Stat Book">
+    </iframe>
+  </div><!-- /tabStatBook -->
+
 </div><!-- /container -->
 
 <!-- Draft Mod PIN Modal -->
@@ -2330,9 +2341,11 @@ function switchTab(tab) {
   document.getElementById('tabDepth').classList.toggle('active', tab === 'depth');
   document.getElementById('tabTrade').classList.toggle('active', tab === 'trade');
   document.getElementById('tabDraft').classList.toggle('active', tab === 'draft');
+  document.getElementById('tabStatBook').classList.toggle('active', tab === 'statbook');
   document.getElementById('tabBtnDepth').classList.toggle('active', tab === 'depth');
   document.getElementById('tabBtnTrade').classList.toggle('active', tab === 'trade');
   document.getElementById('tabBtnDraft').classList.toggle('active', tab === 'draft');
+  document.getElementById('tabBtnStatBook').classList.toggle('active', tab === 'statbook');
   // Build Trade Machine logo grids + load owed picks lazily on first visit
   if (tab === 'trade' && !tmLogoGridsBuilt) {
     buildTMLogoGrids();
@@ -2353,6 +2366,13 @@ function switchTab(tab) {
     dcStartPolling();
   } else {
     dcStopPolling();
+  }
+  // Lazy-load Stat Book iframe on first visit
+  if (tab === 'statbook') {
+    const frame = document.getElementById('statBookFrame');
+    if (frame && frame.src === 'about:blank') {
+      frame.src = 'https://storied-creponne-7d87ff.netlify.app/';
+    }
   }
 }
 
@@ -7087,6 +7107,20 @@ let campDataReady  = false;
     .catch(() => { campDataReady = true; });
 })();
 
+let STAT_PLAYERS   = [];  // flat array of {season, name, team, pos, age, ppg, ...}
+let STAT_SEASONS   = [];  // [{key, label, order, played}]
+let statDataReady  = false;
+(function loadStatData() {
+  fetch('/api/stat-book')
+    .then(r => r.json())
+    .then(d => {
+      STAT_SEASONS = d.seasons || [];
+      STAT_PLAYERS = Object.values(d.players || {});
+      statDataReady = true;
+    })
+    .catch(() => { statDataReady = true; });
+})();
+
 function campLookup(query) {
   if (!campDataReady || !Object.keys(CAMP_DATA).length) return null;
   const norm    = s => s.toLowerCase().replace(/'/g, '').replace(/-/g, ' ').replace(/\./g, '');
@@ -7129,6 +7163,108 @@ function formatCampHistory(player) {
   if (player.total) lines.push('', 'Total: ' + player.total);
   return lines.join('\n');
 }
+
+// ── Stat Book lookup ──────────────────────────────────────────────────────────
+
+function _normName(s) {
+  return s.toLowerCase().replace(/'/g, '').replace(/-/g, ' ').replace(/\./g, '');
+}
+
+function _findStatEntries(query) {
+  if (!statDataReady || !STAT_PLAYERS.length) return [];
+  const q       = _normName(query);
+  const qTokens = q.split(/\s+/).filter(t => t.length > 1);
+  if (!qTokens.length) return [];
+
+  const fullNames = new Map();
+  const partNames = new Map();
+
+  for (const p of STAT_PLAYERS) {
+    if (!p || !p.name) continue;
+    const normN   = _normName(p.name);
+    const nToks   = normN.split(/\s+/).filter(t => t.length > 1);
+    const matched = nToks.filter(t => qTokens.includes(t)).length;
+    if (matched === nToks.length) {
+      if (!fullNames.has(normN)) fullNames.set(normN, []);
+      fullNames.get(normN).push(p);
+    } else if (matched > 0) {
+      if (!partNames.has(normN)) partNames.set(normN, []);
+      partNames.get(normN).push(p);
+    }
+  }
+
+  if (fullNames.size === 1) return [...fullNames.values()][0];
+  if (fullNames.size > 1) {
+    const ranked = [...fullNames.entries()].sort((a, b) =>
+      b[0].split(/\s+/).length - a[0].split(/\s+/).length
+    );
+    if (ranked[0][0].split(/\s+/).length > ranked[1][0].split(/\s+/).length)
+      return ranked[0][1];
+    return [];
+  }
+  if (partNames.size === 1) return [...partNames.values()][0];
+  return [];
+}
+
+function statLookup(query) {
+  if (!statDataReady) return null;
+  const FAQ_CTX = ['free agent','free agency','salary','contract','rules','cap','exception','buyout','trade','draft pick','reward camp','reward point','how do','how does','what is','what are','who is','tell me','explain'];
+  if (FAQ_CTX.some(p => query.toLowerCase().includes(p))) return null;
+
+  const entries = _findStatEntries(query);
+  if (!entries.length) return null;
+
+  const ym = query.match(/\b(20[0-9]{2})\b/);
+  const targetYear = ym ? parseInt(ym[1]) : null;
+
+  let entry, yr;
+  if (targetYear) {
+    entry = entries.find(p => {
+      const s = STAT_SEASONS.find(s => s.key === p.season);
+      return s && s.order === targetYear;
+    });
+    if (!entry) return null;
+    yr = targetYear;
+  } else {
+    entry = entries
+      .filter(p => { const s = STAT_SEASONS.find(s => s.key === p.season); return s && s.played !== false; })
+      .sort((a, b) => {
+        const ya = (STAT_SEASONS.find(s => s.key === a.season) || {}).order || 0;
+        const yb = (STAT_SEASONS.find(s => s.key === b.season) || {}).order || 0;
+        return yb - ya;
+      })[0];
+    if (!entry) return null;
+    yr = (STAT_SEASONS.find(s => s.key === entry.season) || {}).order || '?';
+  }
+
+  const pct = v => (v != null && v !== 0) ? ('.' + Math.round(v * 1000).toString().padStart(3, '0')) : '---';
+  const f1  = v => v != null ? (+v).toFixed(1) : '---';
+
+  return [
+    entry.name + ' — ' + yr + ' Stats (' + entry.team + ')',
+    'PPG ' + f1(entry.ppg) + ' · RPG ' + f1(entry.rpg) + ' · APG ' + f1(entry.apg) + ' · SPG ' + f1(entry.spg) + ' · BPG ' + f1(entry.bpg),
+    'FG% ' + pct(entry.fgp) + ' · FT% ' + pct(entry.ftp) + ' · 3P% ' + pct(entry.tpp) + ' · G ' + entry.g + ' · MPG ' + f1(entry.mpg),
+  ].join('\n');
+}
+
+// Routes FAQ player queries: "camps" -> camp only, "stats" -> stat only, neither -> both
+function playerLookup(query) {
+  const q = query.toLowerCase();
+  const FAQ_CTX = ['free agent','free agency','salary','contract','rules','cap','exception','buyout','trade','draft pick','reward camp','reward point','how do','how does','what is','what are','who is','tell me','explain'];
+  if (FAQ_CTX.some(p => q.includes(p))) return null;
+
+  const wantsStats = /\bstats?\b/.test(q);
+  const wantsCamps = /\bcamps?\b/.test(q);
+
+  if (wantsStats && !wantsCamps) return statLookup(query) || null;
+  if (wantsCamps && !wantsStats) return campLookup(query) || null;
+
+  const camps = campLookup(query);
+  const stats = statLookup(query);
+  if (camps && stats) return camps + '\n\n' + stats;
+  return camps || stats || null;
+}
+
 
 function faqToggle() {
   faqPanelOpen = !faqPanelOpen;
@@ -7182,7 +7318,7 @@ function faqAsk(idx) {
   faqRenderMessages();
   faqScrollBottom();
   setTimeout(() => {
-    faqHistory.push({ role: 'bot', text: campLookup(q) || faqMatch(q) });
+    faqHistory.push({ role: 'bot', text: playerLookup(q) || faqMatch(q) });
     faqRenderMessages();
     faqScrollBottom();
   }, 220);
@@ -7199,7 +7335,7 @@ function faqSend() {
   faqRenderMessages();
   faqScrollBottom();
   setTimeout(() => {
-    faqHistory.push({ role: 'bot', text: campLookup(text) || faqMatch(text) });
+    faqHistory.push({ role: 'bot', text: playerLookup(text) || faqMatch(text) });
     faqRenderMessages();
     faqScrollBottom();
   }, 220);
