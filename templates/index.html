@@ -7224,7 +7224,7 @@ function statLookup(query) {
   const entries = _findStatEntries(query);
   if (!entries.length) return null;
 
-  const ym = query.match(/\b(20[0-9]{2})\b/);
+  const ym = query.match(/\b((?:19|20)[0-9]{2})\b/);
   const targetYear = ym ? parseInt(ym[1]) : null;
 
   let entry, yr;
@@ -7292,7 +7292,7 @@ function specificAwardLookup(query) {
   const awardKey = _detectAwardKey(q);
   if (!awardKey) return null;
 
-  const yearM = q.match(/\b(20[0-9]{2})\b/);
+  const yearM = q.match(/\b((?:19|20)[0-9]{2})\b/);
   if (!yearM) return null;
   const year = parseInt(yearM[1]);
 
@@ -7366,7 +7366,7 @@ function playerAwardsLookup(query) {
 // "champion [year]" -> champion team for that year
 function championLookup(query) {
   if (!statDataReady) return null;
-  const ym = query.match(/\b(20[0-9]{2})\b/);
+  const ym = query.match(/\b((?:19|20)[0-9]{2})\b/);
   if (!ym) return null;
   const year = parseInt(ym[1]);
 
@@ -7394,7 +7394,7 @@ function playerLookup(query) {
   const wantsCamps    = /\bcamps?\b/.test(q);
   const wantsAwards   = /\bawards?\b/.test(q);
   const wantsChampion = /\bchampions?\b/.test(q);
-  const yearM         = q.match(/\b(20[0-9]{2})\b/);
+  const yearM         = q.match(/\b((?:19|20)[0-9]{2})\b/);
   const year          = yearM ? parseInt(yearM[1]) : null;
 
   if (wantsChampion)  return championLookup(query) || null;
