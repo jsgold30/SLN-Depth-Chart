@@ -7260,6 +7260,53 @@ function statLookup(query) {
 }
 
 // "awards [year]" -> all award winners for that season
+const AWARD_LABELS = {
+  'MVP': 'MVP', 'DPOY': 'DPOY', 'ROY': 'ROY', '6th Man': '6th Man of the Year',
+  'All-League 1st':    'First Team All-SLN',
+  'All-League 2nd':    'Second Team All-SLN',
+  'All-League 3rd':    'Third Team All-SLN',
+  'All-Defensive 1st': 'First Team All-Defense',
+  'All-Defensive 2nd': 'Second Team All-Defense',
+  'All-Rookie 1st':    'First Team All-Rookie',
+  'All-Rookie 2nd':    'Second Team All-Rookie',
+};
+
+function _detectAwardKey(q) {
+  if (/\bmvp\b/.test(q))                                                    return 'MVP';
+  if (/\bdpoy\b|\bdef(ensive)?\s+player\s+of\s+the\s+year\b/.test(q))      return 'DPOY';
+  if (/\broy\b|\brookie\s+of\s+the\s+year\b/.test(q))                       return 'ROY';
+  if (/\b(sixth|6th)\s+man\b/.test(q))                                      return '6th Man';
+  if (/\b(first|1st)\s+team\s+all[\s-]?(sln|league)\b/.test(q))            return 'All-League 1st';
+  if (/\b(second|2nd)\s+team\s+all[\s-]?(sln|league)\b/.test(q))           return 'All-League 2nd';
+  if (/\b(third|3rd)\s+team\s+all[\s-]?(sln|league)\b/.test(q))            return 'All-League 3rd';
+  if (/\b(first|1st)\s+team\s+all[\s-]?def(ense|ensive)?\b/.test(q))       return 'All-Defensive 1st';
+  if (/\b(second|2nd)\s+team\s+all[\s-]?def(ense|ensive)?\b/.test(q))      return 'All-Defensive 2nd';
+  if (/\b(first|1st)\s+team\s+all[\s-]?rookie\b/.test(q))                  return 'All-Rookie 1st';
+  if (/\b(second|2nd)\s+team\s+all[\s-]?rookie\b/.test(q))                 return 'All-Rookie 2nd';
+  return null;
+}
+
+function specificAwardLookup(query) {
+  if (!statDataReady) return null;
+  const q = query.toLowerCase();
+  const awardKey = _detectAwardKey(q);
+  if (!awardKey) return null;
+
+  const yearM = q.match(/\b(20[0-9]{2})\b/);
+  if (!yearM) return null;
+  const year = parseInt(yearM[1]);
+
+  const season = STAT_SEASONS.find(s => s.order === year);
+  if (!season) return null;
+
+  const winners = STAT_PLAYERS
+    .filter(p => p.season === season.key && p.awards && p.awards.includes(awardKey))
+    .map(p => p.name);
+
+  if (!winners.length) return year + ' ' + AWARD_LABELS[awardKey] + ': No data found.';
+  return year + ' ' + AWARD_LABELS[awardKey] + ':\n' + winners.join('\n');
+}
+
 function yearAwardsLookup(year) {
   if (!statDataReady) return null;
   const season = STAT_SEASONS.find(s => s.order === year);
@@ -7268,19 +7315,6 @@ function yearAwardsLookup(year) {
   const players = STAT_PLAYERS.filter(p => p.season === season.key && p.awards && p.awards.length);
   if (!players.length) return year + ' — No awards data found.';
 
-  const AWARD_LABELS = {
-    'MVP':              'MVP',
-    'DPOY':             'DPOY',
-    'ROY':              'ROY',
-    '6th Man':          '6th Man',
-    'All-League 1st':   'First Team All-SLN',
-    'All-League 2nd':   'Second Team All-SLN',
-    'All-League 3rd':   'Third Team All-SLN',
-    'All-Defensive 1st':'First Team All-Defense',
-    'All-Defensive 2nd':'Second Team All-Defense',
-    'All-Rookie 1st':   'First Team All-Rookie',
-    'All-Rookie 2nd':   'Second Team All-Rookie',
-  };
   const AWARD_ORDER = Object.keys(AWARD_LABELS);
 
   // Build map: award -> [player names]
@@ -7364,6 +7398,8 @@ function playerLookup(query) {
   const year          = yearM ? parseInt(yearM[1]) : null;
 
   if (wantsChampion)  return championLookup(query) || null;
+  const specificAward = specificAwardLookup(query);
+  if (specificAward)  return specificAward;
   if (wantsAwards) {
     if (year && !_findStatEntries(query).length) return yearAwardsLookup(year) || null;
     return playerAwardsLookup(query) || (year ? yearAwardsLookup(year) : null) || null;
