@@ -338,13 +338,14 @@
     .tactic-label-row { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
     .tactic-label-row label { margin-bottom: 0; }
     .tactic-info {
-      position: relative; cursor: default;
+      position: relative; cursor: pointer;
       font-size: 0.6rem; font-weight: 700; color: #b45309;
       border: 1px solid #c4a05a; border-radius: 50%;
       width: 13px; height: 13px; flex-shrink: 0;
       display: inline-flex; align-items: center; justify-content: center;
-      line-height: 1;
+      line-height: 1; background: none; padding: 0;
     }
+    .tactic-info:focus { outline: 2px solid #b45309; outline-offset: 2px; }
     .tactic-tooltip {
       display: none; position: absolute;
       left: 0; bottom: calc(100% + 6px);
@@ -356,7 +357,8 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.35);
     }
     .tactics-grid .tactic-item:nth-child(even) .tactic-tooltip { left: auto; right: 0; }
-    .tactic-info:hover .tactic-tooltip { display: block; }
+    .tactic-info:hover .tactic-tooltip,
+    .tactic-info:focus .tactic-tooltip { display: block; }
 
     /* Trade editor */
     .trade-panel {
@@ -1849,7 +1851,7 @@
           <div class="tactic-item">
             <div class="tactic-label-row">
               <label>Pace</label>
-              <span class="tactic-info">i<span class="tactic-tooltip">Pace (Very Fast/Fast/Normal/Slow/Very Slow): Faster = first good shot available; Slower = more patient, concentrated shot distribution</span></span>
+              <button type="button" class="tactic-info">i<span class="tactic-tooltip">Pace (Very Fast/Fast/Normal/Slow/Very Slow): Faster = first good shot available; Slower = more patient, concentrated shot distribution</span></button>
             </div>
             <div class="tactic-sel-row">
               <label class="bold-check" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')">B</label>
@@ -1863,7 +1865,7 @@
           <div class="tactic-item">
             <div class="tactic-label-row">
               <label>Trap</label>
-              <span class="tactic-info">i<span class="tactic-tooltip">Trap (Always→Often→Sometimes→Never): More trapping = more steals but more fouls and fatigue</span></span>
+              <button type="button" class="tactic-info">i<span class="tactic-tooltip">Trap (Always→Often→Normal→Sometimes→Never): More trapping = more steals but more fouls and fatigue</span></button>
             </div>
             <div class="tactic-sel-row">
               <label class="bold-check" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')">B</label>
@@ -1877,7 +1879,7 @@
           <div class="tactic-item">
             <div class="tactic-label-row">
               <label>Pressure</label>
-              <span class="tactic-info">i<span class="tactic-tooltip">Pressure/Press (Always→Often→Sometimes→Never): More pressing = more wing steals but more fouls</span></span>
+              <button type="button" class="tactic-info">i<span class="tactic-tooltip">Pressure/Press (Always→Often→Normal→Sometimes→Never): More pressing = more wing steals but more fouls</span></button>
             </div>
             <div class="tactic-sel-row">
               <label class="bold-check" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')">B</label>
@@ -1891,7 +1893,7 @@
           <div class="tactic-item">
             <div class="tactic-label-row">
               <label>Offense Focus</label>
-              <span class="tactic-info">i<span class="tactic-tooltip">Offense Focus (Inside/Outside/Balanced): Players attack more in your chosen area</span></span>
+              <button type="button" class="tactic-info">i<span class="tactic-tooltip">Offense Focus (Inside/Outside/Balanced): Players attack more in your chosen area</span></button>
             </div>
             <div class="tactic-sel-row">
               <label class="bold-check" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')">B</label>
@@ -7018,7 +7020,7 @@ const FAQ_DATA = [
   {
     keywords: ['tactics', 'pace', 'trap', 'press', 'offense focus', 'strategy', 'settings', 'team strategy'],
     question: 'How do team tactics work?',
-    answer: 'Choose one for each setting:\n• Pace (Very Fast/Fast/Normal/Slow/Very Slow): Faster = first good shot available; Slower = more patient, concentrated shot distribution\n• Trap (Always→Often→Sometimes→Never): More trapping = more steals but more fouls and fatigue\n• Pressure/Press (Always→Often→Sometimes→Never): More pressing = more wing steals but more fouls\n• Offense Focus (Inside/Outside/Balanced): Players attack more in your chosen area\n• Key Players (3): These players handle and score more'
+    answer: 'Choose one for each setting:\n• Pace (Very Fast/Fast/Normal/Slow/Very Slow): Faster = first good shot available; Slower = more patient, concentrated shot distribution\n• Trap (Always→Often→Normal→Sometimes→Never): More trapping = more steals but more fouls and fatigue\n• Pressure/Press (Always→Often→Normal→Sometimes→Never): More pressing = more wing steals but more fouls\n• Offense Focus (Inside/Outside/Balanced): Players attack more in your chosen area\n• Key Players (3): These players handle and score more'
   },
   {
     keywords: ['what focus should i use', 'outside focus', 'inside focus', 'offense focus tips', 'should i use inside'],
@@ -7280,9 +7282,10 @@ function _buildDisambigHtml(names, origQuery) {
   const yearStr = yearM ? ' ' + yearM[1] : '';
   const kwM    = origQuery.toLowerCase().match(/\b(stats?|camps?|awards?)\b/);
   const kwStr  = kwM ? ' ' + kwM[1] : '';
+  const escHtml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const btns   = names.map(n => {
     const q = (n + kwStr + yearStr).replace(/"/g, '&quot;');
-    return `<button class="faq-disambig-btn" data-q="${q}" onclick="faqSendQuery(this.dataset.q)">${n}</button>`;
+    return `<button class="faq-disambig-btn" data-q="${q}" onclick="faqSendQuery(this.dataset.q)">${escHtml(n)}</button>`;
   }).join('');
   return { html: 'Did you mean:<br>' + btns };
 }
@@ -7543,9 +7546,8 @@ function playerLookup(query) {
 
   const camps = campLookup(query);
   const stats = statLookup(query);
-  const roster = rosterLookup(query);
   if (camps && stats) return camps + '\n\n' + stats;
-  return camps || stats || roster || null;
+  return camps || stats || rosterLookup(query) || null;
 }
 
 
