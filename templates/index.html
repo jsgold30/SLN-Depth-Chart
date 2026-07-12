@@ -7383,8 +7383,59 @@ function championLookup(query) {
   return year + ' Champion: ' + champPlayer.team + ' 🏆';
 }
 
+function rosterLookup(query) {
+  if (!statDataReady || !STAT_PLAYERS.length) return null;
+  const q = query.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
+
+  // Extract year; default to latest played season
+  const yearM = q.match(/\b((?:19|20)[0-9]{2})\b/);
+  let season;
+  if (yearM) {
+    const year = parseInt(yearM[1]);
+    season = STAT_SEASONS.find(s => s.order === year);
+  } else {
+    season = STAT_SEASONS.filter(s => s.played !== false).sort((a, b) => b.order - a.order)[0];
+  }
+  if (!season) return null;
+
+  // Find best-matching team name from this season's players
+  const seasonPlayers = STAT_PLAYERS.filter(p => p.season === season.key);
+  const teams = [...new Set(seasonPlayers.map(p => p.team))];
+  const norm = s => s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').trim();
+
+  let bestTeam = null, bestScore = 0;
+  for (const team of teams) {
+    const tTokens = norm(team).split(/\s+/).filter(t => t.length > 3);
+    if (!tTokens.length) continue;
+    const matched = tTokens.filter(t => q.includes(t)).length;
+    const score = matched / tTokens.length;
+    if (score > 0 && score > bestScore) { bestScore = score; bestTeam = team; }
+  }
+  if (!bestTeam) return null;
+
+  const roster = seasonPlayers
+    .filter(p => p.team === bestTeam)
+    .sort((a, b) => (b.mpg || 0) - (a.mpg || 0));
+
+  if (!roster.length) return null;
+
+  const f1 = v => v != null ? (+v).toFixed(1) : '--';
+  const lines = [bestTeam + ' — ' + season.order + ' Roster', ''];
+  for (const p of roster) {
+    const awards = (p.awards && p.awards.length) ? '  🏅' + p.awards.join(', ') : '';
+    lines.push(
+      p.pos + '  ' + p.name + awards
+    );
+    lines.push(
+      '     ' + f1(p.ppg) + ' PPG · ' + f1(p.rpg) + ' RPG · ' + f1(p.apg) + ' APG · ' +
+      f1(p.spg) + ' SPG · ' + f1(p.bpg) + ' BPG · ' + p.g + 'G'
+    );
+  }
+  return lines.join('\n');
+}
+
 // Routes FAQ player queries: "awards [year]" -> season awards, "[player] awards" -> career awards,
-// "champion [year]" -> champion, "stats" -> stats, "camps" -> camps, neither -> camps + stats
+// "champion [year]" -> champion, "roster [team] [year]" -> team roster, "stats" -> stats, "camps" -> camps, neither -> camps + stats
 function playerLookup(query) {
   const q = query.toLowerCase();
   const FAQ_CTX = ['free agent','free agency','salary','contract','rules','cap','exception','buyout','trade','draft pick','reward camp','reward point','how do','how does','what is','what are','who is','tell me','explain'];
@@ -7394,10 +7445,12 @@ function playerLookup(query) {
   const wantsCamps    = /\bcamps?\b/.test(q);
   const wantsAwards   = /\bawards?\b/.test(q);
   const wantsChampion = /\bchampions?\b/.test(q);
+  const wantsRoster   = /\broster\b/.test(q);
   const yearM         = q.match(/\b((?:19|20)[0-9]{2})\b/);
   const year          = yearM ? parseInt(yearM[1]) : null;
 
   if (wantsChampion)  return championLookup(query) || null;
+  if (wantsRoster)    return rosterLookup(query) || null;
   const specificAward = specificAwardLookup(query);
   if (specificAward)  return specificAward;
   if (wantsAwards) {
