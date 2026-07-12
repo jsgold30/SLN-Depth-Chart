@@ -7413,9 +7413,14 @@ function rosterLookup(query) {
   }
   if (!bestTeam) return null;
 
+  const POS_ORDER = { 'C': 0, 'PF': 1, 'SF': 2, 'SG': 3, 'PG': 4 };
   const roster = seasonPlayers
     .filter(p => p.team === bestTeam)
-    .sort((a, b) => (b.mpg || 0) - (a.mpg || 0));
+    .sort((a, b) => {
+      const pa = POS_ORDER[a.pos] ?? 9, pb = POS_ORDER[b.pos] ?? 9;
+      if (pa !== pb) return pa - pb;
+      return (b.mpg || 0) - (a.mpg || 0);
+    });
 
   if (!roster.length) return null;
 
@@ -7423,13 +7428,10 @@ function rosterLookup(query) {
   const lines = [bestTeam + ' — ' + season.order + ' Roster', ''];
   for (const p of roster) {
     const awards = (p.awards && p.awards.length) ? '  🏅' + p.awards.join(', ') : '';
-    lines.push(
-      p.pos + '  ' + p.name + awards
-    );
-    lines.push(
-      '     ' + f1(p.ppg) + ' PPG · ' + f1(p.rpg) + ' RPG · ' + f1(p.apg) + ' APG · ' +
-      f1(p.spg) + ' SPG · ' + f1(p.bpg) + ' BPG · ' + p.g + 'G'
-    );
+    lines.push(p.pos + '  ' + p.name + awards);
+    lines.push('     ' + f1(p.ppg) + ' PPG · ' + f1(p.rpg) + ' RPG · ' + f1(p.apg) + ' APG · ' +
+      f1(p.spg) + ' SPG · ' + f1(p.bpg) + ' BPG · ' + p.g + 'G');
+    lines.push('');
   }
   return lines.join('\n');
 }
