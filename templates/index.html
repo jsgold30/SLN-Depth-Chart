@@ -6076,22 +6076,25 @@ async function tmFlushSalaryCache() {
 
 
 // ── Trade Finder ──────────────────────────────────────────────────────────────
+const TF_SAL_TOL = 0.15;   // ±15% salary window, both modes
+
 let tfOpen = false;
 let tfMode = 'A'; // 'A' = outgoing from Team A, 'B' = incoming from Team B
-let tfSelected = [];      // [{name, salary, pos}]
-let tfPinnedB  = [];      // Team B players pre-checked when TF opens (must appear in combos)
-let tfAllRosters = {};    // abbr -> [{name,salary,pos,in_rat,...}]
+let tfSelected = [];        // [{name, salary, pos}]
+let tfPinnedB  = [];        // Team B players pre-checked when TF opens (must appear in combos)
+let tfAllRosters = {};      // abbr -> [{name,salary,pos,in_rat,...}]
+let tfFailedRosters = new Set(); // abbrs that failed to load
 let tfPosFilter = 'ALL';
 let tfPreloadStarted = false;
+let tfForceAllTeams = false; // when true, ignore loaded Team B and search all teams
 
 // Pre-load all team salary rosters in the background.
 // Uses direct server fetch only (no proxy fallback) to avoid excessive delays.
 async function tfPreloadAllRosters() {
   if (tfPreloadStarted) return;
   tfPreloadStarted = true;
-  const outAbbr = tmGetSideAbbr('A');
   for (const t of TM_TEAMS) {
-    if (t.abbr === outAbbr) continue;
+    if (t.abbr === tmGetSideAbbr('A')) continue; // re-check each iteration in case user switches team
     if (tfAllRosters[t.abbr]) continue;
     try {
       const res = await fetch('/fetch_salary_roster', {
@@ -6106,7 +6109,7 @@ async function tfPreloadAllRosters() {
         })).filter(p => p.salary > 0);
         if (mapped.length > 0) tfAllRosters[t.abbr] = mapped;
       }
-    } catch(e) { console.warn('[tfPreload] failed for', t.abbr, e); }
+    } catch(e) { tfFailedRosters.add(t.abbr); }
     await new Promise(r => setTimeout(r, 400)); // 0.4s between teams
   }
 }
@@ -6188,6 +6191,7 @@ function tfClose() {
   tfSelected = [];
   tfPinnedB = [];
   tfMode = 'A';
+  tfForceAllTeams = false;
   const btn = document.getElementById('tfToggleBtn');
   btn.style.background = '';
   btn.style.borderColor = '#1e3a5f';
@@ -6254,11 +6258,17 @@ function tfUpdateWindow() {
     document.getElementById('tfResults').innerHTML = '';
     return;
   }
+  if (tfSelected.length > 3) {
+    wb.style.display = 'none';
+    fr.style.display = 'none';
+    document.getElementById('tfResults').innerHTML = '<div class="tf-empty">Trade Finder supports up to 3 outgoing players. Deselect one to search.</div>';
+    return;
+  }
   wb.style.display = 'flex';
   fr.style.display = 'flex';
   document.getElementById('tfOutTotal').textContent = tfFmt(total);
-  document.getElementById('tfWindowMin').textContent = tfFmt(total / 1.15);
-  document.getElementById('tfWindowMax').textContent = tfFmt(total * 1.15);
+  document.getElementById('tfWindowMin').textContent = tfFmt(total / (1 + TF_SAL_TOL));
+  document.getElementById('tfWindowMax').textContent = tfFmt(total * (1 + TF_SAL_TOL));
   tfRun();
 }
 
@@ -6316,8 +6326,8 @@ async function tfRun() {
     } catch(e) {}
   }
   const outTotal = tfSelected.reduce((s, p) => s + p.salary, 0);
-  const minIn = outTotal / 1.15;
-  const maxIn = outTotal * 1.15;
+  const minIn = outTotal / (1 + TF_SAL_TOL);
+  const maxIn = outTotal * (1 + TF_SAL_TOL);
   const outAbbr = tmGetSideAbbr('A');
   const inAbbrB = tmGetSideAbbr('B');
 
@@ -6327,8 +6337,8 @@ async function tfRun() {
 
   const resultsEl = document.getElementById('tfResults');
 
-  // If Team B is loaded, only search Team B
-  if (inAbbrB && tmRosterB && tmRosterB.length) {
+  // If Team B is loaded and user hasn't opted into full search, only search Team B
+  if (!tfForceAllTeams && inAbbrB && tmRosterB && tmRosterB.length) {
     const teamB = TM_TEAMS.find(t => t.abbr === inAbbrB);
     const matches = [];
 
@@ -6366,14 +6376,15 @@ async function tfRun() {
     matches.sort((a, b) => tfComboScore(b.players) - tfComboScore(a.players));
     const spread = tfSpreadResults(matches);
     tfLastResults = spread;
-    tfRenderResults(spread, null, null);
+    tfRenderResults(spread, null, null, true);
     return;
   }
 
   const needed = TM_TEAMS.filter(t => t.abbr !== outAbbr && !tfAllRosters[t.abbr]);
   if (needed.length) {
+    const total = needed.length;
     let loaded = 0;
-    resultsEl.innerHTML = `<div class="tf-loading"><div class="tf-spinner"></div>Loading rosters… (0/${needed.length})</div>`;
+    resultsEl.innerHTML = `<div class="tf-loading"><div class="tf-spinner"></div>Loading rosters… (0/${total})</div>`;
     await Promise.all(needed.map(async t => {
       try {
         const res = await fetch('/fetch_salary_roster', {
@@ -6387,10 +6398,16 @@ async function tfRun() {
             in_rat: p.in_rat||'', out: p.out||'', hn: p.hn||'', df: p.df||'', reb: p.reb||''
           })).filter(p => p.salary > 0);
           if (mapped.length > 0) tfAllRosters[t.abbr] = mapped;
+          else tfFailedRosters.add(t.abbr);
+        } else {
+          tfFailedRosters.add(t.abbr);
         }
-      } catch(e) {}
-      loaded++;
-      resultsEl.innerHTML = `<div class="tf-loading"><div class="tf-spinner"></div>Loading rosters… (${loaded}/${needed.length})</div>`;
+      } catch(e) {
+        tfFailedRosters.add(t.abbr);
+      } finally {
+        loaded++;
+        resultsEl.innerHTML = `<div class="tf-loading"><div class="tf-spinner"></div>Loading rosters… (${loaded}/${total})</div>`;
+      }
     }));
   } else {
     resultsEl.innerHTML = '<div class="tf-loading"><div class="tf-spinner"></div>Searching…</div>';
@@ -6415,7 +6432,7 @@ async function tfRun() {
   tfLastResults = spread;
   const totalTeams = TM_TEAMS.filter(t => t.abbr !== outAbbr).length;
   const loadedTeams = Object.keys(tfAllRosters).length;
-  tfRenderResults(spread, loadedTeams, totalTeams);
+  tfRenderResults(spread, loadedTeams, totalTeams, false);
 }
 
 function tfFindCombos(players, minSal, maxSal) {
@@ -6445,9 +6462,14 @@ function tfFindCombos(players, minSal, maxSal) {
   return results;
 }
 
-function tfRenderResults(matches, loadedTeams, totalTeams) {
+function tfRenderResults(matches, loadedTeams, totalTeams, teamBOnly) {
   const resultsEl = document.getElementById('tfResults');
   const countEl = document.getElementById('tfResultCount');
+
+  // Banner: show scope indicator when in Team B-only mode
+  const scopeNote = teamBOnly
+    ? `<span style="font-size:0.65rem;color:#64748b;margin-left:8px;">Team B only · <a href="#" style="color:#60a5fa;text-decoration:none;" onclick="event.preventDefault();tfForceAllTeams=true;tfRun();">Search all teams ↗</a></span>`
+    : (tfFailedRosters.size > 0 ? `<span style="font-size:0.65rem;color:#f87171;margin-left:8px;">${tfFailedRosters.size} team roster(s) unavailable</span>` : '');
 
   let filtered = matches;
   if (tfPosFilter !== 'ALL') {
@@ -6455,19 +6477,20 @@ function tfRenderResults(matches, loadedTeams, totalTeams) {
   }
 
   if (!filtered.length) {
-    const rosterNote = (loadedTeams != null && loadedTeams < totalTeams)
+    const rosterNote = (!teamBOnly && loadedTeams != null && loadedTeams < totalTeams)
       ? ` (${loadedTeams}/${totalTeams} teams loaded — some rosters unavailable)`
       : '';
-    countEl.textContent = '0 matches found' + rosterNote;
+    countEl.innerHTML = '0 matches found' + rosterNote + scopeNote;
     resultsEl.innerHTML = '<div class="tf-empty">No salary matches found within the trade threshold.</div>';
     return;
   }
 
   const show = filtered.slice(0, 20);
   tfLastShow = show;
-  countEl.textContent = filtered.length > 20
+  const countText = filtered.length > 20
     ? `Best 20 of ${filtered.length} matches`
     : filtered.length + ' match' + (filtered.length !== 1 ? 'es' : '') + ' found';
+  countEl.innerHTML = countText + scopeNote;
   resultsEl.innerHTML = '';
   show.forEach((m, i) => {
     const card = document.createElement('div');
@@ -6571,9 +6594,8 @@ function tfSelectFromB(player, rowEl) {
   const rowCb = rowEl.querySelector('input[type="checkbox"]');
   if (rowCb) rowCb.checked = true;
   // Update window bar in B panel
-  const tol = 0.25;
-  const minIn = player.salary * (1 - tol);
-  const maxIn = player.salary * (1 + tol);
+  const minIn = player.salary / (1 + TF_SAL_TOL);
+  const maxIn = player.salary * (1 + TF_SAL_TOL);
   document.getElementById('tfWindowBarB').style.display = '';
   document.getElementById('tfOutTotalB').textContent = tfFmt(player.salary);
   document.getElementById('tfWindowMinB').textContent = tfFmt(minIn);
