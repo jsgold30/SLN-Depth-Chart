@@ -7556,10 +7556,10 @@ const AWARD_LABELS = {
 };
 
 function _detectAwardKey(q) {
-  if (/\bmvp\b/.test(q))                                                    return 'MVP';
-  if (/\bdpoy\b|\bdef(ensive)?\s+player\s+of\s+the\s+year\b/.test(q))      return 'DPOY';
-  if (/\broy\b|\brookie\s+of\s+the\s+year\b/.test(q))                       return 'ROY';
-  if (/\b(sixth|6th)\s+man\b/.test(q))                                      return '6th Man';
+  if (/\bmvps?\b/.test(q))                                                   return 'MVP';
+  if (/\bdpoys?\b|\bdef(ensive)?\s+player\s+of\s+the\s+year\b/.test(q))    return 'DPOY';
+  if (/\broys?\b|\brookie\s+of\s+the\s+year\b/.test(q))                     return 'ROY';
+  if (/\b(sixth|6th)\s+man\b|\b6motys?\b|\b6moys?\b/.test(q))               return '6th Man';
   if (/\b(first|1st)\s+team\s+all[\s-]?(sln|league)\b/.test(q))            return 'All-League 1st';
   if (/\b(second|2nd)\s+team\s+all[\s-]?(sln|league)\b/.test(q))           return 'All-League 2nd';
   if (/\b(third|3rd)\s+team\s+all[\s-]?(sln|league)\b/.test(q))            return 'All-League 3rd';
@@ -7720,6 +7720,24 @@ function rosterLookup(query) {
   return lines.join('\n');
 }
 
+// "list the MVPs" / "list all DPOYs" / "6MOTY history" -> all winners across every season
+function allAwardHistoryLookup(awardKey) {
+  if (!statDataReady) return null;
+  const label = AWARD_LABELS[awardKey] || awardKey;
+  const results = [];
+  for (const season of STAT_SEASONS) {
+    const winners = STAT_PLAYERS
+      .filter(p => p.season === season.key && p.awards && p.awards.includes(awardKey))
+      .map(p => p.name);
+    if (winners.length) results.push({ year: season.order, names: winners });
+  }
+  if (!results.length) return 'No ' + label + ' data found.';
+  results.sort((a, b) => b.year - a.year);
+  const lines = ['League ' + label + ' History:'];
+  for (const r of results) lines.push(r.year + ': ' + r.names.join(', '));
+  return lines.join('\n');
+}
+
 // Routes FAQ player queries: "awards [year]" -> season awards, "[player] awards" -> career awards,
 // "champion [year]" -> champion, "roster [team] [year]" -> team roster, "stats" -> stats, "camps" -> camps, neither -> camps + stats
 function playerLookup(query) {
@@ -7739,6 +7757,12 @@ function playerLookup(query) {
   if (wantsRoster)    return rosterLookup(query) || null;
   const specificAward = specificAwardLookup(query);
   if (specificAward)  return specificAward;
+
+  // "list all MVPs" / "DPOY history" — award key present but no specific year
+  if (!year) {
+    const histKey = _detectAwardKey(q);
+    if (histKey) return allAwardHistoryLookup(histKey) || null;
+  }
 
   // Disambiguate when multiple players match but none uniquely
   const yearOnlyAwards = wantsAwards && year && !_findStatEntries(query).length;
