@@ -328,13 +328,14 @@
     }
 
     /* Options row */
-    .option-row { display: flex; align-items: center; gap: 10px; }
-    .option-row select { flex: 1; }
+    .option-row { display: flex; align-items: center; gap: 6px; position: relative; }
+    .option-row select { flex: 1; min-width: 0; }
+    .option-row .bold-check { display: none; }
 
     /* Tactic select + bold inline */
-    .tactic-sel-row { display: flex; align-items: center; gap: 6px; }
+    .tactic-sel-row { display: flex; align-items: center; gap: 6px; position: relative; }
     .tactic-sel-row select { flex: 1; min-width: 0; width: auto; }
-    .tactic-sel-row .bold-check { flex-shrink: 0; }
+    .tactic-sel-row .bold-check { display: none; }
     .tactic-label-row { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
     .tactic-label-row label { margin-bottom: 0; }
     .tactic-info {
@@ -766,7 +767,9 @@
     .ctx-item.ctx-item-disabled { color: #475569; cursor: default; pointer-events: none; }
     .ctx-icon { font-size: 0.7rem; font-weight: 900; width: 14px; text-align: center; flex-shrink: 0; }
     /* Bold border on select when bold is active */
-    .slot-sel-row select.slot-bolded { border: 2px solid #f59e0b; }
+    .slot-sel-row select.slot-bolded,
+    .option-row select.slot-bolded,
+    .tactic-sel-row select.slot-bolded { border: 2px solid #f59e0b; }
 
     .i-btn {
       width: 18px; height: 18px; border-radius: 50%;
@@ -1525,7 +1528,9 @@
     .ctx-item:hover { background: #f5e8c8 !important; }
     .ctx-item.ctx-item-active { color: #b45309 !important; }
     .ctx-item.ctx-item-disabled { color: #c4a05a !important; }
-    .slot-sel-row select.slot-bolded { border: 2px solid #b45309 !important; }
+    .slot-sel-row select.slot-bolded,
+    .option-row select.slot-bolded,
+    .tactic-sel-row select.slot-bolded { border: 2px solid #b45309 !important; }
 
     /* ── Stat popover ── */
     .stat-popover { background: #fff8e8 !important; border-color: #d4b87a !important; box-shadow: 0 6px 20px rgba(100,60,0,0.15) !important; }
@@ -1874,16 +1879,28 @@
         <div class="card-title">Options</div>
         <div class="options-col" id="optionsContainer">
           <div class="option-row">
-            <label class="bold-check" id="boldlabel_opt1"><input type="checkbox" id="bold_opt1" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt1')">B</label>
+            <label class="bold-check" id="boldlabel_opt1" style="display:none"><input type="checkbox" id="bold_opt1" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt1')">B</label>
             <select id="opt1" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 1 (optional) --</option></select>
+            <button type="button" class="ctx-btn" id="ctxbtn_opt1" aria-label="Bold option" onmousedown="event.stopPropagation()" onclick="event.stopPropagation(); toggleCtxMenuById('opt1')">⋮</button>
+            <div class="ctx-menu" id="ctxmenu_opt1">
+              <div class="ctx-item" id="ctx-bold_opt1" onclick="event.stopPropagation(); ctxToggleBoldById('opt1')"><span class="ctx-icon">B</span>Bold</div>
+            </div>
           </div>
           <div class="option-row">
-            <label class="bold-check" id="boldlabel_opt2"><input type="checkbox" id="bold_opt2" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt2')">B</label>
+            <label class="bold-check" id="boldlabel_opt2" style="display:none"><input type="checkbox" id="bold_opt2" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt2')">B</label>
             <select id="opt2" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 2 (optional) --</option></select>
+            <button type="button" class="ctx-btn" id="ctxbtn_opt2" aria-label="Bold option" onmousedown="event.stopPropagation()" onclick="event.stopPropagation(); toggleCtxMenuById('opt2')">⋮</button>
+            <div class="ctx-menu" id="ctxmenu_opt2">
+              <div class="ctx-item" id="ctx-bold_opt2" onclick="event.stopPropagation(); ctxToggleBoldById('opt2')"><span class="ctx-icon">B</span>Bold</div>
+            </div>
           </div>
           <div class="option-row">
-            <label class="bold-check" id="boldlabel_opt3"><input type="checkbox" id="bold_opt3" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt3')">B</label>
+            <label class="bold-check" id="boldlabel_opt3" style="display:none"><input type="checkbox" id="bold_opt3" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_opt3')">B</label>
             <select id="opt3" onmousedown="pushUndo()" onchange="onOptChange()"><option value="">-- Option 3 (optional) --</option></select>
+            <button type="button" class="ctx-btn" id="ctxbtn_opt3" aria-label="Bold option" onmousedown="event.stopPropagation()" onclick="event.stopPropagation(); toggleCtxMenuById('opt3')">⋮</button>
+            <div class="ctx-menu" id="ctxmenu_opt3">
+              <div class="ctx-item" id="ctx-bold_opt3" onclick="event.stopPropagation(); ctxToggleBoldById('opt3')"><span class="ctx-icon">B</span>Bold</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1898,12 +1915,16 @@
               <button type="button" class="tactic-info">i<span class="tactic-tooltip">Pace (Very Fast/Fast/Normal/Slow/Very Slow): Faster = first good shot available; Slower = more patient, concentrated shot distribution</span></button>
             </div>
             <div class="tactic-sel-row">
-              <label class="bold-check" id="boldlabel_t_pace"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')">B</label>
+              <label class="bold-check" id="boldlabel_t_pace" style="display:none"><input type="checkbox" id="bold_t_pace" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pace')">B</label>
               <select id="t_pace" onmousedown="pushUndo()" onchange="saveState()">
                 <option>Very Fast</option><option>Fast</option>
                 <option selected>Normal</option>
                 <option>Slow</option><option>Very Slow</option>
               </select>
+              <button type="button" class="ctx-btn" id="ctxbtn_t_pace" aria-label="Bold option" onmousedown="event.stopPropagation()" onclick="event.stopPropagation(); toggleCtxMenuById('t_pace')">⋮</button>
+              <div class="ctx-menu" id="ctxmenu_t_pace">
+                <div class="ctx-item" id="ctx-bold_t_pace" onclick="event.stopPropagation(); ctxToggleBoldById('t_pace')"><span class="ctx-icon">B</span>Bold</div>
+              </div>
             </div>
           </div>
           <div class="tactic-item">
@@ -1912,12 +1933,16 @@
               <button type="button" class="tactic-info">i<span class="tactic-tooltip">Trap (Always→Often→Normal→Sometimes→Never): More trapping = more steals but more fouls and fatigue</span></button>
             </div>
             <div class="tactic-sel-row">
-              <label class="bold-check" id="boldlabel_t_trap"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')">B</label>
+              <label class="bold-check" id="boldlabel_t_trap" style="display:none"><input type="checkbox" id="bold_t_trap" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_trap')">B</label>
               <select id="t_trap" onmousedown="pushUndo()" onchange="saveState()">
                 <option>Always</option><option>Often</option>
                 <option selected>Normal</option>
                 <option>Sometimes</option><option>Never</option>
               </select>
+              <button type="button" class="ctx-btn" id="ctxbtn_t_trap" aria-label="Bold option" onmousedown="event.stopPropagation()" onclick="event.stopPropagation(); toggleCtxMenuById('t_trap')">⋮</button>
+              <div class="ctx-menu" id="ctxmenu_t_trap">
+                <div class="ctx-item" id="ctx-bold_t_trap" onclick="event.stopPropagation(); ctxToggleBoldById('t_trap')"><span class="ctx-icon">B</span>Bold</div>
+              </div>
             </div>
           </div>
           <div class="tactic-item">
@@ -1926,12 +1951,16 @@
               <button type="button" class="tactic-info">i<span class="tactic-tooltip">Pressure/Press (Always→Often→Normal→Sometimes→Never): More pressing = more wing steals but more fouls</span></button>
             </div>
             <div class="tactic-sel-row">
-              <label class="bold-check" id="boldlabel_t_pressure"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')">B</label>
+              <label class="bold-check" id="boldlabel_t_pressure" style="display:none"><input type="checkbox" id="bold_t_pressure" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_pressure')">B</label>
               <select id="t_pressure" onmousedown="pushUndo()" onchange="saveState()">
                 <option>Always</option><option>Often</option>
                 <option selected>Normal</option>
                 <option>Sometimes</option><option>Never</option>
               </select>
+              <button type="button" class="ctx-btn" id="ctxbtn_t_pressure" aria-label="Bold option" onmousedown="event.stopPropagation()" onclick="event.stopPropagation(); toggleCtxMenuById('t_pressure')">⋮</button>
+              <div class="ctx-menu" id="ctxmenu_t_pressure">
+                <div class="ctx-item" id="ctx-bold_t_pressure" onclick="event.stopPropagation(); ctxToggleBoldById('t_pressure')"><span class="ctx-icon">B</span>Bold</div>
+              </div>
             </div>
           </div>
           <div class="tactic-item">
@@ -1940,12 +1969,16 @@
               <button type="button" class="tactic-info">i<span class="tactic-tooltip">Offense Focus (Inside/Outside/Balanced): Players attack more in your chosen area</span></button>
             </div>
             <div class="tactic-sel-row">
-              <label class="bold-check" id="boldlabel_t_offense"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')">B</label>
+              <label class="bold-check" id="boldlabel_t_offense" style="display:none"><input type="checkbox" id="bold_t_offense" onmousedown="pushUndo()" onchange="toggleBoldLabel('boldlabel_t_offense')">B</label>
               <select id="t_offense" onmousedown="pushUndo()" onchange="saveState()">
                 <option>Inside</option>
                 <option selected>Balanced</option>
                 <option>Outside</option>
               </select>
+              <button type="button" class="ctx-btn" id="ctxbtn_t_offense" aria-label="Bold option" onmousedown="event.stopPropagation()" onclick="event.stopPropagation(); toggleCtxMenuById('t_offense')">⋮</button>
+              <div class="ctx-menu" id="ctxmenu_t_offense">
+                <div class="ctx-item" id="ctx-bold_t_offense" onclick="event.stopPropagation(); ctxToggleBoldById('t_offense')"><span class="ctx-icon">B</span>Bold</div>
+              </div>
             </div>
           </div>
         </div>
@@ -2941,6 +2974,24 @@ function toggleBoldLabel(labelId) {
   saveState();
 }
 
+function toggleCtxMenuById(id) {
+  const menu = document.getElementById(`ctxmenu_${id}`);
+  if (!menu) return;
+  const isOpen = menu.classList.contains('open');
+  document.querySelectorAll('.ctx-menu.open').forEach(m => m.classList.remove('open'));
+  if (!isOpen) menu.classList.add('open');
+}
+
+function ctxToggleBoldById(id) {
+  const cb = document.getElementById(`bold_${id}`);
+  if (!cb) return;
+  pushUndo();
+  cb.checked = !cb.checked;
+  toggleBoldLabel(`boldlabel_${id}`);
+  const menu = document.getElementById(`ctxmenu_${id}`);
+  if (menu) menu.classList.remove('open');
+}
+
 function toggleCtxMenu(pos, slot) {
   const menu = document.getElementById(`ctxmenu_${pos}_${slot}`);
   if (!menu) return;
@@ -2978,6 +3029,17 @@ function syncBoldVisuals() {
       const boldItem = document.getElementById(`ctx-bold_${pos}_${slot}`);
       if (boldItem) boldItem.classList.toggle('ctx-item-active', isActive);
     }
+  });
+  ['opt1','opt2','opt3','t_pace','t_trap','t_pressure','t_offense'].forEach(id => {
+    const cb = document.getElementById(`bold_${id}`);
+    if (!cb) return;
+    const isActive = cb.checked;
+    const sel = document.getElementById(id);
+    if (sel) sel.classList.toggle('slot-bolded', isActive);
+    const ctxBtn = document.getElementById(`ctxbtn_${id}`);
+    if (ctxBtn) ctxBtn.classList.toggle('bold-active', isActive);
+    const boldItem = document.getElementById(`ctx-bold_${id}`);
+    if (boldItem) boldItem.classList.toggle('ctx-item-active', isActive);
   });
 }
 
