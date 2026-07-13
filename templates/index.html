@@ -4931,7 +4931,7 @@ function validateTradeMatch() {
       players.forEach(p => lines.push(p.name));
       picks.forEach(p => lines.push(p.label));
       if (rp > 0) lines.push(`${rp} RP`);
-      return `${teamName} sends:\n${lines.join('\n')}`;
+      return `${teamName} Send:\n${lines.join('\n')}`;
     };
     const sideAText = buildSideText(tmNameA, playersA, picksA, rpA);
     const sideBText = buildSideText(tmNameB, playersB, picksB, rpB);
