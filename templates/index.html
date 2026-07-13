@@ -351,9 +351,10 @@
       display: none; position: absolute;
       left: 0; bottom: calc(100% + 6px);
       background: #1e293b; color: #e2e8f0;
-      font-size: 0.68rem; line-height: 1.45;
-      padding: 7px 10px; border-radius: 6px;
-      width: 250px; white-space: normal;
+      font-size: 0.72rem; line-height: 1.5;
+      padding: 8px 10px; border-radius: 6px;
+      width: 230px; max-width: calc(100vw - 24px);
+      white-space: normal; overflow-wrap: break-word; word-break: break-word;
       z-index: 200; pointer-events: none;
       box-shadow: 0 4px 12px rgba(0,0,0,0.35);
     }
@@ -719,6 +720,8 @@
 
       /* Tactics single column */
       .tactics-grid { grid-template-columns: 1fr; }
+      /* Reset even-item tooltip alignment — all flush left in single column */
+      .tactics-grid .tactic-item:nth-child(even) .tactic-tooltip { left: 0; right: auto; }
 
       /* Generate button full width */
       .generate-row { flex-direction: column; align-items: stretch; }
