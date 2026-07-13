@@ -2108,22 +2108,20 @@
 
         <!-- Vet Min Players -->
         <div class="tm-vetmin-section">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
-            <div class="tm-vetmin-label" style="margin-bottom:0;">Add Salaries</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
             <div style="position:relative;">
-              <button type="button" class="ctx-btn" id="tmAddMenuBtnA" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();toggleCtxMenuById('tmAddMenuA')">⋮</button>
-              <div class="ctx-menu" id="ctxmenu_tmAddMenuA">
-                <div class="ctx-item" id="tmVetMinAddA" onclick="addVetMin('A');document.getElementById('ctxmenu_tmAddMenuA').classList.remove('open')"><span class="ctx-icon">+</span>Vet Min</div>
+              <button type="button" class="btn btn-slate tm-vetmin-add" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();toggleCtxMenuById('tmAddMenuA')">Add Salaries ▾</button>
+              <div class="ctx-menu" id="ctxmenu_tmAddMenuA" style="top:calc(100% + 2px);left:0;right:auto;">
+                <div class="ctx-item" id="tmVetMinAddA" onclick="addVetMin('A');document.getElementById('ctxmenu_tmAddMenuA').classList.remove('open')"><span class="ctx-icon">+</span>Add Vet Min</div>
                 <div class="ctx-item" onclick="addCustomSalary('A');document.getElementById('ctxmenu_tmAddMenuA').classList.remove('open')"><span class="ctx-icon">+</span>Custom Salary</div>
                 <div class="ctx-item" id="tmPickBtnA" style="display:none;" onclick="tmAddPickUI('A');document.getElementById('ctxmenu_tmAddMenuA').classList.remove('open')"><span class="ctx-icon">🏀</span>Add Pick</div>
                 <div class="ctx-item" id="tmRPBtnA" style="display:none;" onclick="tmAddRPUI('A');document.getElementById('ctxmenu_tmAddMenuA').classList.remove('open')"><span class="ctx-icon">+</span>Add RP</div>
                 <div class="ctx-item" id="tmFABtnA" style="display:none;" onclick="toggleSideFAPanel('A');document.getElementById('ctxmenu_tmAddMenuA').classList.remove('open')"><span class="ctx-icon">+</span>Free Agent</div>
-                <div class="ctx-item" id="tfToggleBtn" style="display:none;" onclick="tfToggle();document.getElementById('ctxmenu_tmAddMenuA').classList.remove('open')"><span class="ctx-icon">🔍</span>Trade Finder</div>
               </div>
             </div>
+            <button type="button" class="btn btn-slate tm-vetmin-add" id="tfToggleBtn" style="display:none;border-color:#1e3a5f;color:#60a5fa;" onclick="tfToggle()">🔍 Trade Finder</button>
           </div>
           <div id="tmVetMinListA"></div>
-          <div style="display:none;"></div>
           <!-- Pick selector -->
           <div id="tmPickSelectorA" class="tm-pick-selector" style="display:none;">
             <select id="tmPickSelA" class="tm-pick-sel" style="min-width:200px;"></select>
@@ -2201,22 +2199,20 @@
 
         <!-- Vet Min Players -->
         <div class="tm-vetmin-section">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
-            <div class="tm-vetmin-label" style="margin-bottom:0;">Add Salaries</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
             <div style="position:relative;">
-              <button type="button" class="ctx-btn" id="tmAddMenuBtnB" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();toggleCtxMenuById('tmAddMenuB')">⋮</button>
-              <div class="ctx-menu" id="ctxmenu_tmAddMenuB">
-                <div class="ctx-item" id="tmVetMinAddB" onclick="addVetMin('B');document.getElementById('ctxmenu_tmAddMenuB').classList.remove('open')"><span class="ctx-icon">+</span>Vet Min</div>
+              <button type="button" class="btn btn-slate tm-vetmin-add" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();toggleCtxMenuById('tmAddMenuB')">Add Salaries ▾</button>
+              <div class="ctx-menu" id="ctxmenu_tmAddMenuB" style="top:calc(100% + 2px);left:0;right:auto;">
+                <div class="ctx-item" id="tmVetMinAddB" onclick="addVetMin('B');document.getElementById('ctxmenu_tmAddMenuB').classList.remove('open')"><span class="ctx-icon">+</span>Add Vet Min</div>
                 <div class="ctx-item" onclick="addCustomSalary('B');document.getElementById('ctxmenu_tmAddMenuB').classList.remove('open')"><span class="ctx-icon">+</span>Custom Salary</div>
                 <div class="ctx-item" id="tmPickBtnB" style="display:none;" onclick="tmAddPickUI('B');document.getElementById('ctxmenu_tmAddMenuB').classList.remove('open')"><span class="ctx-icon">🏀</span>Add Pick</div>
                 <div class="ctx-item" id="tmRPBtnB" style="display:none;" onclick="tmAddRPUI('B');document.getElementById('ctxmenu_tmAddMenuB').classList.remove('open')"><span class="ctx-icon">+</span>Add RP</div>
                 <div class="ctx-item" id="tmFABtnB" style="display:none;" onclick="toggleSideFAPanel('B');document.getElementById('ctxmenu_tmAddMenuB').classList.remove('open')"><span class="ctx-icon">+</span>Free Agent</div>
-                <div class="ctx-item" id="tfToggleBtnB" style="display:none;" onclick="tfToggleFromB();document.getElementById('ctxmenu_tmAddMenuB').classList.remove('open')"><span class="ctx-icon">🔍</span>Trade Finder</div>
               </div>
             </div>
+            <button type="button" class="btn btn-slate tm-vetmin-add" id="tfToggleBtnB" style="display:none;border-color:#1e3a5f;color:#60a5fa;" onclick="tfToggleFromB()">🔍 Trade Finder</button>
           </div>
           <div id="tmVetMinListB"></div>
-          <div style="display:none;"></div>
           <!-- Pick selector -->
           <div id="tmPickSelectorB" class="tm-pick-selector" style="display:none;">
             <select id="tmPickSelB" class="tm-pick-sel" style="min-width:200px;"></select>
@@ -6150,7 +6146,7 @@ function tfToggleFromB() {
   tfOpen = true;
   tfMode = 'B';
   const btnB = document.getElementById('tfToggleBtnB');
-  if (btnB) btnB.classList.add('ctx-item-active');
+  if (btnB) { btnB.style.background = '#1d4ed8'; btnB.style.borderColor = '#3b82f6'; btnB.style.color = '#fff'; }
   // Show results in Team A column, hide Team A content
   document.getElementById('tfTeamAContent').style.display = 'none';
   document.getElementById('tfResultsPanelB').style.display = '';
@@ -6163,7 +6159,7 @@ function tfToggle() {
   tfOpen = true;
   tfMode = 'A';
   const btn = document.getElementById('tfToggleBtn');
-  if (btn) btn.classList.add('ctx-item-active');
+  if (btn) { btn.style.background = '#1d4ed8'; btn.style.borderColor = '#3b82f6'; btn.style.color = '#fff'; }
   // Collect pre-checked players BEFORE init clears state
   const preChecked = [];
   document.querySelectorAll('#tmPlayerListA input[type="checkbox"]:checked').forEach(cb => {
@@ -6197,9 +6193,9 @@ function tfClose() {
   tfMode = 'A';
   tfForceAllTeams = false;
   const btn = document.getElementById('tfToggleBtn');
-  if (btn) btn.classList.remove('ctx-item-active');
+  if (btn) { btn.style.background = ''; btn.style.borderColor = '#1e3a5f'; btn.style.color = '#60a5fa'; }
   const btnB = document.getElementById('tfToggleBtnB');
-  if (btnB) btnB.classList.remove('ctx-item-active');
+  if (btnB) { btnB.style.background = ''; btnB.style.borderColor = '#1e3a5f'; btnB.style.color = '#60a5fa'; }
   document.getElementById('tfResultsPanel').style.display = 'none';
   document.getElementById('tfResultsPanelB').style.display = 'none';
   document.getElementById('tfTeamAContent').style.display = '';
