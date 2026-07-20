@@ -1880,7 +1880,10 @@
 
       <!-- ── IR ── -->
       <div class="card">
-        <div class="card-title">Injured Reserve (IR)</div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;">
+          <div class="card-title" style="margin-bottom:0;">Injured Reserve (IR)</div>
+          <div id="irStatus" style="font-size:0.7rem;font-weight:700;color:#64748b;letter-spacing:0.03em;"></div>
+        </div>
         <div id="irContainer">
           <p class="placeholder-msg">Load a roster to see players.</p>
         </div>
@@ -2832,6 +2835,7 @@ function buildIR() {
   });
 
   container.appendChild(grid);
+  enforceIRLimit();
 }
 
 // ─── Enforce IR roster limit (min 12 active players) ─────────────────────────
@@ -2842,7 +2846,7 @@ function enforceIRLimit() {
 
   document.querySelectorAll('input[name="ir"]').forEach(cb => {
     const label = cb.closest('label');
-    if (cb.checked) return; // leave selected boxes alone
+    if (cb.checked) return;
     if (atLimit) {
       cb.disabled = true;
       if (label) { label.style.opacity = '0.25'; label.style.cursor = 'not-allowed'; }
@@ -2851,6 +2855,20 @@ function enforceIRLimit() {
       if (label) { label.style.opacity = ''; label.style.cursor = ''; }
     }
   });
+
+  const statusEl = document.getElementById('irStatus');
+  if (statusEl) {
+    if (maxIR === 0) {
+      statusEl.textContent = 'IR needed: 0/0';
+      statusEl.style.color = '#64748b';
+    } else if (currentIR >= maxIR) {
+      statusEl.textContent = `IR needed: ${currentIR}/${maxIR} ✓`;
+      statusEl.style.color = '#4ade80';
+    } else {
+      statusEl.textContent = `IR needed: ${currentIR}/${maxIR}`;
+      statusEl.style.color = '#f59e0b';
+    }
+  }
 }
 
 // ─── Build options dropdowns ──────────────────────────────────────────────────
