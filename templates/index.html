@@ -1784,6 +1784,7 @@
       </div>
       <div class="status-row-btns">
         <button class="btn btn-slate" id="undoBtn" onclick="undoLast()" disabled style="font-size:0.72rem;padding:4px 10px;">↩ Undo</button>
+        <button class="btn btn-slate" onclick="clearAllBold()" style="font-size:0.72rem;padding:4px 10px;">✕ Clear Bold</button>
         <button class="btn btn-slate" id="tradeModeBtn" onclick="toggleTradePanel()" style="display:none;font-size:0.72rem;padding:4px 10px;">✏ Trade Mode</button>
 
         <button class="btn btn-cyan" id="faBtn" onclick="toggleFAPanel()" style="font-size:0.72rem;padding:4px 10px;display:none;">＋ Free Agents</button>
@@ -3036,6 +3037,13 @@ function ctxViewStats(pos, slot) {
   const menu = document.getElementById(`ctxmenu_${pos}_${slot}`);
   if (menu) menu.classList.remove('open');
   toggleStatPopover(pos, slot);
+}
+
+function clearAllBold() {
+  pushUndo();
+  document.querySelectorAll('input[type="checkbox"][id^="bold_"]').forEach(cb => { cb.checked = false; });
+  syncBoldVisuals();
+  saveState();
 }
 
 function syncBoldVisuals() {
