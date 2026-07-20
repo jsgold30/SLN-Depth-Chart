@@ -6332,11 +6332,12 @@ function tfSpreadResults(matches) {
 }
 
 function tfComboScore(combo) {
-  // Sum grade values of in/out/hn/df/reb ratings stored directly on each player
+  // Average per-player grade score so a single elite player ranks above a diluted 3-player combo
   const TF_GRADES = ['F','D-','D','D+','C-','C','C+','B-','B','B+','A-','A','A+'];
   const gv = g => { const i = TF_GRADES.indexOf(g||''); return i < 0 ? 0 : i; };
   const keys = ['in_rat','out','hn','df','reb'];
-  return combo.reduce((total, cp) => total + keys.reduce((s, k) => s + Math.max(0, gv(cp[k])), 0), 0);
+  const total = combo.reduce((sum, cp) => sum + keys.reduce((s, k) => s + Math.max(0, gv(cp[k])), 0), 0);
+  return total / combo.length;
 }
 
 async function tfRun() {
