@@ -3462,7 +3462,7 @@ function generateDepthChart() {
     .filter(o => o.val);
   if (opts.length) {
     lines.push('Options:');
-    opts.forEach(o => lines.push(bb(o.val, `bold_${o.id}`)));
+    opts.forEach((o, i) => lines.push(`${i + 1}. ${bb(o.val, `bold_${o.id}`)}`));
     lines.push('');
   }
 
