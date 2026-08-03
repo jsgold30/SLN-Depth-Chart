@@ -952,11 +952,12 @@
       .tab-nav { gap: 2px; padding: 3px; }
       .tab-btn { font-size: 0.62rem; padding: 8px 6px; letter-spacing: 0.5px; }
 
-      /* Draft Order + Results: stack vertically */
-      .dc-bottom-grid {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 12px !important;
+      /* Collapse two-column layout to single column on mobile */
+      #tabDraft > [style*="grid-template-columns"] {
+        display: block !important;
+      }
+      #tabDraft > [style*="grid-template-columns"] > div > [style*="flex-direction"] {
+        display: block !important;
       }
 
       /* Order list and results: use fixed heights that work on phone */
@@ -2280,6 +2281,34 @@
   <!-- ── TAB 3: Draft Center ── -->
   <div class="tab-panel" id="tabDraft">
 
+    <!-- Two-column layout: pool on left, order+results on right -->
+    <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px;align-items:start;">
+
+    <!-- LEFT: Selected Panel + Notes + Player Pool -->
+    <div>
+
+    <!-- Selected Player Panel (above pool) -->
+    <div class="dc-selected-panel" id="dcSelectedPanel">
+      <div>
+        <div class="dc-selected-name" id="dcSelectedName">—</div>
+        <div class="dc-selected-meta" id="dcSelectedMeta"></div>
+      </div>
+      <button class="dc-confirm-draft-btn" onclick="dcConfirmDraft()">Draft</button>
+      <button class="dc-queue-btn" id="dcQueueAddBtn" onclick="dcToggleQueue()">+ Queue</button>
+      <button class="dc-selected-clear" onclick="dcClearSelection()" title="Clear selection">✕</button>
+    </div>
+    <!-- Scout Notes Panel (above pool) -->
+    <div class="dc-notes-panel" id="dcNotesPanel">
+      <div class="dc-notes-label">Scout Notes</div>
+      <!-- Read-only view (mod locked, note exists) -->
+      <div class="dc-notes-readonly" id="dcNotesReadonly"></div>
+      <!-- Edit view (mod unlocked) -->
+      <div id="dcNotesEditWrap" style="display:none;">
+        <textarea class="dc-notes-ta" id="dcNotesTa" placeholder="Add scouting notes for this player…" rows="3"></textarea>
+        <div><button class="dc-notes-save-btn" onclick="dcSaveNote()">Save Note</button></div>
+      </div>
+    </div>
+
     <!-- Player Pool -->
     <div class="card">
       <div class="card-title">Player Pool</div>
@@ -2329,30 +2358,10 @@
       </div>
     </div>
 
-    <!-- Selected Player Panel -->
-    <div class="dc-selected-panel" id="dcSelectedPanel">
-      <div>
-        <div class="dc-selected-name" id="dcSelectedName">—</div>
-        <div class="dc-selected-meta" id="dcSelectedMeta"></div>
-      </div>
-      <button class="dc-confirm-draft-btn" onclick="dcConfirmDraft()">Draft</button>
-      <button class="dc-queue-btn" id="dcQueueAddBtn" onclick="dcToggleQueue()">+ Queue</button>
-      <button class="dc-selected-clear" onclick="dcClearSelection()" title="Clear selection">✕</button>
-    </div>
-    <!-- Scout Notes Panel -->
-    <div class="dc-notes-panel" id="dcNotesPanel">
-      <div class="dc-notes-label">Scout Notes</div>
-      <!-- Read-only view (mod locked, note exists) -->
-      <div class="dc-notes-readonly" id="dcNotesReadonly"></div>
-      <!-- Edit view (mod unlocked) -->
-      <div id="dcNotesEditWrap" style="display:none;">
-        <textarea class="dc-notes-ta" id="dcNotesTa" placeholder="Add scouting notes for this player…" rows="3"></textarea>
-        <div><button class="dc-notes-save-btn" onclick="dcSaveNote()">Save Note</button></div>
-      </div>
-    </div>
+    </div><!-- /left col -->
 
-    <!-- Draft Order + Log side by side on wide screens -->
-    <div class="dc-bottom-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <!-- RIGHT: Draft Order + Draft Results -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
 
       <!-- Draft Order -->
       <div class="card">
@@ -2418,7 +2427,9 @@
         </div>
       </div>
 
-    </div><!-- /grid -->
+    </div><!-- /right col -->
+
+    </div><!-- /outer two-col grid -->
 
   </div><!-- /tabDraft -->
 
