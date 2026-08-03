@@ -1016,10 +1016,25 @@ def flush_salary_cache():
         return jsonify({'error': str(e)}), 500
 
 
+DRAFT_POOL_VERSION = ','.join(p['name'] for p in DRAFT_PLAYER_POOL)
+
 @app.route('/fetch_draft_players', methods=['POST'])
 def fetch_draft_players():
     players = [dict(p, id=str(i+1), out=p.get('out_rat',''), in_rating=p.get('in_rat','')) for i, p in enumerate(DRAFT_PLAYER_POOL)]
-    return jsonify({'players': players})
+    return jsonify({'players': players, 'pool_version': DRAFT_POOL_VERSION})
+
+
+@app.route('/clear_draft_notes', methods=['POST'])
+def clear_draft_notes():
+    db = get_db()
+    row = db.execute('SELECT data FROM draft_state WHERE id = 1').fetchone()
+    if row:
+        data = json.loads(row[0])
+        data['playerNotes'] = {}
+        db.execute('UPDATE draft_state SET data=?, updated_at=CURRENT_TIMESTAMP WHERE id=1', (json.dumps(data),))
+        db.commit()
+    db.close()
+    return jsonify({'ok': True})
 
 
 @app.route('/save_draft', methods=['POST'])

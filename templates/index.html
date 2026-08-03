@@ -997,7 +997,7 @@
     .dc-filter-btn.active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
     .dc-filter-btn:hover:not(.active) { background: #273549; color: #e2e8f0; }
     /* Player pool table */
-    .dc-pool-wrap { overflow-x: auto; max-height: 220px; overflow-y: auto; }
+    .dc-pool-wrap { overflow-x: auto; max-height: clamp(400px, calc(100vh - 380px), 800px); overflow-y: auto; }
     .dc-pool-table {
       width: 100%; border-collapse: collapse; font-size: 0.78rem;
     }
@@ -5047,6 +5047,7 @@ let dcOrder        = [];   // [{ name, abbr, c1, c2, url }, ...]  current draft 
 let dcCurrentPick  = 0;    // index into dcOrder
 let dcResults      = [];   // [{ pick, teamName, playerName, pos }, ...]
 let dcPlayerNotes  = {};   // { [playerId]: "note text" } – scout notes per player
+let dcSavedPoolVersion = ''; // tracks which pool class notes belong to
 let dcPosFilter    = 'ALL';
 let dcSearchQuery  = '';
 let dcSelectedId   = null; // id of player currently selected for drafting
@@ -5301,7 +5302,7 @@ function dcSave() {
   // is reachable. Prevents cold-start network errors from wiping real data.
   const hasData = dcOrder.length > 0 || dcResults.length > 0 || Object.keys(dcPlayerNotes).length > 0;
   if (!hasData && !dcServerReached) return;
-  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, results: dcResults, playerNotes: dcPlayerNotes, ts: Date.now() };
+  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, results: dcResults, playerNotes: dcPlayerNotes, pool_version: dcSavedPoolVersion, ts: Date.now() };
   dcLastSyncStamp = payload.ts;
   // Save to server (shared across all devices)
   fetch('/save_draft', {
@@ -5327,6 +5328,7 @@ async function dcLoadFromServer() {
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
     dcPlayerNotes = s.playerNotes || {};
+    dcSavedPoolVersion = s.pool_version || '';
     dcLastSyncStamp = s.ts || 0;
     // Rebuild pool from saved pool until dcAllPlayers is available
     dcPool = s.pool || [];
@@ -5346,6 +5348,7 @@ function dcLoad() {
     dcCurrentPick = s.currentPick || 0;
     dcResults     = s.results     || [];
     dcPlayerNotes = s.playerNotes || {};
+    dcSavedPoolVersion = s.pool_version || '';
     dcLastSyncStamp = s.ts || 0;
     return dcPool.length > 0 || dcOrder.length > 0 || Object.keys(dcPlayerNotes).length > 0;
   } catch(e) { return false; }
@@ -5375,6 +5378,13 @@ async function dcFetchPlayers() {
     dcAllPlayers = data.players;
     dcPlayersLoaded = true;
     dcPlayersFetching = false;
+
+    // If the pool changed (new draft class), wipe scout notes automatically.
+    if (data.pool_version && data.pool_version !== dcSavedPoolVersion) {
+      dcPlayerNotes = {};
+      fetch('/clear_draft_notes', { method: 'POST' });
+    }
+    dcSavedPoolVersion = data.pool_version || '';
 
     // Always rebuild pool from the authoritative server list,
     // minus any players already drafted (by name) in saved results.
