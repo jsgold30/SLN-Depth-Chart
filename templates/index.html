@@ -442,7 +442,9 @@
     .tab-panel.active { display: block; }
 
     #tabStatBook { padding: 0; }
-    #tabSLN { padding: 0; }
+    #tabSLN { padding: 0; margin-left: -150px; margin-right: -150px; }
+    @media (max-width: 1100px) { #tabSLN { margin-left: -32px; margin-right: -32px; } }
+    @media (max-width: 860px)  { #tabSLN { margin-left: -10px; margin-right: -10px; } }
 
     /* ── Trade Machine ── */
     .tm-columns {
