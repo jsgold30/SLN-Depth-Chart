@@ -5425,14 +5425,15 @@ function dcSortPool(col) {
     dcSortCol = col;
     dcSortAsc = false;
   }
-  // Map column name -> pre-computed site rank field (lower rank = better)
   const siteRankField = {'in_rat':'sri','out':'sro','hn':'srh','df':'srd','reb':'srr','pot':'srp'};
+  const htToInches = h => { const m = h.match(/(\d+)'(\d+)/); return m ? +m[1]*12 + +m[2] : 0; };
   dcPool.sort((a, b) => {
     let cmp;
     const rf = siteRankField[col];
     if (rf && a[rf] != null && b[rf] != null) {
-      // Use site rank: lower rank = better, invert so "best first" (dcSortAsc=false) works correctly
       cmp = b[rf] - a[rf];
+    } else if (col === 'ht') {
+      cmp = htToInches(a.ht) - htToInches(b.ht);
     } else if (!isNaN(parseFloat(a[col])) && !isNaN(parseFloat(b[col]))) {
       cmp = parseFloat(a[col]) - parseFloat(b[col]);
     } else {
@@ -7438,7 +7439,7 @@ function campLookup(query) {
   const norm    = s => s.toLowerCase().replace(/'/g, '').replace(/-/g, ' ').replace(/\./g, '');
   const q       = norm(query);
   // If query contains clear FAQ context words, skip player lookup
-  const FAQ_CTX = ['free agent','free agency','salary','contract','rules','cap','exception','buyout','trade','draft pick','reward camp','reward point','how do','how does','what is','what are','who is','tell me','explain'];
+  const FAQ_CTX = ['free agent','free agency','salary','contract','rules','cap','exception','buyout','trade','draft pick','reward camp','reward point','how do','how does','what is','what are','who is','tell me','explain','schedule'];
   if (FAQ_CTX.some(p => q.includes(p))) return null;
   const qTokens = q.split(/\s+/).filter(t => t.length > 1);
   if (!qTokens.length) return null;
@@ -7549,7 +7550,7 @@ function _buildDisambigHtml(names, origQuery) {
 
 function statLookup(query) {
   if (!statDataReady) return null;
-  const FAQ_CTX = ['free agent','free agency','salary','contract','rules','cap','exception','buyout','trade','draft pick','reward camp','reward point','how do','how does','what is','what are','who is','tell me','explain'];
+  const FAQ_CTX = ['free agent','free agency','salary','contract','rules','cap','exception','buyout','trade','draft pick','reward camp','reward point','how do','how does','what is','what are','who is','tell me','explain','schedule'];
   if (FAQ_CTX.some(p => query.toLowerCase().includes(p))) return null;
 
   const entries = _findStatEntries(query);
@@ -7789,7 +7790,7 @@ function allAwardHistoryLookup(awardKey) {
 // "champion [year]" -> champion, "roster [team] [year]" -> team roster, "stats" -> stats, "camps" -> camps, neither -> camps + stats
 function playerLookup(query) {
   const q = query.toLowerCase();
-  const FAQ_CTX = ['free agent','free agency','salary','contract','rules','cap','exception','buyout','trade','draft pick','reward camp','reward point','how do','how does','what is','what are','who is','tell me','explain'];
+  const FAQ_CTX = ['free agent','free agency','salary','contract','rules','cap','exception','buyout','trade','draft pick','reward camp','reward point','how do','how does','what is','what are','who is','tell me','explain','schedule'];
   if (FAQ_CTX.some(p => q.includes(p))) return null;
 
   const wantsStats    = /\bstats?\b/.test(q);
