@@ -7833,7 +7833,7 @@ function rosterLookup(query) {
   if (!bestTeam) return null;
 
   const POS_ORDER = { 'C': 0, 'PF': 1, 'SF': 2, 'SG': 3, 'PG': 4 };
-  const roster = seasonPlayers
+  const statRoster = seasonPlayers
     .filter(p => p.team === bestTeam)
     .sort((a, b) => {
       const pa = POS_ORDER[a.pos] ?? 9, pb = POS_ORDER[b.pos] ?? 9;
@@ -7841,11 +7841,11 @@ function rosterLookup(query) {
       return (b.mpg || 0) - (a.mpg || 0);
     });
 
-  if (!roster.length) return null;
+  if (!statRoster.length) return null;
 
   const f1 = v => v != null ? (+v).toFixed(1) : '--';
   const lines = [bestTeam + ' — ' + season.order + ' Roster', ''];
-  for (const p of roster) {
+  for (const p of statRoster) {
     const awards = (p.awards && p.awards.length) ? '  🏅' + p.awards.join(', ') : '';
     lines.push(p.pos + '  ' + p.name + awards);
     lines.push('     ' + f1(p.ppg) + ' PPG · ' + f1(p.rpg) + ' RPG · ' + f1(p.apg) + ' APG · ' +
