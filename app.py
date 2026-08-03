@@ -34,7 +34,7 @@ _SHEETS_CSV_URL  = ('https://docs.google.com/spreadsheets/d/'
 _stat_cache      = None
 _stat_cache_time = 0
 _STAT_CACHE_TTL  = 300   # 5 minutes — keeps FAQ roster data fresh
-_STAT_BOOK_URL   = 'https://storied-creponne-7d87ff.netlify.app/'
+_STAT_BOOK_URL   = 'https://slnstatbook.com/'
 
 def _clean_camp_text(s):
     cleaned = re.sub(r'[^\x20-\x7E]', '', s)       # strip non-ASCII
