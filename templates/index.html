@@ -442,6 +442,7 @@
     .tab-panel.active { display: block; }
 
     #tabStatBook { padding: 0; }
+    #tabSLN { padding: 0; }
 
     /* ── Trade Machine ── */
     .tm-columns {
@@ -1756,6 +1757,7 @@
     <button class="tab-btn" id="tabBtnTrade" onclick="switchTab('trade')">⇄ Trade Machine</button>
     <button class="tab-btn" id="tabBtnDraft" onclick="switchTab('draft')">🏀 Draft Center</button>
     <button class="tab-btn" id="tabBtnStatBook" onclick="switchTab('statbook')">📊 Stat Book</button>
+    <button class="tab-btn" id="tabBtnSLN" onclick="switchTab('sln')">🏀 SLN</button>
   </div>
 
   <!-- ── TAB 1: Depth Chart Builder ── -->
@@ -2432,6 +2434,15 @@
     </iframe>
   </div><!-- /tabStatBook -->
 
+  <div class="tab-panel" id="tabSLN">
+    <iframe id="slnFrame"
+      src="about:blank"
+      style="width:100%;height:calc(100vh - 116px);border:none;display:block;border-radius:10px;"
+      loading="lazy"
+      title="SLN">
+    </iframe>
+  </div><!-- /tabSLN -->
+
 </div><!-- /container -->
 
 <!-- Clear All Confirmation Modal -->
@@ -2511,10 +2522,12 @@ function switchTab(tab) {
   document.getElementById('tabTrade').classList.toggle('active', tab === 'trade');
   document.getElementById('tabDraft').classList.toggle('active', tab === 'draft');
   document.getElementById('tabStatBook').classList.toggle('active', tab === 'statbook');
+  document.getElementById('tabSLN').classList.toggle('active', tab === 'sln');
   document.getElementById('tabBtnDepth').classList.toggle('active', tab === 'depth');
   document.getElementById('tabBtnTrade').classList.toggle('active', tab === 'trade');
   document.getElementById('tabBtnDraft').classList.toggle('active', tab === 'draft');
   document.getElementById('tabBtnStatBook').classList.toggle('active', tab === 'statbook');
+  document.getElementById('tabBtnSLN').classList.toggle('active', tab === 'sln');
   // Build Trade Machine logo grids + load owed picks lazily on first visit
   if (tab === 'trade' && !tmLogoGridsBuilt) {
     buildTMLogoGrids();
@@ -2541,6 +2554,13 @@ function switchTab(tab) {
     const frame = document.getElementById('statBookFrame');
     if (frame && frame.src === 'about:blank') {
       frame.src = 'https://slnstatbook.com/';
+    }
+  }
+  // Lazy-load SLN iframe on first visit
+  if (tab === 'sln') {
+    const frame = document.getElementById('slnFrame');
+    if (frame && frame.src === 'about:blank') {
+      frame.src = 'https://simleaguenirvana.com/index.php';
     }
   }
 }
