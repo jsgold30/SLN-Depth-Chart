@@ -2572,7 +2572,6 @@ const POSITIONS = ['C', 'PF', 'SF', 'SG', 'PG'];
 const GRADE_ORDER = ['F','D-','D','D+','C-','C','C+','B-','B','B+','A-','A','A+'];
 
 let roster = [];
-let loadedTeamName = '';
 let lastGeneratedState = null;
 let undoStack = [];
 
@@ -2679,7 +2678,6 @@ async function loadRoster(restoring = false) {
     if (data.error) { setStatus(data.error, 'err'); return; }
 
     roster = data.players;
-    loadedTeamName = data.team_name || '';
     // Reset FA state on new roster load
     faLoaded = false;
     faPlayers = [];
@@ -7484,7 +7482,7 @@ let STAT_PLAYERS   = [];  // flat array of {season, name, team, pos, age, ppg, .
 let STAT_SEASONS   = [];  // [{key, label, order, played}]
 let STAT_CHAMPS    = {};  // season key -> roster number of champion
 let statDataReady  = false;
-(function loadStatData() {
+function loadStatData() {
   fetch('/api/stat-book')
     .then(r => r.json())
     .then(d => {
@@ -7494,7 +7492,9 @@ let statDataReady  = false;
       statDataReady = true;
     })
     .catch(() => { statDataReady = true; });
-})();
+}
+loadStatData();
+setInterval(loadStatData, 5 * 60 * 1000);
 
 function campLookup(query) {
   if (!campDataReady || !Object.keys(CAMP_DATA).length) return null;
@@ -7780,30 +7780,6 @@ function championLookup(query) {
 function rosterLookup(query) {
   const q = query.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
 
-  // If the user has a roster loaded in the depth chart, and the query matches
-  // that team, use the live roster data (reflects trades not yet in stat book).
-  if (roster.length > 0 && loadedTeamName) {
-    const normTeam = loadedTeamName.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
-    const tokens = normTeam.split(/\s+/).filter(t => t.length > 3);
-    const matched = tokens.filter(t => q.includes(t)).length;
-    if (matched > 0 && matched / tokens.length >= 0.5) {
-      const POS_ORDER = { 'C': 0, 'PF': 1, 'SF': 2, 'SG': 3, 'PG': 4 };
-      const sorted = roster.filter(p => !p.is_fa).sort((a, b) => {
-        const pa = POS_ORDER[a.pos] ?? 9, pb = POS_ORDER[b.pos] ?? 9;
-        return pa !== pb ? pa - pb : (a.name > b.name ? 1 : -1);
-      });
-      const lines = [loadedTeamName + ' — Current Roster', ''];
-      for (const p of sorted) {
-        lines.push(p.pos + '  ' + p.name);
-        const rats = [p.in_rating, p.out, p.hn, p.df, p.reb, p.pot].filter(Boolean);
-        if (rats.length) lines.push('     In ' + p.in_rating + ' · Out ' + p.out +
-          ' · Hn ' + p.hn + ' · Df ' + p.df + ' · Reb ' + p.reb + ' · Pot ' + p.pot);
-        lines.push('');
-      }
-      return lines.join('\n');
-    }
-  }
-
   if (!statDataReady || !STAT_PLAYERS.length) return null;
 
   // Extract year; default to latest played season
@@ -7844,7 +7820,7 @@ function rosterLookup(query) {
   if (!statRoster.length) return null;
 
   const f1 = v => v != null ? (+v).toFixed(1) : '--';
-  const lines = [bestTeam + ' — ' + season.order + ' Roster', ''];
+  const lines = [bestTeam + ' — ' + season.order + ' Roster', '*according to Statbook*', ''];
   for (const p of statRoster) {
     const awards = (p.awards && p.awards.length) ? '  🏅' + p.awards.join(', ') : '';
     lines.push(p.pos + '  ' + p.name + awards);

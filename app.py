@@ -33,6 +33,7 @@ _SHEETS_CSV_URL  = ('https://docs.google.com/spreadsheets/d/'
 
 _stat_cache      = None
 _stat_cache_time = 0
+_STAT_CACHE_TTL  = 300   # 5 minutes — keeps FAQ roster data fresh
 _STAT_BOOK_URL   = 'https://storied-creponne-7d87ff.netlify.app/'
 
 def _clean_camp_text(s):
@@ -1340,7 +1341,7 @@ def camp_history():
 def stat_book():
     global _stat_cache, _stat_cache_time
     now = time.time()
-    if _stat_cache is not None and now - _stat_cache_time < _CAMP_CACHE_TTL:
+    if _stat_cache is not None and now - _stat_cache_time < _STAT_CACHE_TTL:
         return jsonify(_stat_cache)
     try:
         resp = _fetch_url(_STAT_BOOK_URL, timeout=20)
