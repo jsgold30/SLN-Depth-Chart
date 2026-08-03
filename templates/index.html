@@ -953,11 +953,9 @@
       .tab-btn { font-size: 0.62rem; padding: 8px 6px; letter-spacing: 0.5px; }
 
       /* Collapse two-column layout to single column on mobile */
-      #tabDraft > [style*="grid-template-columns"] {
+      .dc-main-grid {
         display: block !important;
-      }
-      #tabDraft > [style*="grid-template-columns"] > div > [style*="flex-direction"] {
-        display: block !important;
+        margin-left: 0 !important;
       }
 
       /* Order list and results: use fixed heights that work on phone */
@@ -2281,13 +2279,7 @@
   <!-- ── TAB 3: Draft Center ── -->
   <div class="tab-panel" id="tabDraft">
 
-    <!-- Two-column layout: pool on left, order+results on right -->
-    <div style="display:grid;grid-template-columns:3fr 2fr;gap:16px;align-items:start;">
-
-    <!-- LEFT: Selected Panel + Notes + Player Pool -->
-    <div>
-
-    <!-- Selected Player Panel (above pool) -->
+    <!-- Selected Player Panel — full width, above both columns -->
     <div class="dc-selected-panel" id="dcSelectedPanel">
       <div>
         <div class="dc-selected-name" id="dcSelectedName">—</div>
@@ -2297,17 +2289,21 @@
       <button class="dc-queue-btn" id="dcQueueAddBtn" onclick="dcToggleQueue()">+ Queue</button>
       <button class="dc-selected-clear" onclick="dcClearSelection()" title="Clear selection">✕</button>
     </div>
-    <!-- Scout Notes Panel (above pool) -->
+    <!-- Scout Notes Panel — full width, above both columns -->
     <div class="dc-notes-panel" id="dcNotesPanel">
       <div class="dc-notes-label">Scout Notes</div>
-      <!-- Read-only view (mod locked, note exists) -->
       <div class="dc-notes-readonly" id="dcNotesReadonly"></div>
-      <!-- Edit view (mod unlocked) -->
       <div id="dcNotesEditWrap" style="display:none;">
         <textarea class="dc-notes-ta" id="dcNotesTa" placeholder="Add scouting notes for this player…" rows="3"></textarea>
         <div><button class="dc-notes-save-btn" onclick="dcSaveNote()">Save Note</button></div>
       </div>
     </div>
+
+    <!-- Two-column layout: pool on left, order+results on right -->
+    <div class="dc-main-grid" style="display:grid;grid-template-columns:3fr 2fr;gap:16px;align-items:start;">
+
+    <!-- LEFT: Player Pool -->
+    <div>
 
     <!-- Player Pool -->
     <div class="card">
