@@ -2434,6 +2434,19 @@
 
 </div><!-- /container -->
 
+<!-- Clear All Confirmation Modal -->
+<div class="dc-add-pick-overlay" id="dcClearAllOverlay" onclick="if(event.target===this)document.getElementById('dcClearAllOverlay').style.display='none'">
+  <div class="dc-add-pick-modal" style="max-width:340px;text-align:center;">
+    <button onclick="document.getElementById('dcClearAllOverlay').style.display='none'" style="position:absolute;top:10px;right:14px;background:none;border:none;color:#94a3b8;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
+    <h3 style="margin-bottom:10px;">Clear All Draft Data?</h3>
+    <p style="font-size:0.85rem;color:#94a3b8;margin-bottom:20px;">This will remove all picks, results, and the draft order so you can start fresh.</p>
+    <div class="dc-add-pick-actions">
+      <button class="dc-btn-cancel" onclick="document.getElementById('dcClearAllOverlay').style.display='none'">No</button>
+      <button class="dc-btn-confirm" style="background:#7f1d1d;border-color:#b91c1c;" onclick="dcClearAllConfirmed()">Yes, Clear All</button>
+    </div>
+  </div>
+</div>
+
 <!-- Draft Mod PIN Modal -->
 <div class="dc-add-pick-overlay" id="dcModPinOverlay" onclick="if(event.target===this)dcHideModPin()">
   <div class="dc-add-pick-modal" style="max-width:300px;">
@@ -5867,9 +5880,9 @@ function dcRenderOrder() {
     // Trade: show full chain e.g. SAS → SAC → DEN
     const tradeParts = team.trade ? team.trade.split(' to ').map(s => s.trim()).filter(Boolean) : [];
     const tradeCell = tradeParts.length >= 2
-      ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;word-break:break-word;">${tradeParts.join('<span style="color:#64748b;"> → </span>')}</span>`
+      ? `<span style="font-size:0.7rem;color:#b45309;font-weight:600;word-break:break-word;">${tradeParts.join('<span style="color:#64748b;"> → </span>')}</span>`
       : tradeParts.length === 1
-        ? `<span style="font-size:0.7rem;color:#fbbf24;font-weight:600;word-break:break-word;">${tradeParts[0]}</span>`
+        ? `<span style="font-size:0.7rem;color:#b45309;font-weight:600;word-break:break-word;">${tradeParts[0]}</span>`
         : `<span style="color:#334155;">—</span>`;
 
     let rowBtn = '';
@@ -6998,7 +7011,18 @@ function dcConfirmAddPick() {
     entry.draftedPos    = dcOrder[dcEditingIdx].draftedPos    || '';
     dcOrder[dcEditingIdx] = entry;
   } else {
-    dcOrder.push(entry);
+    // Insert at the end of the target round, not blindly at the end of the array
+    const targetRound = entry.round || 1;
+    let lastOfRound = -1;
+    for (let i = 0; i < dcOrder.length; i++) {
+      if ((dcOrder[i].round || 1) === targetRound) lastOfRound = i;
+    }
+    if (lastOfRound >= 0) {
+      dcOrder.splice(lastOfRound + 1, 0, entry);
+    } else {
+      const firstHigher = dcOrder.findIndex(p => (p.round || 1) > targetRound);
+      dcOrder.splice(firstHigher >= 0 ? firstHigher : dcOrder.length, 0, entry);
+    }
   }
 
   dcHideAddPick();
@@ -7039,7 +7063,11 @@ function dcRenderLog() {
 
 // ── Reset draft ───────────────────────────────────────────────────────────
 function dcClearAll() {
-  if (!confirm('Clear everything? This will remove all picks, results, and the draft order so you can start fresh.')) return;
+  document.getElementById('dcClearAllOverlay').style.display = 'flex';
+}
+
+function dcClearAllConfirmed() {
+  document.getElementById('dcClearAllOverlay').style.display = 'none';
   dcPool        = [...dcAllPlayers];
   dcCurrentPick = 0;
   dcResults     = [];
