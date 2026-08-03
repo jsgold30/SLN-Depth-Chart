@@ -993,14 +993,7 @@
     #tabDraft .card { margin-bottom: 16px; }
     /* All grid/flex children must be able to shrink below content width */
     .dc-main-grid > div { min-width: 0; }
-    .dc-main-grid > div:last-child > .card { min-width: 0; overflow: hidden; }
-    /* Pool card stretches to match draft order height */
-    .dc-main-grid > div:first-child > .card {
-      flex: 1; margin-bottom: 0; display: flex; flex-direction: column; min-width: 0; overflow: hidden;
-    }
-    .dc-main-grid > div:first-child > .card .dc-pool-wrap {
-      flex: 1; max-height: none; min-height: 0;
-    }
+    .dc-main-grid > div > .card { min-width: 0; }
     .dc-section-title {
       font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 0.06em; color: #94a3b8; margin-bottom: 10px;
@@ -2319,7 +2312,7 @@
     </div>
 
     <!-- Two-column layout: pool on left, order+results on right -->
-    <div class="dc-main-grid" style="display:grid;grid-template-columns:3fr 2fr;gap:16px;align-items:stretch;min-width:0;">
+    <div class="dc-main-grid" style="display:grid;grid-template-columns:3fr 2fr;gap:16px;align-items:start;min-width:0;">
 
     <!-- LEFT: Player Pool -->
     <div style="display:flex;flex-direction:column;min-width:0;">
@@ -2376,7 +2369,7 @@
     </div><!-- /left col -->
 
     <!-- RIGHT: Draft Order + Draft Results side by side -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;min-width:0;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;min-width:0;">
 
       <!-- Draft Order -->
       <div class="card">
