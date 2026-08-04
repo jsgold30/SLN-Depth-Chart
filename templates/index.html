@@ -1256,6 +1256,12 @@
     .dc-log-table td { padding: 6px 8px; border-bottom: 1px solid #1a2535; color: #e2e8f0; }
     .dc-log-table tr:last-child td { border-bottom: none; }
     .dc-log-empty { color: #64748b; font-size: 0.82rem; padding: 16px 0; text-align: center; }
+    .dc-note-tooltip {
+      position: fixed; z-index: 9999; pointer-events: none; display: none;
+      background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+      padding: 10px 13px; color: #e2e8f0; font-size: 0.74rem; line-height: 1.55;
+      max-width: 300px; white-space: pre-wrap; box-shadow: 0 4px 16px rgba(0,0,0,0.45);
+    }
     /* Add Pick modal */
     .dc-add-pick-overlay {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
@@ -1455,6 +1461,7 @@
     /* Draft results log table */
     .dc-log-table th { background: #f5e8c8 !important; color: #7c5a1a !important; border-color: #e2cc90 !important; }
     .dc-log-table td { color: #3a2e1a !important; border-color: #e8d9b0 !important; }
+    .dc-note-tooltip { background: #3a2e1a !important; border-color: #c4a05a !important; color: #f5e8c8 !important; }
     .dc-log-empty { color: #a07840 !important; }
     /* Player pool table */
     .dc-pool-table th { background: #f5e8c8 !important; color: #7c5a1a !important; border-color: #e2cc90 !important; }
@@ -2448,6 +2455,7 @@
 </div><!-- /container -->
 
 <!-- Clear All Confirmation Modal -->
+<div id="dcNoteTooltip" class="dc-note-tooltip"></div>
 <div class="dc-add-pick-overlay" id="dcClearAllOverlay" onclick="if(event.target===this)document.getElementById('dcClearAllOverlay').style.display='none'">
   <div class="dc-add-pick-modal" style="max-width:340px;text-align:center;">
     <button onclick="document.getElementById('dcClearAllOverlay').style.display='none'" style="position:absolute;top:10px;right:14px;background:none;border:none;color:#94a3b8;font-size:1.1rem;cursor:pointer;line-height:1;">✕</button>
@@ -7064,6 +7072,19 @@ function dcRenderLog() {
 
   // Show in ascending pick-number order
   const sortedResults = [...dcResults].sort((a, b) => a.pick - b.pick);
+  const tip = document.getElementById('dcNoteTooltip');
+  const showTip = (e, text) => {
+    tip.textContent = text;
+    tip.style.display = 'block';
+    tip.style.left = (e.clientX + 14) + 'px';
+    tip.style.top  = Math.min(e.clientY - 8, window.innerHeight - tip.offsetHeight - 12) + 'px';
+  };
+  const moveTip = e => {
+    tip.style.left = (e.clientX + 14) + 'px';
+    tip.style.top  = Math.min(e.clientY - 8, window.innerHeight - tip.offsetHeight - 12) + 'px';
+  };
+  const hideTip = () => { tip.style.display = 'none'; };
+
   sortedResults.forEach(r => {
     const tr = document.createElement('tr');
     const tradeTd = r.trade
@@ -7076,9 +7097,22 @@ function dcRenderLog() {
       <td style="color:#64748b;">${r.pick}</td>
       <td>${r.teamName}</td>
       ${tradeTd}
-      <td style="font-weight:600;">${r.rescinded ? '<span style="color:#ef4444;font-style:italic;">(Rescinded)</span>' : (r.playerName || '<span style="color:#334155;">—</span>')}</td>
+      <td class="dc-log-player-cell" style="font-weight:600;">${r.rescinded ? '<span style="color:#ef4444;font-style:italic;">(Rescinded)</span>' : (r.playerName || '<span style="color:#334155;">—</span>')}</td>
       ${posTd}
     `;
+    // Attach scout-note tooltip if this player has notes
+    if (!r.rescinded && r.playerName) {
+      const player = dcAllPlayers.find(p => p.name === r.playerName);
+      const note = player ? dcPlayerNotes[player.id] : null;
+      if (note) {
+        const playerTd = tr.querySelector('.dc-log-player-cell');
+        playerTd.style.cursor = 'help';
+        playerTd.style.textDecoration = 'underline dotted';
+        playerTd.addEventListener('mouseenter', e => showTip(e, note));
+        playerTd.addEventListener('mousemove', moveTip);
+        playerTd.addEventListener('mouseleave', hideTip);
+      }
+    }
     tbody.appendChild(tr);
   });
 }
