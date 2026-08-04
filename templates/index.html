@@ -7108,20 +7108,10 @@ function dcRenderLog() {
         const playerTd = tr.querySelector('.dc-log-player-cell');
         playerTd.style.cursor = 'pointer';
         playerTd.style.textDecoration = 'underline dotted';
-        // Desktop hover tooltip
+        // Hover tooltip (desktop)
         playerTd.addEventListener('mouseenter', e => showTip(e, note));
         playerTd.addEventListener('mousemove', moveTip);
         playerTd.addEventListener('mouseleave', hideTip);
-        // Tap / click: toggle inline note row (works on mobile)
-        let noteRow = null;
-        playerTd.addEventListener('click', () => {
-          hideTip();
-          if (noteRow) { noteRow.remove(); noteRow = null; return; }
-          noteRow = document.createElement('tr');
-          const esc = note.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-          noteRow.innerHTML = `<td colspan="5" style="padding:8px 12px 10px;font-size:0.72rem;line-height:1.55;white-space:pre-wrap;color:#94a3b8;background:#0c1a2e;border-bottom:1px solid #1a2535;">${esc}</td>`;
-          tr.after(noteRow);
-        });
       }
     }
     tbody.appendChild(tr);
