@@ -1542,48 +1542,32 @@ def faq_query():
     if not question:
         return jsonify({'error': 'No question provided'}), 400
 
-    # Detect whether this is a rules/league question or a stats/player question
-    q_lower = question.lower()
-    rules_keywords = [
-        'cap', 'salary', 'contract', 'trade', 'draft', 'free agent', 'exception',
-        'bird', 'mle', 'lle', 'buyout', 'rule', 'how does', 'how do', 'what is',
-        'what are', 'explain', 'dues', 'reward', 'camp', 'format', 'season length',
-        'sim', 'fbb', 'fast break', 'commish', 'gm', 'schedule', 'playoffs'
-    ]
-    is_rules_question = any(kw in q_lower for kw in rules_keywords)
+    data = _get_stat_data()
+    if not data:
+        return jsonify({'error': 'Stat book data unavailable'}), 503
+    stat_context = _build_stat_context(data)
 
-    if is_rules_question:
-        # Rules question: use FAQ rules only, no stat book
-        user_content = f'=== SLN LEAGUE RULES & FAQ ===\n{faq_rules}\n\nQuestion: {question}'
-        system_msg = (
-            'You are an assistant for SLN (Sim League Nirvana), a fantasy basketball simulation league. '
-            'Answer questions using ONLY the SLN League Rules and FAQ provided. '
-            'Be concise and direct. If the answer is not in the rules, say so.'
-        )
-    else:
-        # Stats/player question: use stat book only, no FAQ rules
-        data = _get_stat_data()
-        if not data:
-            return jsonify({'error': 'Stat book data unavailable'}), 503
-        stat_context = _build_stat_context(data)
-        user_content = f'=== SLN STAT BOOK ===\n{stat_context}\n\nQuestion: {question}'
-        system_msg = (
-            'You are an assistant for SLN (Sim League Nirvana), a fantasy basketball simulation league. '
-            'The SLN Stat Book is your ONLY source of truth for ALL player information. '
-            'This league uses real NBA player names but their careers are entirely different from real NBA history — '
-            'they were drafted and traded by human GMs starting in 1996, so every team, stat, ring, and award '
-            'is different from what happened in real life. '
-            'Read the stat book data carefully. Every answer must come directly from the data provided. '
-            'Include the exact team name from the "teams:" field in the data. '
-            'If a player or fact is not in the stat book, say: "I don\'t see that in the SLN stat book." '
-            'Never use your training knowledge about real NBA history under any circumstances.'
-        )
+    user_content = ''
+    if faq_rules:
+        user_content += f'=== SLN LEAGUE RULES & FAQ ===\n{faq_rules}\n\n'
+    user_content += f'=== SLN STAT BOOK ===\n{stat_context}\n\nQuestion: {question}'
+
+    system_msg = (
+        'You are the assistant for SLN (Sim League Nirvana), a fantasy basketball simulation league. '
+        'Every question you receive is about SLN — its stat book, its history, or its league rules. '
+        'Your ONLY sources of truth are the SLN League Rules/FAQ and the SLN Stat Book provided above. '
+        'This league uses real NBA player names but careers are entirely different from real NBA history — '
+        'players were drafted and traded by human GMs starting in 1996. '
+        'Every team, stat, ring, and award must come directly from the provided data. '
+        'Never use your training knowledge about real NBA history. '
+        'If the answer is not in the provided data, say: "I don\'t see that in the SLN data."'
+    )
 
     try:
         import anthropic as _anthropic
         client = _anthropic.Anthropic(api_key=api_key)
         msg = client.messages.create(
-            model='claude-haiku-4-5-20251001',
+            model='claude-sonnet-4-5',
             max_tokens=600,
             system=system_msg,
             messages=[{'role': 'user', 'content': user_content}]
