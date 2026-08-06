@@ -8036,7 +8036,8 @@ async function _faqDispatch(text) {
   // LLM path
   setTimeout(() => {
     const typingId = _faqShowTyping();
-    const faqRulesText = FAQ_DATA.map(e => `Q: ${e.question}\nA: ${e.answer}`).join('\n\n');
+    const _stripHtml = s => s.replace(/<[^>]*>/g, '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');
+    const faqRulesText = FAQ_DATA.map(e => `Q: ${_stripHtml(e.question)}\nA: ${_stripHtml(e.answer)}`).join('\n\n');
     fetch('/api/faq-query', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
