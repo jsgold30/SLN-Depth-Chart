@@ -8043,8 +8043,14 @@ async function _faqDispatch(text) {
       body: JSON.stringify({ question: resolved.question, faq_rules: faqRulesText })
     })
       .then(r => r.json())
-      .then(d => _faqReplaceTyping(typingId, d.answer || d.error || FAQ_FALLBACK))
-      .catch(() => _faqReplaceTyping(typingId, FAQ_FALLBACK));
+      .then(d => {
+        if (d.answer) {
+          _faqReplaceTyping(typingId, d.answer);
+        } else {
+          _faqReplaceTyping(typingId, playerLookup(resolved.question) || faqMatch(resolved.question));
+        }
+      })
+      .catch(() => _faqReplaceTyping(typingId, playerLookup(resolved.question) || faqMatch(resolved.question)));
   }, 220);
 }
 
