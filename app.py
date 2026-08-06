@@ -1464,8 +1464,8 @@ def _build_stat_context(data):
         lines.append(f'{aw}: {", ".join(f"{n}({c})" for n,c in winners)}')
     lines.append('')
 
-    # ── Career stats + team history (all players with 2+ seasons or any ring/award) ──
-    lines.append('--- CAREER STATS & TEAM HISTORY (PPG/RPG/APG/SPG/BPG, G, Seasons, Teams by year) ---')
+    # ── Per-player career summary (team history + career totals) ──
+    lines.append('--- PLAYER CAREER SUMMARIES (career PPG/RPG/APG, teams by year) ---')
     included = {n for n, c in career.items()
                 if c['seasons'] >= 2 or n in ring_map or n in award_career}
     for name in sorted(included):
@@ -1474,22 +1474,68 @@ def _build_stat_context(data):
             continue
         extras = []
         if name in ring_map:
-            extras.append(f'rings:{len(ring_map[name])}')
+            extras.append(f'rings:{len(ring_map[name])}({",".join(str(y) for y in sorted(ring_map[name]))})')
         if name in award_career:
-            extras.append('awards:' + ','.join(f'{a}x{cnt}' for a, cnt in sorted(award_career[name].items())))
-        # Compact team history: deduplicate consecutive same-team entries
+            extras.append('career_awards:' + ','.join(f'{a}x{cnt}' for a, cnt in sorted(award_career[name].items())))
         hist = sorted(team_history[name], key=lambda x: x[0])
         seen, compact = None, []
         for yr, tm in hist:
             if tm != seen:
                 compact.append(f'{yr}-{tm}')
                 seen = tm
-        line = (f'{name}: {cavg(name,"pts")}/{cavg(name,"reb")}/{cavg(name,"ast")}/'
-                f'{cavg(name,"stl")}/{cavg(name,"blk")} '
-                f'{int(c["g"])}G {c["seasons"]}Y | teams: {", ".join(compact)}')
+        line = (f'{name}: {cavg(name,"pts")}/{cavg(name,"reb")}/{cavg(name,"ast")} career avg, '
+                f'{int(c["g"])}G, {c["seasons"]}Y | teams: {", ".join(compact)}')
         if extras:
             line += ' [' + ' '.join(extras) + ']'
         lines.append(line)
+    lines.append('')
+
+    # ── Per-team history: stats and awards earned WHILE on each team ──
+    team_player_stats = defaultdict(lambda: defaultdict(
+        lambda: {'g': 0, 'pts': 0, 'reb': 0, 'ast': 0, 'seasons': 0, 'awards': [], 'years': []}
+    ))
+    for p in players:
+        if p.get('season') == 'current':
+            continue
+        team = p.get('team', '')
+        name = p['name']
+        yr   = season_year.get(p.get('season'), p.get('season'))
+        g    = p.get('g', 0) or 0
+        team_player_stats[team][name]['g']       += g
+        team_player_stats[team][name]['pts']     += (p.get('ppg') or 0) * g
+        team_player_stats[team][name]['reb']     += (p.get('rpg') or 0) * g
+        team_player_stats[team][name]['ast']     += (p.get('apg') or 0) * g
+        team_player_stats[team][name]['seasons'] += 1
+        team_player_stats[team][name]['years'].append(yr)
+        for aw in (p.get('awards') or []):
+            team_player_stats[team][name]['awards'].append(f'{aw}({yr})')
+
+    team_champs = defaultdict(list)
+    for sk, rn in champs.items():
+        yr = season_year.get(sk, sk)
+        for p in players:
+            if p.get('season') == sk and p.get('rn') == rn:
+                team_champs[p.get('team', '')].append(yr)
+                break
+
+    lines.append('--- TEAM HISTORIES (stats/awards earned while on each team) ---')
+    for team in sorted(team_player_stats.keys()):
+        champ_years = sorted(set(team_champs.get(team, [])))
+        champ_str = f' | Championships: {",".join(str(y) for y in champ_years)}' if champ_years else ''
+        lines.append(f'{team}{champ_str}:')
+        roster = team_player_stats[team]
+        top = sorted(roster.items(), key=lambda x: -(x[1]['pts'] / max(x[1]['g'], 1)))[:20]
+        for pname, s in top:
+            if s['g'] < 1:
+                continue
+            ppg = round(s['pts'] / s['g'], 1)
+            rpg = round(s['reb'] / s['g'], 1)
+            apg = round(s['ast'] / s['g'], 1)
+            yr_range = f'{min(s["years"])}-{max(s["years"])}' if s['years'] else ''
+            ring_here = [y for y in champ_years if y in s['years']]
+            ring_str  = f' 🏆{",".join(str(y) for y in ring_here)}' if ring_here else ''
+            aw_str    = f' | Awards here: {", ".join(s["awards"])}' if s['awards'] else ''
+            lines.append(f'  {pname} ({yr_range}): {ppg}/{rpg}/{apg} {int(s["g"])}G{ring_str}{aw_str}')
     lines.append('')
 
     # ── Current season rosters ──
@@ -1498,9 +1544,7 @@ def _build_stat_context(data):
         lines.append('--- CURRENT SEASON ROSTERS ---')
         by_team = defaultdict(list)
         for p in current:
-            by_team[p.get('team', '?')].append(
-                f'{p["name"]}({p.get("ppg",0):.1f}ppg)'
-            )
+            by_team[p.get('team', '?')].append(f'{p["name"]}({p.get("ppg",0):.1f}ppg)')
         for team in sorted(by_team):
             lines.append(f'{team}: {", ".join(by_team[team])}')
 
