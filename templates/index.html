@@ -7631,7 +7631,11 @@ function _findStatEntries(query) {
 
 function _findAmbiguousNames(query) {
   const q = _normName(query);
-  const SKIP = new Set(['stats','stat','camps','camp','awards','award','roster','champion','champions']);
+  const SKIP = new Set(['stats','stat','camps','camp','awards','award','roster','champion','champions',
+    'best','worst','top','most','least','greatest','goat','all','time','ever','history','historic',
+    'who','what','which','when','where','how','many','much','more','than','the','of','in','for',
+    'spurs','lakers','knicks','celtics','heat','bulls','nets','suns','warriors','rockets',
+    'player','players','team','teams','league','season','seasons','year','years']);
   const nameTokens = q.split(/\s+/).filter(t => t.length > 1 && !SKIP.has(t) && !/^(?:19|20)[0-9]{2}$/.test(t));
   if (!nameTokens.length) return [];
   const seen = new Map();
