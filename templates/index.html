@@ -7997,7 +7997,11 @@ function _faqPushResult(result) {
 }
 
 async function _faqResolve(text) {
-  return { llm: true, question: text };
+  const local = playerLookup(text);
+  if (local && local !== FAQ_FALLBACK) return { result: local };
+  const rule = faqMatch(text);
+  if (rule !== FAQ_FALLBACK) return { result: rule };
+  return { result: FAQ_FALLBACK };
 }
 
 function _faqShowTyping() {
