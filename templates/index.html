@@ -8001,7 +8001,8 @@ async function _faqResolve(text) {
   if (local && local !== FAQ_FALLBACK) return { result: local };
   const rule = faqMatch(text);
   if (rule !== FAQ_FALLBACK) return { result: rule };
-  return { result: FAQ_FALLBACK };
+  // Pattern matching found nothing — escalate to LLM
+  return { llm: true, question: text };
 }
 
 function _faqShowTyping() {

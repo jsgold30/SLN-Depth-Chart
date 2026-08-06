@@ -1567,6 +1567,32 @@ def _build_stat_context(data):
     return '\n'.join(lines)
 
 
+def _build_player_maps(players):
+    """Build name→token and token→name maps using stat book player IDs."""
+    name_to_token = {}
+    token_to_name = {}
+    for p in players:
+        name = p.get('name', '').strip()
+        pid  = p.get('id')
+        if name and pid and name not in name_to_token:
+            token = f'PLYR{pid}'
+            name_to_token[name] = token
+            token_to_name[token] = name
+    return name_to_token, token_to_name
+
+
+def _anonymize(text, name_to_token):
+    """Replace player names with PLYR{id} tokens (longest names first)."""
+    for name in sorted(name_to_token.keys(), key=len, reverse=True):
+        text = text.replace(name, name_to_token[name])
+    return text
+
+
+def _deanonymize(text, token_to_name):
+    """Replace PLYR{id} tokens back with real player names."""
+    return re.sub(r'PLYR\d+', lambda m: token_to_name.get(m.group(0), m.group(0)), text)
+
+
 @app.route('/api/faq-query', methods=['POST'])
 def faq_query():
     api_key = os.environ.get('ANTHROPIC_API_KEY', '')
@@ -1582,9 +1608,14 @@ def faq_query():
     data = _get_stat_data()
     if not data:
         return jsonify({'error': 'Stat book data unavailable'}), 503
-    stat_context  = _build_stat_context(data)
-    camp_players  = _get_camp_data()
-    camp_context  = _build_camp_context(camp_players)
+
+    # Build anonymization maps from stat book player list
+    players_raw = data.get('players', {})
+    all_players = list(players_raw.values()) if isinstance(players_raw, dict) else players_raw
+    name_to_token, token_to_name = _build_player_maps(all_players)
+
+    stat_context = _anonymize(_build_stat_context(data), name_to_token)
+    camp_context = _anonymize(_build_camp_context(_get_camp_data()), name_to_token)
 
     user_content = ''
     if faq_rules:
@@ -1599,12 +1630,9 @@ def faq_query():
         'Every question is about SLN. You have three equally authoritative sources — use ALL of them:\n'
         '1. SLN LEAGUE RULES & FAQ: league rules, salary cap, trades, free agency, draft, season format, dues, etc.\n'
         '2. SLN STAT BOOK: every player career, team history, championships, awards, and game stats.\n'
+        '   Player names are replaced with PLYR{id} tokens — use these tokens in your answer.\n'
         '3. PLAYER CAMP DATA: training camp ratings and development history by year for each player.\n'
-        'This league uses real NBA player names but careers differ completely from real NBA history — '
-        'players were drafted by human GMs in 1996 and traded freely, so teams, stats, rings, and awards '
-        'are all different from real life. Never use your training knowledge about real NBA history. '
-        'All answers must come directly from the provided data. '
-        'If something is not in the provided data, say: "I don\'t see that in the SLN data."'
+        'Answer using only the provided data. If something is not in the data, say: "I don\'t see that in the SLN data."'
     )
 
     try:
@@ -1616,7 +1644,8 @@ def faq_query():
             system=system_msg,
             messages=[{'role': 'user', 'content': user_content}]
         )
-        return jsonify({'answer': msg.content[0].text})
+        answer = _deanonymize(msg.content[0].text, token_to_name)
+        return jsonify({'answer': answer})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
