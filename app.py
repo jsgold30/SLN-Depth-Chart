@@ -1380,19 +1380,17 @@ def _get_stat_data():
 
 
 def _build_stat_context(data):
-    """Pre-compute analytics from stat book data for LLM context."""
+    """Build comprehensive stat book context for LLM — all rings, all awards, all careers."""
     from collections import defaultdict
 
     players_raw = data.get('players', {})
     players = list(players_raw.values()) if isinstance(players_raw, dict) else players_raw
     seasons  = data.get('seasons', [])
     champs   = data.get('champs', {})
-    records  = data.get('records', {})
 
     season_year = {s['key']: s['order'] for s in seasons}
-    season_label = {s['key']: s.get('label', str(s['order'])) for s in seasons}
 
-    # Championship rings per player
+    # Championship rings — every player on every championship roster
     ring_map = defaultdict(list)
     for sk, rn in champs.items():
         year = season_year.get(sk, sk)
@@ -1400,15 +1398,16 @@ def _build_stat_context(data):
             if p.get('season') == sk and p.get('rn') == rn:
                 ring_map[p['name']].append(year)
 
-    rings_sorted = sorted(ring_map.items(), key=lambda x: -len(x[1]))
-
-    # Award counts per player
-    award_map = defaultdict(lambda: defaultdict(int))
+    # Award history — season by season (all seasons, all awards)
+    award_by_season = defaultdict(dict)
+    award_career    = defaultdict(lambda: defaultdict(int))
     for p in players:
         for aw in (p.get('awards') or []):
-            award_map[p['name']][aw] += 1
+            yr = season_year.get(p.get('season'), p.get('season'))
+            award_by_season[yr].setdefault(aw, []).append(p['name'])
+            award_career[p['name']][aw] += 1
 
-    # Aggregate career stats per player (weighted by games played)
+    # Career stats — every player with 2+ seasons or any ring/award
     career = defaultdict(lambda: {'g': 0, 'pts': 0, 'reb': 0, 'ast': 0, 'stl': 0, 'blk': 0, 'seasons': 0})
     for p in players:
         if p.get('season') == 'current':
@@ -1423,61 +1422,76 @@ def _build_stat_context(data):
         career[n]['blk']     += (p.get('bpg') or 0) * g
         career[n]['seasons'] += 1
 
-    def avg(n, stat):
+    def cavg(n, stat):
         g = career[n]['g']
         return round(career[n][stat] / g, 1) if g else 0
 
-    def top_career(stat, label, n=10):
-        ranked = sorted(career.keys(), key=lambda x: -avg(x, stat))[:n]
-        return label + ': ' + ', '.join(f'{p} ({avg(p, stat)})' for p in ranked if avg(p, stat) > 0)
-
-    # Award leaders summary
-    def award_leaders(aw_name, n=8):
-        leaders = [(name, counts[aw_name]) for name, counts in award_map.items() if counts.get(aw_name, 0) > 0]
-        leaders.sort(key=lambda x: -x[1])
-        return aw_name + ': ' + ', '.join(f'{p} ({c}x)' for p, c in leaders[:n])
-
     lines = []
 
-    lines.append('=== SIM LEAGUE NIRVANA STAT BOOK ===')
-    lines.append(f'Seasons: {", ".join(str(s["order"]) for s in reversed(seasons) if s.get("played"))}')
+    lines.append('=== SIM LEAGUE NIRVANA (SLN) STAT BOOK ===')
+    played = [s for s in reversed(seasons) if s.get('played')]
+    lines.append(f'Seasons covered: {played[-1]["order"] if played else "?"} – {played[0]["order"] if played else "?"}')
     lines.append('')
 
-    lines.append('--- CHAMPIONSHIP RINGS (most to fewest) ---')
-    for name, years in rings_sorted[:20]:
-        lines.append(f'{name}: {len(years)} rings ({", ".join(str(y) for y in sorted(years))})')
+    # ── Championship rings (ALL ring holders) ──
+    lines.append('--- CHAMPIONSHIP RINGS (all players, most rings first) ---')
+    for name, years in sorted(ring_map.items(), key=lambda x: (-len(x[1]), x[0])):
+        lines.append(f'{name}: {len(years)} ({",".join(str(y) for y in sorted(years))})')
     lines.append('')
 
-    lines.append('--- AWARD LEADERS ---')
-    for aw in ['MVP', 'DPOY', 'ROY', '6th Man', 'All-League 1st', 'All-League 2nd', 'All-League 3rd',
-               'All-Defensive 1st', 'All-Defensive 2nd', 'All-Rookie 1st', 'All-Rookie 2nd']:
-        lines.append(award_leaders(aw))
+    # ── Season-by-season award history (every season, every award) ──
+    lines.append('--- SEASON-BY-SEASON AWARDS ---')
+    for yr in sorted(award_by_season.keys()):
+        parts = [f'{aw}:{",".join(names)}' for aw, names in sorted(award_by_season[yr].items())]
+        lines.append(f'{yr}: {" | ".join(parts)}')
     lines.append('')
 
-    lines.append('--- CAREER STAT LEADERS (career avg, completed seasons only) ---')
-    lines.append(top_career('pts', 'PPG'))
-    lines.append(top_career('reb', 'RPG'))
-    lines.append(top_career('ast', 'APG'))
-    lines.append(top_career('stl', 'SPG'))
-    lines.append(top_career('blk', 'BPG'))
+    # ── Award career totals (all winners, sorted by count) ──
+    lines.append('--- ALL-TIME AWARD COUNTS ---')
+    award_types = ['MVP', 'DPOY', 'ROY', '6th Man',
+                   'All-League 1st', 'All-League 2nd', 'All-League 3rd',
+                   'All-Defensive 1st', 'All-Defensive 2nd',
+                   'All-Rookie 1st', 'All-Rookie 2nd']
+    for aw in award_types:
+        winners = sorted(
+            [(n, c[aw]) for n, c in award_career.items() if c.get(aw, 0) > 0],
+            key=lambda x: -x[1]
+        )
+        lines.append(f'{aw}: {", ".join(f"{n}({c})" for n,c in winners)}')
     lines.append('')
 
-    lines.append('--- SEASON-BY-SEASON CHAMPIONS ---')
-    for sk, rn in sorted(champs.items(), key=lambda x: season_year.get(x[0], 0)):
-        year = season_year.get(sk, sk)
-        champ_players = [p['name'] for p in players if p.get('season') == sk and p.get('rn') == rn]
-        lines.append(f'{year}: {", ".join(champ_players[:8])}{"..." if len(champ_players) > 8 else ""}')
+    # ── Career stats (all players with 2+ seasons or any ring/award) ──
+    lines.append('--- CAREER STATS (PPG/RPG/APG/SPG/BPG, G, Seasons) ---')
+    included = {n for n, c in career.items()
+                if c['seasons'] >= 2 or n in ring_map or n in award_career}
+    for name in sorted(included):
+        c = career[name]
+        if c['g'] < 1:
+            continue
+        extras = []
+        if name in ring_map:
+            extras.append(f'rings:{len(ring_map[name])}')
+        if name in award_career:
+            extras.append('awards:' + ','.join(f'{a}x{n}' for a, n in sorted(award_career[name].items())))
+        line = (f'{name}: {cavg(name,"pts")}/{cavg(name,"reb")}/{cavg(name,"ast")}/'
+                f'{cavg(name,"stl")}/{cavg(name,"blk")} '
+                f'{int(c["g"])}G {c["seasons"]}Y')
+        if extras:
+            line += ' [' + ' '.join(extras) + ']'
+        lines.append(line)
     lines.append('')
 
-    # Current season snapshot
+    # ── Current season rosters ──
     current = [p for p in players if p.get('season') == 'current']
     if current:
-        lines.append('--- CURRENT SEASON ACTIVE PLAYERS (sample) ---')
+        lines.append('--- CURRENT SEASON ROSTERS ---')
         by_team = defaultdict(list)
         for p in current:
-            by_team[p.get('team', '?')].append(p['name'])
-        for team, names in sorted(by_team.items()):
-            lines.append(f'{team}: {", ".join(names[:5])}')
+            by_team[p.get('team', '?')].append(
+                f'{p["name"]}({p.get("ppg",0):.1f}ppg)'
+            )
+        for team in sorted(by_team):
+            lines.append(f'{team}: {", ".join(by_team[team])}')
 
     return '\n'.join(lines)
 
@@ -1489,7 +1503,8 @@ def faq_query():
         return jsonify({'error': 'ANTHROPIC_API_KEY not configured'}), 503
 
     body = request.get_json(silent=True) or {}
-    question = (body.get('question') or '').strip()
+    question   = (body.get('question') or '').strip()
+    faq_rules  = (body.get('faq_rules') or '').strip()
     if not question:
         return jsonify({'error': 'No question provided'}), 400
 
@@ -1497,20 +1512,26 @@ def faq_query():
     if not data:
         return jsonify({'error': 'Stat book data unavailable'}), 503
 
-    context = _build_stat_context(data)
+    stat_context = _build_stat_context(data)
+
+    user_content = ''
+    if faq_rules:
+        user_content += f'=== SLN LEAGUE RULES & FAQ ===\n{faq_rules}\n\n'
+    user_content += f'=== STAT BOOK DATA ===\n{stat_context}\n\nQuestion: {question}'
 
     try:
         import anthropic as _anthropic
         client = _anthropic.Anthropic(api_key=api_key)
         msg = client.messages.create(
             model='claude-haiku-4-5-20251001',
-            max_tokens=400,
+            max_tokens=500,
             system=(
                 'You are a knowledgeable assistant for SLN (Sim League Nirvana), a fantasy basketball simulation league. '
-                'Answer questions using only the stat book data provided. Be concise and direct — 1-4 sentences. '
-                'Use specific names and numbers. If the data does not support a definitive answer, say so briefly.'
+                'You have access to the complete league rules/FAQ and the full stat book. '
+                'Answer questions directly and specifically — use real names and numbers from the data. '
+                'Keep answers concise (1-5 sentences). If the data does not support an answer, say so clearly.'
             ),
-            messages=[{'role': 'user', 'content': f'Stat Book Data:\n{context}\n\nQuestion: {question}'}]
+            messages=[{'role': 'user', 'content': user_content}]
         )
         return jsonify({'answer': msg.content[0].text})
     except Exception as e:

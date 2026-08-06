@@ -8036,10 +8036,11 @@ async function _faqDispatch(text) {
   // LLM path
   setTimeout(() => {
     const typingId = _faqShowTyping();
+    const faqRulesText = FAQ_DATA.map(e => `Q: ${e.question}\nA: ${e.answer}`).join('\n\n');
     fetch('/api/faq-query', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: resolved.question })
+      body: JSON.stringify({ question: resolved.question, faq_rules: faqRulesText })
     })
       .then(r => r.json())
       .then(d => _faqReplaceTyping(typingId, d.answer || d.error || FAQ_FALLBACK))
