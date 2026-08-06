@@ -7997,11 +7997,6 @@ function _faqPushResult(result) {
 }
 
 async function _faqResolve(text) {
-  const local = playerLookup(text);
-  if (local && local !== FAQ_FALLBACK) return { result: local };
-  const rule = faqMatch(text);
-  if (rule !== FAQ_FALLBACK) return { result: rule };
-  // Fall through to LLM
   return { llm: true, question: text };
 }
 
