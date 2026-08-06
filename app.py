@@ -1407,13 +1407,16 @@ def _build_stat_context(data):
             award_by_season[yr].setdefault(aw, []).append(p['name'])
             award_career[p['name']][aw] += 1
 
-    # Career stats — every player with 2+ seasons or any ring/award
-    career = defaultdict(lambda: {'g': 0, 'pts': 0, 'reb': 0, 'ast': 0, 'stl': 0, 'blk': 0, 'seasons': 0})
+    # Career stats + team history — every player with 2+ seasons or any ring/award
+    career       = defaultdict(lambda: {'g': 0, 'pts': 0, 'reb': 0, 'ast': 0, 'stl': 0, 'blk': 0, 'seasons': 0})
+    team_history = defaultdict(list)   # name -> [(year, team), ...]
     for p in players:
         if p.get('season') == 'current':
             continue
         n = p['name']
         g = p.get('g', 0) or 0
+        yr = season_year.get(p.get('season'), p.get('season'))
+        team = p.get('team', '')
         career[n]['g']       += g
         career[n]['pts']     += (p.get('ppg') or 0) * g
         career[n]['reb']     += (p.get('rpg') or 0) * g
@@ -1421,6 +1424,7 @@ def _build_stat_context(data):
         career[n]['stl']     += (p.get('spg') or 0) * g
         career[n]['blk']     += (p.get('bpg') or 0) * g
         career[n]['seasons'] += 1
+        team_history[n].append((yr, team))
 
     def cavg(n, stat):
         g = career[n]['g']
@@ -1460,8 +1464,8 @@ def _build_stat_context(data):
         lines.append(f'{aw}: {", ".join(f"{n}({c})" for n,c in winners)}')
     lines.append('')
 
-    # ── Career stats (all players with 2+ seasons or any ring/award) ──
-    lines.append('--- CAREER STATS (PPG/RPG/APG/SPG/BPG, G, Seasons) ---')
+    # ── Career stats + team history (all players with 2+ seasons or any ring/award) ──
+    lines.append('--- CAREER STATS & TEAM HISTORY (PPG/RPG/APG/SPG/BPG, G, Seasons, Teams by year) ---')
     included = {n for n, c in career.items()
                 if c['seasons'] >= 2 or n in ring_map or n in award_career}
     for name in sorted(included):
@@ -1472,10 +1476,17 @@ def _build_stat_context(data):
         if name in ring_map:
             extras.append(f'rings:{len(ring_map[name])}')
         if name in award_career:
-            extras.append('awards:' + ','.join(f'{a}x{n}' for a, n in sorted(award_career[name].items())))
+            extras.append('awards:' + ','.join(f'{a}x{cnt}' for a, cnt in sorted(award_career[name].items())))
+        # Compact team history: deduplicate consecutive same-team entries
+        hist = sorted(team_history[name], key=lambda x: x[0])
+        seen, compact = None, []
+        for yr, tm in hist:
+            if tm != seen:
+                compact.append(f'{yr}-{tm}')
+                seen = tm
         line = (f'{name}: {cavg(name,"pts")}/{cavg(name,"reb")}/{cavg(name,"ast")}/'
                 f'{cavg(name,"stl")}/{cavg(name,"blk")} '
-                f'{int(c["g"])}G {c["seasons"]}Y')
+                f'{int(c["g"])}G {c["seasons"]}Y | teams: {", ".join(compact)}')
         if extras:
             line += ' [' + ' '.join(extras) + ']'
         lines.append(line)
