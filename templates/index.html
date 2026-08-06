@@ -1694,7 +1694,14 @@
     }
     .faq-msg.bot {
       background: #fff8e8; border: 1px solid #e2cc90; color: #3a2e1a;
-      align-self: flex-start; border-radius: 3px 12px 12px 12px;
+      align-self: flex-start; border-radius: 3px 12px 12px 12px; white-space: pre-wrap;
+    }
+    .faq-msg.bot.typing {
+      color: #a07840; letter-spacing: 0.15em;
+      animation: faqTypingPulse 1.1s ease-in-out infinite;
+    }
+    @keyframes faqTypingPulse {
+      0%, 100% { opacity: 0.5; } 50% { opacity: 1; }
     }
     .faq-msg.user {
       background: #b45309; color: #fff; align-self: flex-end;
@@ -7967,9 +7974,10 @@ function faqToggle() {
 function faqRenderMessages() {
   const el = document.getElementById('faqMessages');
   if (!el) return;
-  el.innerHTML = faqHistory.map(m =>
-    `<div class="faq-msg ${m.role}">${m.html ? m.text : faqEscHtml(m.text)}</div>`
-  ).join('');
+  el.innerHTML = faqHistory.map(m => {
+    const typing = (m.role === 'bot' && m.text === '…') ? ' typing' : '';
+    return `<div class="faq-msg ${m.role}${typing}">${m.html ? m.text : faqEscHtml(m.text)}</div>`;
+  }).join('');
 }
 
 function faqRenderSuggestions() {
@@ -7988,6 +7996,62 @@ function _faqPushResult(result) {
   }
 }
 
+async function _faqResolve(text) {
+  const local = playerLookup(text);
+  if (local && local !== FAQ_FALLBACK) return { result: local };
+  const rule = faqMatch(text);
+  if (rule !== FAQ_FALLBACK) return { result: rule };
+  // Fall through to LLM
+  return { llm: true, question: text };
+}
+
+function _faqShowTyping() {
+  const id = 'faqTyping_' + Date.now();
+  faqHistory.push({ role: 'bot', text: '…', id });
+  faqRenderMessages();
+  faqScrollBottom();
+  return id;
+}
+
+function _faqReplaceTyping(id, result) {
+  const idx = faqHistory.findIndex(m => m.id === id);
+  if (idx !== -1) {
+    if (result && typeof result === 'object' && result.html) {
+      faqHistory[idx] = { role: 'bot', text: result.html, html: true };
+    } else {
+      faqHistory[idx] = { role: 'bot', text: result };
+    }
+  } else {
+    _faqPushResult(result);
+  }
+  faqRenderMessages();
+  faqScrollBottom();
+}
+
+async function _faqDispatch(text) {
+  const resolved = await _faqResolve(text);
+  if (!resolved.llm) {
+    setTimeout(() => {
+      _faqPushResult(resolved.result);
+      faqRenderMessages();
+      faqScrollBottom();
+    }, 220);
+    return;
+  }
+  // LLM path
+  setTimeout(() => {
+    const typingId = _faqShowTyping();
+    fetch('/api/faq-query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: resolved.question })
+    })
+      .then(r => r.json())
+      .then(d => _faqReplaceTyping(typingId, d.answer || d.error || FAQ_FALLBACK))
+      .catch(() => _faqReplaceTyping(typingId, FAQ_FALLBACK));
+  }, 220);
+}
+
 function faqAsk(idx) {
   const q = FAQ_SUGGESTIONS[idx];
   if (!q) return;
@@ -7996,11 +8060,7 @@ function faqAsk(idx) {
   faqHistory.push({ role: 'user', text: q });
   faqRenderMessages();
   faqScrollBottom();
-  setTimeout(() => {
-    _faqPushResult(playerLookup(q) || faqMatch(q));
-    faqRenderMessages();
-    faqScrollBottom();
-  }, 220);
+  _faqDispatch(q);
 }
 
 function faqSend() {
@@ -8013,11 +8073,7 @@ function faqSend() {
   faqHistory.push({ role: 'user', text });
   faqRenderMessages();
   faqScrollBottom();
-  setTimeout(() => {
-    _faqPushResult(playerLookup(text) || faqMatch(text));
-    faqRenderMessages();
-    faqScrollBottom();
-  }, 220);
+  _faqDispatch(text);
 }
 
 function faqSendQuery(q) {

@@ -1358,6 +1358,165 @@ def stat_book():
         return jsonify({'error': str(e), 'seasons': [], 'players': []}), 500
 
 
+def _get_stat_data():
+    """Return cached stat book data, refreshing if stale."""
+    global _stat_cache, _stat_cache_time
+    now = time.time()
+    if _stat_cache is not None and now - _stat_cache_time < _STAT_CACHE_TTL:
+        return _stat_cache
+    try:
+        resp = _fetch_url(_STAT_BOOK_URL, timeout=20)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        tag = soup.find('script', {'type': 'application/json'})
+        if tag:
+            data = json.loads(tag.string)
+            _stat_cache      = data
+            _stat_cache_time = now
+            return data
+    except Exception:
+        pass
+    return _stat_cache or {}
+
+
+def _build_stat_context(data):
+    """Pre-compute analytics from stat book data for LLM context."""
+    from collections import defaultdict
+
+    players_raw = data.get('players', {})
+    players = list(players_raw.values()) if isinstance(players_raw, dict) else players_raw
+    seasons  = data.get('seasons', [])
+    champs   = data.get('champs', {})
+    records  = data.get('records', {})
+
+    season_year = {s['key']: s['order'] for s in seasons}
+    season_label = {s['key']: s.get('label', str(s['order'])) for s in seasons}
+
+    # Championship rings per player
+    ring_map = defaultdict(list)
+    for sk, rn in champs.items():
+        year = season_year.get(sk, sk)
+        for p in players:
+            if p.get('season') == sk and p.get('rn') == rn:
+                ring_map[p['name']].append(year)
+
+    rings_sorted = sorted(ring_map.items(), key=lambda x: -len(x[1]))
+
+    # Award counts per player
+    award_map = defaultdict(lambda: defaultdict(int))
+    for p in players:
+        for aw in (p.get('awards') or []):
+            award_map[p['name']][aw] += 1
+
+    # Aggregate career stats per player (weighted by games played)
+    career = defaultdict(lambda: {'g': 0, 'pts': 0, 'reb': 0, 'ast': 0, 'stl': 0, 'blk': 0, 'seasons': 0})
+    for p in players:
+        if p.get('season') == 'current':
+            continue
+        n = p['name']
+        g = p.get('g', 0) or 0
+        career[n]['g']       += g
+        career[n]['pts']     += (p.get('ppg') or 0) * g
+        career[n]['reb']     += (p.get('rpg') or 0) * g
+        career[n]['ast']     += (p.get('apg') or 0) * g
+        career[n]['stl']     += (p.get('spg') or 0) * g
+        career[n]['blk']     += (p.get('bpg') or 0) * g
+        career[n]['seasons'] += 1
+
+    def avg(n, stat):
+        g = career[n]['g']
+        return round(career[n][stat] / g, 1) if g else 0
+
+    def top_career(stat, label, n=10):
+        ranked = sorted(career.keys(), key=lambda x: -avg(x, stat))[:n]
+        return label + ': ' + ', '.join(f'{p} ({avg(p, stat)})' for p in ranked if avg(p, stat) > 0)
+
+    # Award leaders summary
+    def award_leaders(aw_name, n=8):
+        leaders = [(name, counts[aw_name]) for name, counts in award_map.items() if counts.get(aw_name, 0) > 0]
+        leaders.sort(key=lambda x: -x[1])
+        return aw_name + ': ' + ', '.join(f'{p} ({c}x)' for p, c in leaders[:n])
+
+    lines = []
+
+    lines.append('=== SIM LEAGUE NIRVANA STAT BOOK ===')
+    lines.append(f'Seasons: {", ".join(str(s["order"]) for s in reversed(seasons) if s.get("played"))}')
+    lines.append('')
+
+    lines.append('--- CHAMPIONSHIP RINGS (most to fewest) ---')
+    for name, years in rings_sorted[:20]:
+        lines.append(f'{name}: {len(years)} rings ({", ".join(str(y) for y in sorted(years))})')
+    lines.append('')
+
+    lines.append('--- AWARD LEADERS ---')
+    for aw in ['MVP', 'DPOY', 'ROY', '6th Man', 'All-League 1st', 'All-League 2nd', 'All-League 3rd',
+               'All-Defensive 1st', 'All-Defensive 2nd', 'All-Rookie 1st', 'All-Rookie 2nd']:
+        lines.append(award_leaders(aw))
+    lines.append('')
+
+    lines.append('--- CAREER STAT LEADERS (career avg, completed seasons only) ---')
+    lines.append(top_career('pts', 'PPG'))
+    lines.append(top_career('reb', 'RPG'))
+    lines.append(top_career('ast', 'APG'))
+    lines.append(top_career('stl', 'SPG'))
+    lines.append(top_career('blk', 'BPG'))
+    lines.append('')
+
+    lines.append('--- SEASON-BY-SEASON CHAMPIONS ---')
+    for sk, rn in sorted(champs.items(), key=lambda x: season_year.get(x[0], 0)):
+        year = season_year.get(sk, sk)
+        champ_players = [p['name'] for p in players if p.get('season') == sk and p.get('rn') == rn]
+        lines.append(f'{year}: {", ".join(champ_players[:8])}{"..." if len(champ_players) > 8 else ""}')
+    lines.append('')
+
+    # Current season snapshot
+    current = [p for p in players if p.get('season') == 'current']
+    if current:
+        lines.append('--- CURRENT SEASON ACTIVE PLAYERS (sample) ---')
+        by_team = defaultdict(list)
+        for p in current:
+            by_team[p.get('team', '?')].append(p['name'])
+        for team, names in sorted(by_team.items()):
+            lines.append(f'{team}: {", ".join(names[:5])}')
+
+    return '\n'.join(lines)
+
+
+@app.route('/api/faq-query', methods=['POST'])
+def faq_query():
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not api_key:
+        return jsonify({'error': 'ANTHROPIC_API_KEY not configured'}), 503
+
+    body = request.get_json(silent=True) or {}
+    question = (body.get('question') or '').strip()
+    if not question:
+        return jsonify({'error': 'No question provided'}), 400
+
+    data = _get_stat_data()
+    if not data:
+        return jsonify({'error': 'Stat book data unavailable'}), 503
+
+    context = _build_stat_context(data)
+
+    try:
+        import anthropic as _anthropic
+        client = _anthropic.Anthropic(api_key=api_key)
+        msg = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=400,
+            system=(
+                'You are a knowledgeable assistant for SLN (Sim League Nirvana), a fantasy basketball simulation league. '
+                'Answer questions using only the stat book data provided. Be concise and direct — 1-4 sentences. '
+                'Use specific names and numbers. If the data does not support a definitive answer, say so briefly.'
+            ),
+            messages=[{'role': 'user', 'content': f'Stat Book Data:\n{context}\n\nQuestion: {question}'}]
+        )
+        return jsonify({'answer': msg.content[0].text})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
