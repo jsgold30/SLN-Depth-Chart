@@ -1358,6 +1358,43 @@ def stat_book():
         return jsonify({'error': str(e), 'seasons': [], 'players': []}), 500
 
 
+def _get_camp_data():
+    """Return cached camp data, refreshing if stale."""
+    global _camp_cache, _camp_cache_time
+    now = time.time()
+    if _camp_cache is not None and now - _camp_cache_time < _CAMP_CACHE_TTL:
+        return _camp_cache.get('players', {})
+    try:
+        resp = _fetch_url(_SHEETS_CSV_URL, timeout=15)
+        resp.raise_for_status()
+        players = _parse_camp_csv(resp.text)
+        _camp_cache      = {'players': players}
+        _camp_cache_time = now
+        return players
+    except Exception:
+        return (_camp_cache or {}).get('players', {})
+
+
+def _build_camp_context(camp_players):
+    """Serialize camp data into compact text for LLM context."""
+    if not camp_players:
+        return ''
+    lines = ['--- PLAYER CAMP DATA (training camp ratings by year) ---']
+    for key in sorted(camp_players.keys()):
+        p = camp_players[key]
+        name = p.get('name', key)
+        entries = p.get('entries', [])
+        total = p.get('total')
+        if not entries and not total:
+            continue
+        parts = [f'{e["year"]}:{e["rating"]}' for e in entries]
+        line = f'{name}: {", ".join(parts)}'
+        if total:
+            line += f' | Total: {total}'
+        lines.append(line)
+    return '\n'.join(lines)
+
+
 def _get_stat_data():
     """Return cached stat book data, refreshing if stale."""
     global _stat_cache, _stat_cache_time
@@ -1545,23 +1582,29 @@ def faq_query():
     data = _get_stat_data()
     if not data:
         return jsonify({'error': 'Stat book data unavailable'}), 503
-    stat_context = _build_stat_context(data)
+    stat_context  = _build_stat_context(data)
+    camp_players  = _get_camp_data()
+    camp_context  = _build_camp_context(camp_players)
 
     user_content = ''
     if faq_rules:
         user_content += f'=== SLN LEAGUE RULES & FAQ ===\n{faq_rules}\n\n'
-    user_content += f'=== SLN STAT BOOK ===\n{stat_context}\n\nQuestion: {question}'
+    user_content += f'=== SLN STAT BOOK ===\n{stat_context}\n\n'
+    if camp_context:
+        user_content += f'{camp_context}\n\n'
+    user_content += f'Question: {question}'
 
     system_msg = (
         'You are the assistant for SLN (Sim League Nirvana), a fantasy basketball simulation league. '
-        'Every question is about SLN. You have two equally authoritative sources — use BOTH to answer every question:\n'
-        '1. SLN LEAGUE RULES & FAQ: covers league rules, salary cap, trades, free agency, draft, season format, dues, etc.\n'
-        '2. SLN STAT BOOK: covers every player career, team history, championships, awards, and stats.\n'
+        'Every question is about SLN. You have three equally authoritative sources — use ALL of them:\n'
+        '1. SLN LEAGUE RULES & FAQ: league rules, salary cap, trades, free agency, draft, season format, dues, etc.\n'
+        '2. SLN STAT BOOK: every player career, team history, championships, awards, and game stats.\n'
+        '3. PLAYER CAMP DATA: training camp ratings and development history by year for each player.\n'
         'This league uses real NBA player names but careers differ completely from real NBA history — '
         'players were drafted by human GMs in 1996 and traded freely, so teams, stats, rings, and awards '
-        'are all different from real life. Never use real NBA knowledge. '
+        'are all different from real life. Never use your training knowledge about real NBA history. '
         'All answers must come directly from the provided data. '
-        'If the answer is not in either source, say: "I don\'t see that in the SLN data."'
+        'If something is not in the provided data, say: "I don\'t see that in the SLN data."'
     )
 
     try:
