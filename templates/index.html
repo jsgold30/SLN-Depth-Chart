@@ -4522,46 +4522,48 @@ function _teamNameToAbbr(name) {
   return partial ? partial.abbr : name.toUpperCase().slice(0, 3);
 }
 
-// Returns all picks the team currently owns (own picks minus owed away, plus acquired)
-// If side is provided and roster picks were parsed from the page, those take priority.
-function tmAvailablePicks(abbr, side) {
-  const rosterPicks = side === 'A' ? tmRosterPicksA : (side === 'B' ? tmRosterPicksB : null);
-  if (rosterPicks) {
-    return rosterPicks
-      .map(p => ({
-        year: p.year,
-        round: p.round,
-        ownerAbbr: abbr,
-        originalAbbr: _teamNameToAbbr(p.original_team),
-        swapPartner: null,
-        qualifier: null,
-      }))
-      .sort((a, b) => a.year - b.year || a.round - b.round);
-  }
-
-  // Fallback: generate from TM_PICK_YEARS + owed picks database
-  const picks = [];
-  for (const year of TM_PICK_YEARS) {
+// Build picks from owed-picks DB for the given years array, pushing into picks[].
+function _picksFromOwed(abbr, years, picks) {
+  const yearSet = new Set(years);
+  for (const year of years) {
     for (const round of [1, 2]) {
       const owedAway = tmOwedPicks.find(p => p.from_abbr === abbr && p.year === year && p.round === round);
-      if (!owedAway) {
-        picks.push({ year, round, ownerAbbr: abbr, originalAbbr: abbr });
-      }
+      if (!owedAway) picks.push({ year, round, ownerAbbr: abbr, originalAbbr: abbr });
     }
   }
-  // Acquired picks from other teams (exclude sentinel 'EXT')
   for (const p of tmOwedPicks) {
-    if (p.to_abbr === abbr && p.to_abbr !== 'EXT') {
-      picks.push({
-        year: p.year,
-        round: p.round,
-        ownerAbbr: abbr,
-        originalAbbr: p.from_abbr,
-        swapPartner: p.swap_partner || null,
-        qualifier: p.qualifier || null,
-      });
+    if (p.to_abbr === abbr && p.to_abbr !== 'EXT' && yearSet.has(p.year)) {
+      picks.push({ year: p.year, round: p.round, ownerAbbr: abbr, originalAbbr: p.from_abbr,
+        swapPartner: p.swap_partner || null, qualifier: p.qualifier || null });
     }
   }
+}
+
+// Returns all picks the team currently owns.
+// Next year (league_year + 1): from roster page if loaded, else owed-picks DB.
+// Years +2 through +6: always from owed-picks DB.
+function tmAvailablePicks(abbr, side) {
+  const rosterPicks = side === 'A' ? tmRosterPicksA : (side === 'B' ? tmRosterPicksB : null);
+  const nextYear   = TM_LEAGUE_YEAR + 1;
+  const outerYears = TM_PICK_YEARS.filter(y => y > nextYear);
+  const picks = [];
+
+  // Next draft year — source of truth is the roster page
+  if (rosterPicks) {
+    rosterPicks
+      .filter(p => p.year === nextYear)
+      .forEach(p => picks.push({
+        year: p.year, round: p.round, ownerAbbr: abbr,
+        originalAbbr: _teamNameToAbbr(p.original_team),
+        swapPartner: null, qualifier: null,
+      }));
+  } else {
+    _picksFromOwed(abbr, [nextYear], picks);
+  }
+
+  // Future years — always from owed-picks DB
+  _picksFromOwed(abbr, outerYears, picks);
+
   picks.sort((a, b) => a.year - b.year || a.round - b.round);
   return picks;
 }
