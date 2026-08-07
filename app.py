@@ -639,6 +639,48 @@ def parse_salary(salary_str):
         return 0
 
 
+def _parse_draft_picks_from_soup(soup):
+    """Parse the 'Draft Picks' section from an SLN roster page.
+    Returns a list of {year, round, original_team} dicts."""
+    picks = []
+    for table in soup.find_all('table'):
+        if 'draft picks' not in table.get_text(' ', strip=True).lower():
+            continue
+        current_year = None
+        in_picks = False
+        for row in table.find_all('tr'):
+            cells = [td.get_text(strip=True) for td in row.find_all(['td', 'th'])]
+            if not cells:
+                continue
+            if not in_picks:
+                if any('draft picks' in c.lower() for c in cells):
+                    in_picks = True
+                continue
+            # Year row?
+            year_found = False
+            for c in cells:
+                m = re.match(r'^(20[2-9]\d)$', c.strip())
+                if m:
+                    current_year = int(m.group(1))
+                    year_found = True
+                    break
+            if year_found:
+                continue
+            # Header row?
+            low = [c.lower() for c in cells]
+            if 'round' in low or 'team' in low:
+                continue
+            # Data row: first cell is round (1 or 2), second is team name
+            if current_year and len(cells) >= 2:
+                round_str = cells[0].strip()
+                team_str = cells[1].strip()
+                if re.match(r'^[12]$', round_str) and team_str:
+                    picks.append({'year': current_year, 'round': int(round_str), 'original_team': team_str})
+        if picks:
+            break
+    return picks
+
+
 @app.route('/fetch_salary_roster', methods=['POST'])
 def fetch_salary_roster():
     url = (request.get_json() or {}).get('url', '').strip()
@@ -660,7 +702,7 @@ def fetch_salary_roster():
                 cached_data = json.loads(cache_row[0])
                 # Bust old cache entries that don't have rating fields
                 players_list = cached_data.get('players', [])
-                if players_list and players_list[0].get('in_rat'):
+                if players_list and players_list[0].get('in_rat') and 'draft_picks' in cached_data:
                     return jsonify(cached_data)
     except Exception as e:
         app.logger.warning("non-critical error suppressed: %s", e)
@@ -792,7 +834,8 @@ def fetch_salary_roster():
                 break
 
         total_salary = sum(p['salary'] for p in players) + cut_salary
-        result = {'players': players, 'team_name': team_name, 'total_salary': total_salary}
+        draft_picks = _parse_draft_picks_from_soup(soup)
+        result = {'players': players, 'team_name': team_name, 'total_salary': total_salary, 'draft_picks': draft_picks}
 
         try:
             conn = get_db()
@@ -905,7 +948,8 @@ def _parse_salary_roster_from_soup(soup):
             break
 
     total_salary = sum(p['salary'] for p in players) + cut_salary
-    return {'players': players, 'team_name': team_name, 'total_salary': total_salary}
+    draft_picks = _parse_draft_picks_from_soup(soup)
+    return {'players': players, 'team_name': team_name, 'total_salary': total_salary, 'draft_picks': draft_picks}
 
 
 @app.route('/parse_salary_roster_html', methods=['POST'])

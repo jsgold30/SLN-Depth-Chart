@@ -4473,6 +4473,8 @@ function tmApplyLeagueYear(year) {
 let tmPicksA = [];   // [{year, round, ownerAbbr, originalAbbr, label}]
 let tmPicksB = [];
 let tmOwedPicks = []; // [{from_abbr, year, round, to_abbr}] — loaded from server
+let tmRosterPicksA = null; // picks parsed from Team A's roster page [{year, round, original_team}]
+let tmRosterPicksB = null; // picks parsed from Team B's roster page
 let tmRPA = 0;        // Roster Points being traded by side A
 let tmRPB = 0;        // Roster Points being traded by side B
 
@@ -4510,10 +4512,35 @@ async function tmLoadOwedPicks() {
   } catch(e) {}
 }
 
+function _teamNameToAbbr(name) {
+  const norm = name.toLowerCase().trim();
+  const full = TM_TEAMS.find(t => t.name.toLowerCase() === norm);
+  if (full) return full.abbr;
+  // Match by last word of team name (e.g., "Celtics" → BOS, "Lakers" → LAL)
+  const lastWord = norm.split(/\s+/).pop();
+  const partial = TM_TEAMS.find(t => t.name.toLowerCase().endsWith(lastWord));
+  return partial ? partial.abbr : name.toUpperCase().slice(0, 3);
+}
+
 // Returns all picks the team currently owns (own picks minus owed away, plus acquired)
-function tmAvailablePicks(abbr) {
+// If side is provided and roster picks were parsed from the page, those take priority.
+function tmAvailablePicks(abbr, side) {
+  const rosterPicks = side === 'A' ? tmRosterPicksA : (side === 'B' ? tmRosterPicksB : null);
+  if (rosterPicks) {
+    return rosterPicks
+      .map(p => ({
+        year: p.year,
+        round: p.round,
+        ownerAbbr: abbr,
+        originalAbbr: _teamNameToAbbr(p.original_team),
+        swapPartner: null,
+        qualifier: null,
+      }))
+      .sort((a, b) => a.year - b.year || a.round - b.round);
+  }
+
+  // Fallback: generate from TM_PICK_YEARS + owed picks database
   const picks = [];
-  // Own picks for each year/round, unless owed away
   for (const year of TM_PICK_YEARS) {
     for (const round of [1, 2]) {
       const owedAway = tmOwedPicks.find(p => p.from_abbr === abbr && p.year === year && p.round === round);
@@ -4553,7 +4580,7 @@ function tmPopulatePickSelectors(side) {
   if (!sel) return;
   const abbr = tmGetSideAbbr(side);
   const all = abbr
-    ? tmAvailablePicks(abbr)
+    ? tmAvailablePicks(abbr, side)
     : TM_PICK_YEARS.flatMap(y => [1,2].map(r => ({year:y, round:r, ownerAbbr:'', originalAbbr:'', swapPartner:null, qualifier:null})));
 
   // Filter out picks already added to this side's trade
@@ -4720,8 +4747,8 @@ async function loadTMTeam(side) {
     if (data.error) { statusEl.style.display = ''; statusEl.textContent = '⚠ ' + data.error; return; }
 
     const teamName = (data.team_name || (side === 'A' ? 'Team A' : 'Team B')).replace(/\s*Roster$/i, '').trim();
-    if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; tfShowButton(true); }
-    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; tfShowButtonB(true);
+    if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; tmRosterPicksA = data.draft_picks || null; tfShowButton(true); }
+    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; tmRosterPicksB = data.draft_picks || null; tfShowButtonB(true);
       // Pre-cache Team B roster for TF all-teams search
       const _abbrB = tmGetSideAbbr('B');
       if (_abbrB) tfAllRosters[_abbrB] = data.players.map(p => ({name:p.name,pos:p.pos,salary:p.salary||0,in_rat:p.in_rat||'',out:p.out||'',hn:p.hn||'',df:p.df||'',reb:p.reb||''})).filter(p=>p.salary>0);
@@ -6226,7 +6253,7 @@ function tfShowButtonB(show) {
 
 function tmClearTeamB() {
   if (tfOpen) tfClose();
-  tmRosterB = []; tmTotalB = 0; tmNameB = 'Team B'; tfPinnedB = [];
+  tmRosterB = []; tmTotalB = 0; tmNameB = 'Team B'; tfPinnedB = []; tmRosterPicksB = null;
   document.getElementById('tmSelectB').value = '';
   document.getElementById('tmPlayerListB').innerHTML = '';
   document.getElementById('tmTeamNameB').style.display = 'none';
