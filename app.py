@@ -702,7 +702,7 @@ def fetch_salary_roster():
                 cached_data = json.loads(cache_row[0])
                 # Bust old cache entries that don't have rating fields
                 players_list = cached_data.get('players', [])
-                if players_list and players_list[0].get('in_rat') and 'draft_picks' in cached_data:
+                if players_list and players_list[0].get('in_rat'):
                     return jsonify(cached_data)
     except Exception as e:
         app.logger.warning("non-critical error suppressed: %s", e)
