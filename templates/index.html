@@ -7540,7 +7540,7 @@ const FAQ_SUGGESTIONS = [
   'How do Reward Camps work?',
   'What are the trade rules?'
 ];
-const FAQ_FALLBACK = "I don’t have an answer for that — I am but a humble chat bot, not a Sim God.";
+const FAQ_FALLBACK = "I don't have an answer for that — I am but a humble chat bot, not a Sim God.";
 
 let faqHistory   = [];
 let faqFirstOpen = true;
@@ -7993,50 +7993,50 @@ let _faqScrollLockY = 0;
 function _faqLockBodyScroll() {
   if (window.innerWidth > 600) return;
   _faqScrollLockY = window.scrollY;
-  document.body.style.overflow = ‘hidden’;
-  document.body.style.position = ‘fixed’;
-  document.body.style.top = ‘-’ + _faqScrollLockY + ‘px’;
-  document.body.style.width = ‘100%’;
+  document.body.style.overflow = 'hidden';
+  document.body.style.position = 'fixed';
+  document.body.style.top = '-' + _faqScrollLockY + 'px';
+  document.body.style.width = '100%';
 }
 function _faqUnlockBodyScroll() {
   if (!document.body.style.position) return;
-  document.body.style.overflow = ‘’;
-  document.body.style.position = ‘’;
-  document.body.style.top = ‘’;
-  document.body.style.width = ‘’;
+  document.body.style.overflow = '';
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.width = '';
   window.scrollTo(0, _faqScrollLockY);
 }
 
 function faqToggle() {
   faqPanelOpen = !faqPanelOpen;
-  const panel = document.getElementById(‘faqPanel’);
-  const btn   = document.getElementById(‘faqBtn’);
+  const panel = document.getElementById('faqPanel');
+  const btn   = document.getElementById('faqBtn');
   if (faqPanelOpen) {
     _faqLockBodyScroll();
-    panel.classList.add(‘open’);
-    btn.classList.add(‘open’);
+    panel.classList.add('open');
+    btn.classList.add('open');
     if (faqFirstOpen) {
       faqFirstOpen = false;
-      faqHistory.push({ role: ‘bot’, text: ‘Hi! I’m the SLN FAQ assistant. Ask me anything about the league, or tap a topic below:’ });
+      faqHistory.push({ role: 'bot', text: 'Hi! I'm the SLN FAQ assistant. Ask me anything about the league, or tap a topic below:' });
       faqRenderMessages();
       faqRenderSuggestions();
     } else {
       faqRenderMessages();
     }
     setTimeout(() => {
-      const el = document.getElementById(‘faqMessages’);
+      const el = document.getElementById('faqMessages');
       if (el) el.scrollTop = el.scrollHeight;
       // Only auto-focus on desktop — on mobile, auto-focus triggers the keyboard
       // immediately and causes the page to scroll before the scroll-lock takes effect
       if (window.innerWidth > 600) {
-        const inp = document.getElementById(‘faqInput’);
+        const inp = document.getElementById('faqInput');
         if (inp) inp.focus();
       }
     }, 50);
   } else {
-    panel.classList.remove(‘open’);
-    btn.classList.remove(‘open’);
-    panel.style.bottom = ‘’;
+    panel.classList.remove('open');
+    btn.classList.remove('open');
+    panel.style.bottom = '';
     _faqUnlockBodyScroll();
   }
 }
