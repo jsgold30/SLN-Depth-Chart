@@ -1748,8 +1748,9 @@
     .faq-send-btn:hover { background: #92400e; }
 
     @media (max-width: 600px) {
-      .faq-panel { width: calc(100vw - 32px); right: 16px; bottom: 80px; max-height: 72vh; }
+      .faq-panel { width: calc(100vw - 32px); right: 16px; bottom: 80px; max-height: 72dvh; }
       .faq-btn   { right: 16px; bottom: 16px; width: 48px; height: 48px; font-size: 1.2rem; }
+      .faq-input { font-size: 16px; } /* prevent iOS auto-zoom on focus */
     }
   </style>
 </head>
@@ -8162,6 +8163,20 @@ function faqScrollBottom() {
     const el = document.getElementById('faqMessages');
     if (el) el.scrollTop = el.scrollHeight;
   }, 30);
+}
+
+// On mobile, lift the FAQ panel above the virtual keyboard when it opens
+function _faqAdjustForKeyboard() {
+  if (window.innerWidth > 600) return;
+  const panel = document.getElementById('faqPanel');
+  if (!panel || !faqPanelOpen) return;
+  const vvHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const keyboardH = window.innerHeight - vvHeight;
+  panel.style.bottom = keyboardH > 80 ? (keyboardH + 8) + 'px' : '';
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', _faqAdjustForKeyboard);
+  window.visualViewport.addEventListener('scroll', _faqAdjustForKeyboard);
 }
 
 function faqEscHtml(s) {
