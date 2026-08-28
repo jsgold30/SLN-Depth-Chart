@@ -5523,13 +5523,19 @@ function dcSortPool(col) {
   }
   const siteRankField = {'in_rat':'sri','out':'sro','hn':'srh','df':'srd','reb':'srr','pot':'srp'};
   const htToInches = h => { const m = h.match(/(\d+)'(\d+)/); return m ? +m[1]*12 + +m[2] : 0; };
+  const GRADE_COLS = new Set(['in_rat','out','hn','df','reb']);
+  const origIds = dcAllPlayers.map(p => p.id);
   dcPool.sort((a, b) => {
     let cmp;
     const rf = siteRankField[col];
     if (rf && a[rf] != null && b[rf] != null) {
       cmp = b[rf] - a[rf];
+    } else if (col === 'pot') {
+      cmp = origIds.indexOf(b.id) - origIds.indexOf(a.id);
     } else if (col === 'ht') {
       cmp = htToInches(a.ht) - htToInches(b.ht);
+    } else if (GRADE_COLS.has(col)) {
+      cmp = dcGradeVal(b[col]) - dcGradeVal(a[col]);
     } else if (!isNaN(parseFloat(a[col])) && !isNaN(parseFloat(b[col]))) {
       cmp = parseFloat(a[col]) - parseFloat(b[col]);
     } else {
