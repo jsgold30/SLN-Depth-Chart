@@ -1,62 +1,62 @@
 Round 1:
-#,Team,Notes
+#,Team,Trade
 1,VAN,
-2,MIN,* auto-drops to pick 14
-3,PHI,*
+2,MIN,
+3,PHI,
 4,ORL,
 5,LAL,
 6,SEA,
-7,SAC (via CHA),^
-8,PHX,^
-9,IND (via DAL),^
+7,SAC,CHA to SAC
+8,PHX,
+9,IND,DAL to IND
 10,IND,
-11,TOR,#
-12,MIN (via NYK),#
-13,BOS (via MIL),#
+11,TOR,
+12,MIN,NYK to MIN
+13,BOS,MIL to BOS
 14,GSW,
-15,ORL (via LAC),
-16,PHX (via MIA),&
-17,VAN (via DET),&
-18,PHX (via DEN),&
-19,UTA,pick is voided
-20,SAC,%
-21,VAN (via CHI),%
-22,LAL (via CLE),
-23,SAC (via SAS),@
-24,LAL (via ATL),@
+15,ORL,LAC to ORL
+16,PHX,MIA to PHX
+17,VAN,DET to VAN
+18,PHX,DEN to PHX
+19,UTA,
+20,SAC,
+21,VAN,CHI to VAN
+22,LAL,CLE to LAL
+23,SAC,SAS to SAC
+24,LAL,ATL to LAL
 25,POR,
-26,LAL (via NJN),
-27,BOS,!
-28,GSW (via HOU),!
+26,LAL,NJN to LAL
+27,BOS,
+28,GSW,HOU to GSW
 29,WAS,
 Round 2:
-#,Team,Notes
+#,Team,Trade
 30,VAN,
-31,MIN,* auto-drops to pick 43
-32,PHI,*
+31,MIN,
+32,PHI,
 33,ORL,
 34,LAL,
 35,SEA,
-36,SAC (via CHA),^
-37,PHX,^
-38,IND (via DAL),^
+36,CHA,
+37,PHX,
+38,DAL,
 39,IND,
-40,TOR,#
-41,MIN (via NYK),#
-42,BOS (via MIL),#
+40,TOR,
+41,NYK,
+42,MIL,
 43,GSW,
-44,ORL (via LAC),
-45,PHX (via MIA),&
-46,VAN (via DET),&
-47,PHX (via DEN),&
-48,UTA,pick is voided
-49,SAC,%
-50,VAN (via CHI),%
-51,LAL (via CLE),
-52,SAC (via SAS),@
-53,LAL (via ATL),@
+44,LAC,
+45,MIA,
+46,DET,
+47,DEN,
+48,UTA,
+49,SAC,
+50,CHI,
+51,CLE,
+52,ATL,
+53,SAS,
 54,POR,
-55,LAL (via NJN),
-56,BOS,!
-57,GSW (via HOU),!
+55,NJN,
+56,BOS,
+57,HOU,
 58,WAS,
