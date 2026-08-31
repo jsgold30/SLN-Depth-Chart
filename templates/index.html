@@ -6074,7 +6074,7 @@ function dcLoadCsv(input) {
                 || TM_TEAMS.find(t => baseName.toLowerCase().includes(t.abbr.toLowerCase()))
                 || null;
       const entry = {
-        name:          teamRaw,
+        name:          team ? team.name  : teamRaw,
         abbr:          team ? team.abbr  : teamRaw.substring(0, 3).toUpperCase(),
         c1:            team ? team.c1    : '#1e293b',
         c2:            team ? team.c2    : '#334155',
