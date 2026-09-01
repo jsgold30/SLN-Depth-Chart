@@ -6891,7 +6891,8 @@ function dcCopyForumPost() {
     const playerName = rescinded ? '(Rescinded)' : (result ? (result.playerName || '') : '');
     const trade      = team.trade || '';
 
-    text += String(roundPickNum).padEnd(C_PICK) + '| ' + team.name.padEnd(C_TEAM) + '| ' + trade.padEnd(C_TRADE) + '| ' + playerName + '\n';
+    const fullName = (TM_TEAMS.find(t => t.abbr === team.abbr)?.name) || team.name;
+    text += String(roundPickNum).padEnd(C_PICK) + '| ' + fullName.padEnd(C_TEAM) + '| ' + trade.padEnd(C_TRADE) + '| ' + playerName + '\n';
   });
 
   const btn = document.getElementById('dcForumCopyBtn');
