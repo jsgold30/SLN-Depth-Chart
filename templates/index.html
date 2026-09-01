@@ -2434,10 +2434,11 @@
                 <th>Trade</th>
                 <th>Player</th>
                 <th>Pos</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="dcLogBody">
-              <tr><td colspan="5" class="dc-log-empty">No picks yet</td></tr>
+              <tr><td colspan="6" class="dc-log-empty">No picks yet</td></tr>
             </tbody>
           </table>
         </div>
@@ -5941,7 +5942,7 @@ function dcRenderOrder() {
     const onClock   = idx === dcCurrentPick;
     const rescinded = team.draftedPlayer === '(Rescinded)';
     const drafted   = idx < dcCurrentPick && !rescinded;
-    if (drafted) return; // drafted picks are shown in Draft Results only
+    if (drafted || rescinded) return; // drafted and rescinded picks are shown in Draft Results only
 
     // Round separator
     const teamRound = team.round || 1;
@@ -7116,7 +7117,7 @@ function dcRenderLog() {
   tbody.innerHTML = '';
 
   if (dcResults.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="dc-log-empty">No picks yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="dc-log-empty">No picks yet</td></tr>';
     return;
   }
 
@@ -7149,6 +7150,7 @@ function dcRenderLog() {
       ${tradeTd}
       <td class="dc-log-player-cell" style="font-weight:600;">${r.rescinded ? '<span style="color:#ef4444;font-style:italic;">(Rescinded)</span>' : (r.playerName || '<span style="color:#334155;">—</span>')}</td>
       ${posTd}
+      ${r.rescinded ? `<td><button onclick="dcUndoRescindByIdx(${r.pick - 1})" style="background:#1d4ed8;border:1px solid #3b82f6;color:#fff;font-weight:700;border-radius:4px;padding:1px 7px;font-size:0.7rem;cursor:pointer;">⎌ Undo</button></td>` : '<td></td>'}
     `;
     // Attach scout-note tooltip (hover on desktop, tap-to-expand on mobile)
     if (!r.rescinded && r.playerName) {
