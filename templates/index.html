@@ -221,7 +221,7 @@
     }
     .ir-label:hover { border-color: #334155; color: #94a3b8; }
     .ir-label input[type="checkbox"] { display: none; }
-    .ir-label.checked { border-color: #38bdf8; background: #0c1a2e; color: #38bdf8; }
+    .ir-label.checked { border: 2px solid #38bdf8; box-shadow: 0 0 0 2px #38bdf840; background: #0c1a2e; color: #38bdf8; font-weight: 700; }
 
     /* Two-column layout: Depth Chart (left) + Options/Tactics (right) */
     .dc-two-col {
@@ -1490,8 +1490,9 @@
     /* ── Switch team / logo grid (handled above via .tm-logo-cell) ── */
 
     /* ── IR labels ── */
-    .ir-label { background: #fff8e8 !important; border-color: #e2cc90 !important; color: #3a2e1a !important; }
+    .ir-label { background: #fff8e8 !important; border: 1px solid #e2cc90 !important; color: #3a2e1a !important; }
     .ir-label:hover { border-color: #d4b87a !important; }
+    .ir-label.checked { border: 2px solid #c17c1a !important; box-shadow: 0 0 0 2px #c17c1a40 !important; background: #fef3c7 !important; color: #92400e !important; font-weight: 700 !important; }
 
     /* ── Team chip in header ── */
     #myTeamChip { background: #fff8e8 !important; border-color: #e2cc90 !important; }
