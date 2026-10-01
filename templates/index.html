@@ -4551,21 +4551,18 @@ function tmAvailablePicks(abbr, side) {
   const outerYears = TM_PICK_YEARS.filter(y => y > nextYear);
   const picks = [];
 
-  // Next draft year — source of truth is the roster page
+  // All years — owed-picks DB is always the base (own picks + traded picks).
+  // Roster page supplements next year with any received picks not yet in the DB.
+  _picksFromOwed(abbr, TM_PICK_YEARS, picks);
   if (rosterPicks) {
     rosterPicks
       .filter(p => p.year === nextYear)
-      .forEach(p => picks.push({
-        year: p.year, round: p.round, ownerAbbr: abbr,
-        originalAbbr: _teamNameToAbbr(p.original_team),
-        swapPartner: null, qualifier: null,
-      }));
-  } else {
-    _picksFromOwed(abbr, [nextYear], picks);
+      .forEach(p => {
+        const origAbbr = _teamNameToAbbr(p.original_team);
+        if (!picks.find(x => x.year === p.year && x.round === p.round && x.originalAbbr === origAbbr))
+          picks.push({ year: p.year, round: p.round, ownerAbbr: abbr, originalAbbr: origAbbr, swapPartner: null, qualifier: null });
+      });
   }
-
-  // Future years — always from owed-picks DB
-  _picksFromOwed(abbr, outerYears, picks);
 
   picks.sort((a, b) => a.year - b.year || a.round - b.round);
   return picks;
