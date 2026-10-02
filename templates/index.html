@@ -2905,7 +2905,11 @@ function enforceIRLimit() {
 
   document.querySelectorAll('input[name="ir"]').forEach(cb => {
     const label = cb.closest('label');
-    if (cb.checked) return;
+    if (cb.checked) {
+      cb.disabled = false;
+      if (label) { label.style.opacity = ''; label.style.cursor = ''; }
+      return;
+    }
     if (atLimit) {
       cb.disabled = true;
       if (label) { label.style.opacity = '0.25'; label.style.cursor = 'not-allowed'; }
