@@ -5141,6 +5141,7 @@ let dcPosFilter    = 'ALL';
 let dcSearchQuery  = '';
 let dcSelectedId   = null; // id of player currently selected for drafting
 const DC_LS_KEY    = 'draftCenter_v3';
+const DC_STATE_REVISION = {{ draft_state_revision|tojson }};
 let dcServerReached = false; // set to true once we get any response from /load_draft
 // ── Draft Queue (per-device, per-team — never synced to server) ──────────
 let dcQueue = []; // ordered array of player IDs
@@ -5391,7 +5392,7 @@ function dcSave() {
   // is reachable. Prevents cold-start network errors from wiping real data.
   const hasData = dcOrder.length > 0 || dcResults.length > 0 || Object.keys(dcPlayerNotes).length > 0;
   if (!hasData && !dcServerReached) return;
-  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, results: dcResults, playerNotes: dcPlayerNotes, pool_version: dcSavedPoolVersion, ts: Date.now() };
+  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, results: dcResults, playerNotes: dcPlayerNotes, pool_version: dcSavedPoolVersion, state_revision: DC_STATE_REVISION, ts: Date.now() };
   dcLastSyncStamp = payload.ts;
   // Save to server (shared across all devices)
   fetch('/save_draft', {
@@ -5432,6 +5433,7 @@ function dcLoad() {
     const raw = localStorage.getItem(DC_LS_KEY);
     if (!raw) return false;
     const s = JSON.parse(raw);
+    if (s.state_revision !== DC_STATE_REVISION) return false;
     dcPool        = s.pool        || [];
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
@@ -5471,7 +5473,11 @@ async function dcFetchPlayers() {
     // If the pool changed (new draft class), wipe scout notes automatically.
     if (data.pool_version && data.pool_version !== dcSavedPoolVersion) {
       dcPlayerNotes = {};
-      fetch('/clear_draft_notes', { method: 'POST' });
+      fetch('/clear_draft_notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state_revision: DC_STATE_REVISION })
+      });
     }
     dcSavedPoolVersion = data.pool_version || '';
 

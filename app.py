@@ -320,7 +320,7 @@ def get_version():
 
 @app.route('/')
 def index():
-    resp = make_response(render_template('index.html', version=get_version(), league_year=get_league_year()))
+    resp = make_response(render_template('index.html', version=get_version(), league_year=get_league_year(), draft_state_revision=DRAFT_STATE_REVISION))
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     resp.headers['Pragma'] = 'no-cache'
     return resp
@@ -1061,6 +1061,51 @@ def flush_salary_cache():
 
 
 DRAFT_POOL_VERSION = ','.join(p['name'] for p in DRAFT_PLAYER_POOL)
+DRAFT_STATE_REVISION = '2042-reset-notes-v1'
+
+
+def get_draft_db():
+    """Apply the requested reset/import once per database, with a retained backup."""
+    db = get_db()
+    migration_key = 'draft_migration_' + DRAFT_STATE_REVISION
+    try:
+        if db.execute('SELECT value FROM settings WHERE key=?', (migration_key,)).fetchone():
+            return db
+        # Claim the migration inside the same transaction as the data changes.
+        # A concurrent worker waits here, then skips the already-applied import.
+        claimed = db.execute('''INSERT INTO settings (key, value) VALUES (?, ?)
+                                ON CONFLICT(key) DO NOTHING RETURNING value''',
+                             (migration_key, 'applied')).fetchone()
+        if claimed:
+            row = db.execute('SELECT data FROM draft_state WHERE id=1').fetchone()
+            original = row[0] if row else '{}'
+            state = json.loads(original)
+            notes = state.setdefault('playerNotes', {})
+            with open(os.path.join(os.path.dirname(__file__), 'data', 'draft_scout_notes_2042.json')) as source:
+                reports = json.load(source)['notes_by_name']
+            players = [dict(p, id=str(i+1), out=p.get('out_rat', ''), in_rating=p.get('in_rat', ''))
+                       for i, p in enumerate(DRAFT_PLAYER_POOL)]
+            ids_by_name = {p['name']: p['id'] for p in players}
+            for name, report in reports.items():
+                player_id = ids_by_name[name]
+                existing = notes.get(player_id, '')
+                if report not in existing:
+                    notes[player_id] = existing + ('\n\n' if existing else '') + report
+            state.update(pool=players, order=[], results=[], currentPick=0,
+                         pool_version=DRAFT_POOL_VERSION, state_revision=DRAFT_STATE_REVISION,
+                         ts=max(int(time.time() * 1000), int(state.get('ts', 0)) + 1))
+            db.execute('INSERT INTO settings (key, value) VALUES (?, ?)',
+                       ('draft_backup_' + DRAFT_STATE_REVISION, original))
+            db.execute('''INSERT INTO draft_state (id, data, updated_at)
+                          VALUES (1, ?, CURRENT_TIMESTAMP)
+                          ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at''',
+                       (json.dumps(state),))
+        db.commit()
+        return db
+    except Exception:
+        db._raw.rollback()
+        db.close()
+        raise
 
 @app.route('/fetch_draft_players', methods=['POST'])
 def fetch_draft_players():
@@ -1070,7 +1115,9 @@ def fetch_draft_players():
 
 @app.route('/clear_draft_notes', methods=['POST'])
 def clear_draft_notes():
-    db = get_db()
+    if (request.get_json(silent=True) or {}).get('state_revision') != DRAFT_STATE_REVISION:
+        return jsonify({'error': 'Draft Center updated; refresh the page before editing.'}), 409
+    db = get_draft_db()
     row = db.execute('SELECT data FROM draft_state WHERE id = 1').fetchone()
     if row:
         data = json.loads(row[0])
@@ -1084,9 +1131,11 @@ def clear_draft_notes():
 @app.route('/save_draft', methods=['POST'])
 def save_draft():
     data = request.get_json()
-    if data is None:
+    if not isinstance(data, dict):
         return jsonify({'error': 'No data'}), 400
-    db = get_db()
+    if data.get('state_revision') != DRAFT_STATE_REVISION:
+        return jsonify({'error': 'Draft Center updated; refresh the page before editing.'}), 409
+    db = get_draft_db()
     db.execute('''INSERT INTO draft_state (id, data, updated_at)
                   VALUES (1, ?, CURRENT_TIMESTAMP)
                   ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at''',
@@ -1098,7 +1147,7 @@ def save_draft():
 
 @app.route('/load_draft', methods=['GET'])
 def load_draft():
-    db = get_db()
+    db = get_draft_db()
     row = db.execute('SELECT data FROM draft_state WHERE id = 1').fetchone()
     db.close()
     if row:
