@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 import re
 import sqlite3
 import json
+import hmac
 
 from datetime import datetime, timedelta
 
@@ -320,7 +321,7 @@ def get_version():
 
 @app.route('/')
 def index():
-    resp = make_response(render_template('index.html', version=get_version(), league_year=get_league_year(), draft_state_revision=DRAFT_STATE_REVISION))
+    resp = make_response(render_template('index.html', version=get_version(), league_year=get_league_year(), draft_state_revision=DRAFT_STATE_REVISION, draft_clock_version=DRAFT_CLOCK_VERSION))
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     resp.headers['Pragma'] = 'no-cache'
     return resp
@@ -1062,6 +1063,8 @@ def flush_salary_cache():
 
 DRAFT_POOL_VERSION = ','.join(p['name'] for p in DRAFT_PLAYER_POOL)
 DRAFT_STATE_REVISION = '2042-reset-notes-v1'
+DRAFT_CLOCK_VERSION = 2
+DRAFT_ADMIN_PASSWORDS = tuple(os.environ.get('DRAFT_ADMIN_PASSWORDS', 'Jordo,Hoff,Tyler').split(','))
 
 
 def get_draft_db():
@@ -1135,7 +1138,15 @@ def save_draft():
         return jsonify({'error': 'No data'}), 400
     if data.get('state_revision') != DRAFT_STATE_REVISION:
         return jsonify({'error': 'Draft Center updated; refresh the page before editing.'}), 409
+    if data.get('clock_version') != DRAFT_CLOCK_VERSION:
+        return jsonify({'error': 'Draft Center updated; refresh the page before editing.'}), 409
     db = get_draft_db()
+    _lock_draft(db)
+    row = db.execute('SELECT data FROM draft_state WHERE id=1').fetchone()
+    previous = json.loads(row[0]) if row else {}
+    if not _draft_admin() and not _valid_draft_clock_change(previous, data):
+        db.close()
+        return jsonify({'error': 'Only a draft admin can skip a pick. Reload the draft and try again.'}), 403
     db.execute('''INSERT INTO draft_state (id, data, updated_at)
                   VALUES (1, ?, CURRENT_TIMESTAMP)
                   ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at''',
@@ -1151,8 +1162,80 @@ def load_draft():
     row = db.execute('SELECT data FROM draft_state WHERE id = 1').fetchone()
     db.close()
     if row:
-        return jsonify(json.loads(row[0]))
+        data = json.loads(row[0])
+        data['clock_version'] = DRAFT_CLOCK_VERSION
+        return jsonify(data)
     return jsonify({})
+
+
+def _draft_admin():
+    supplied = request.headers.get('X-Draft-Admin', '')
+    return bool(supplied) and any(hmac.compare_digest(supplied, password)
+                                  for password in DRAFT_ADMIN_PASSWORDS if password)
+
+
+def _lock_draft(db):
+    if db._is_pg:
+        db.execute('SELECT id FROM draft_state WHERE id=1 FOR UPDATE')
+    else:
+        db.execute('BEGIN IMMEDIATE')
+
+
+def _pick_complete(state, index):
+    order = state.get('order', [])
+    return (0 <= index < len(order) and bool(order[index].get('draftedPlayer')))
+
+
+def _valid_draft_clock_change(previous, data):
+    old_skip, new_skip = previous.get('skippedPick'), data.get('skippedPick')
+    old_clock, new_clock = previous.get('currentPick', 0), data.get('currentPick', 0)
+    if old_skip != new_skip:
+        # A regular GM may complete the borrowed pick, returning to the deferred team.
+        return (old_skip is not None and new_skip is None and new_clock == old_skip
+                and _pick_complete(data, old_clock))
+    if old_skip is not None and old_clock != new_clock:
+        return False
+    # Moving forward without completing the on-clock pick would bypass admin skip.
+    if new_clock > old_clock and not _pick_complete(data, old_clock):
+        return False
+    return True
+
+
+@app.route('/draft_admin_auth', methods=['POST'])
+def draft_admin_auth():
+    if not _draft_admin():
+        return jsonify({'error': 'Incorrect admin password.'}), 403
+    return jsonify({'ok': True})
+
+
+@app.route('/skip_draft_pick', methods=['POST'])
+def skip_draft_pick():
+    if not _draft_admin():
+        return jsonify({'error': 'Only a draft admin can skip a pick.'}), 403
+    body = request.get_json(silent=True) or {}
+    db = get_draft_db()
+    try:
+        _lock_draft(db)
+        state = json.loads(db.execute('SELECT data FROM draft_state WHERE id=1').fetchone()[0])
+        if state.get('skippedPick') is not None:
+            return jsonify({'error': 'Finish the next pick and return to the skipped team first.'}), 409
+        if body.get('ts') != state.get('ts') or body.get('currentPick') != state.get('currentPick'):
+            return jsonify({'error': 'The draft has changed. Reload it before skipping.'}), 409
+        current = state.get('currentPick', 0)
+        order = state.get('order', [])
+        if current >= len(order) or _pick_complete(state, current):
+            return jsonify({'error': 'There is no active pick to skip.'}), 400
+        next_pick = next((i for i in range(current + 1, len(order)) if not _pick_complete(state, i)), None)
+        if next_pick is None:
+            return jsonify({'error': 'There is no next pick available.'}), 400
+        state.update(skippedPick=current, currentPick=next_pick, clock_version=DRAFT_CLOCK_VERSION,
+                     ts=max(int(time.time() * 1000), state.get('ts', 0) + 1))
+        db.execute('UPDATE draft_state SET data=?, updated_at=CURRENT_TIMESTAMP WHERE id=1',
+                   (json.dumps(state),))
+        db.commit()
+        return jsonify(state)
+    finally:
+        db.close()
 
 
 LEAGUE_YEAR_DEFAULT = 2036

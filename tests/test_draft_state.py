@@ -69,7 +69,7 @@ class DraftStateTests(unittest.TestCase):
 
     def test_later_picks_and_edited_notes_survive_reload(self):
         state = self.load()
-        state.update(order=[{'name': 'New team'}], results=[{'playerName': state['pool'][0]['name']}],
+        state.update(order=[{'name': 'New team', 'draftedPlayer': state['pool'][0]['name']}], results=[{'playerName': state['pool'][0]['name']}],
                      currentPick=1, playerNotes={'1': 'Edited note'})
         response = self.client.post('/save_draft', json=state)
         self.assertEqual(response.status_code, 200)
@@ -108,7 +108,8 @@ class DraftStateTests(unittest.TestCase):
     def test_page_renders_current_version_and_revision(self):
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'v4.1', response.data)
+        version = Path(app.__file__).with_name('VERSION').read_text().strip()
+        self.assertIn(('v' + version).encode(), response.data)
         self.assertIn(('const DC_STATE_REVISION = "' + app.DRAFT_STATE_REVISION + '"').encode(), response.data)
 
 

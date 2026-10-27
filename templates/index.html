@@ -2391,6 +2391,7 @@
           <!-- Unlocked controls (hidden until correct PIN) -->
           <div id="dcModControls" style="display:none;display:none;flex-wrap:wrap;gap:8px;align-items:center;">
             <button class="dc-rescind-btn" id="dcRescindBtn" onclick="dcRescindPick()" disabled style="opacity:0.4;">Rescind Pick</button>
+            <button class="dc-add-round-btn" id="dcSkipBtn" onclick="dcSkipPick()" disabled title="Let the next team pick, then return to this pick">Skip Pick</button>
             <button class="dc-rescind-btn" id="dcUndoBtn" onclick="dcUndoPick()" disabled style="opacity:0.4;">⎌ Undo</button>
             <button class="dc-add-round-btn" style="background:#0ea5e9;border-color:#0ea5e9;color:#fff;font-weight:700;" onclick="dcShowAddPick()">+ Add Pick</button>
 <label class="dc-add-round-btn" style="cursor:pointer;" title="Import draft order from CSV">
@@ -5134,6 +5135,8 @@ let dcAllPlayers   = [];   // full pool fetched from server
 let dcPool         = [];   // remaining (un-drafted) players
 let dcOrder        = [];   // [{ name, abbr, c1, c2, url }, ...]  current draft order
 let dcCurrentPick  = 0;    // index into dcOrder
+let dcSkippedPick = null; // deferred pick; return immediately after the next selection
+let dcSkipBusy = false;
 let dcResults      = [];   // [{ pick, teamName, playerName, pos }, ...]
 let dcPlayerNotes  = {};   // { [playerId]: "note text" } – scout notes per player
 let dcSavedPoolVersion = ''; // tracks which pool class notes belong to
@@ -5142,6 +5145,7 @@ let dcSearchQuery  = '';
 let dcSelectedId   = null; // id of player currently selected for drafting
 const DC_LS_KEY    = 'draftCenter_v3';
 const DC_STATE_REVISION = {{ draft_state_revision|tojson }};
+const DC_CLOCK_VERSION = {{ draft_clock_version|tojson }};
 let dcServerReached = false; // set to true once we get any response from /load_draft
 // ── Draft Queue (per-device, per-team — never synced to server) ──────────
 let dcQueue = []; // ordered array of player IDs
@@ -5387,23 +5391,29 @@ function dcGradeClass(g) {
 }
 
 // ── Persist / restore state ──────────────────────────────────────────────
-function dcSave() {
+async function dcSave() {
   // Safety: never overwrite the DB with empty state if we haven't confirmed the server
   // is reachable. Prevents cold-start network errors from wiping real data.
   const hasData = dcOrder.length > 0 || dcResults.length > 0 || Object.keys(dcPlayerNotes).length > 0;
   if (!hasData && !dcServerReached) return;
-  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, results: dcResults, playerNotes: dcPlayerNotes, pool_version: dcSavedPoolVersion, state_revision: DC_STATE_REVISION, ts: Date.now() };
+  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, skippedPick: dcSkippedPick, results: dcResults, playerNotes: dcPlayerNotes, pool_version: dcSavedPoolVersion, state_revision: DC_STATE_REVISION, clock_version: DC_CLOCK_VERSION, ts: Math.max(Date.now(), dcLastSyncStamp + 1) };
   dcLastSyncStamp = payload.ts;
   // Save to server (shared across all devices)
-  fetch('/save_draft', {
+  try {
+  const response = await fetch('/save_draft', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(dcModUnlocked ? { 'X-Draft-Admin': dcModPassword } : {}) },
     body: JSON.stringify(payload)
-  }).then(r => {
-    if (!r.ok) r.text().then(t => console.error('save_draft failed:', r.status, t));
-  }).catch(e => console.error('save_draft network error:', e));
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    document.getElementById('dcPoolStatus').textContent = error.error || 'Draft could not be saved. Refresh and try again.';
+    return false;
+  }
   // Also mirror to localStorage as a fast cache
   try { localStorage.setItem(DC_LS_KEY, JSON.stringify(payload)); } catch(e) { console.error('localStorage save failed:', e); }
+  return true;
+  } catch(e) { console.error('save_draft network error:', e); return false; }
 }
 
 async function dcLoadFromServer() {
@@ -5416,6 +5426,7 @@ async function dcLoadFromServer() {
     if (!s || (!s.pool && !s.order)) return 'empty'; // server reachable, DB is fresh
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
+    dcSkippedPick = s.skippedPick ?? null;
     dcResults     = s.results     || [];
     dcPlayerNotes = s.playerNotes || {};
     dcSavedPoolVersion = s.pool_version || '';
@@ -5433,10 +5444,11 @@ function dcLoad() {
     const raw = localStorage.getItem(DC_LS_KEY);
     if (!raw) return false;
     const s = JSON.parse(raw);
-    if (s.state_revision !== DC_STATE_REVISION) return false;
+    if (s.state_revision !== DC_STATE_REVISION || s.clock_version !== DC_CLOCK_VERSION) return false;
     dcPool        = s.pool        || [];
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
+    dcSkippedPick = s.skippedPick ?? null;
     dcResults     = s.results     || [];
     dcPlayerNotes = s.playerNotes || {};
     dcSavedPoolVersion = s.pool_version || '';
@@ -5696,7 +5708,7 @@ function dcRescindByIdx(idx) {
   const pickNum = idx + 1;
   team.draftedPlayer = '(Rescinded)';
   team.draftedPos = '';
-  const rescindedEntry = { pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: '(Rescinded)', pos: '', rescinded: true };
+  const rescindedEntry = { pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: '(Rescinded)', pos: '', rescinded: true, ...dcCompletionDetails() };
   const existingIdx = dcResults.findIndex(r => r.pick === pickNum);
   if (existingIdx >= 0) {
     dcResults[existingIdx] = rescindedEntry;
@@ -5705,7 +5717,8 @@ function dcRescindByIdx(idx) {
     if (insertAt === -1) dcResults.push(rescindedEntry);
     else dcResults.splice(insertAt, 0, rescindedEntry);
   }
-  if (dcCurrentPick === idx) { dcCurrentPick = idx + 1; dcAdvancePastRescinded(); }
+  if (dcCurrentPick === idx) dcAdvanceAfterPick();
+  else if (dcSkippedPick === idx) dcSkippedPick = null;
   dcSave();
   dcRenderOrder();
   dcRenderLog();
@@ -5718,12 +5731,17 @@ function dcUndoRescindByIdx(idx) {
   // Remove from results
   const pickNum = idx + 1;
   const ri = dcResults.findIndex(r => r.pick === pickNum && r.rescinded);
+  const previousClock = ri >= 0 ? dcResults[ri].clockBefore : null;
+  const previousSkip = ri >= 0 ? dcResults[ri].skippedBefore : null;
   if (ri >= 0) dcResults.splice(ri, 1);
   // Clear team state
   team.draftedPlayer = null;
   team.draftedPos    = null;
   // Step currentPick back if this was the immediately preceding pick
-  if (dcCurrentPick === idx + 1) dcCurrentPick = idx;
+  if (Number.isInteger(previousClock)) {
+    dcCurrentPick = previousClock;
+    dcSkippedPick = previousSkip ?? null;
+  } else if (dcCurrentPick === idx + 1) dcCurrentPick = idx;
   dcSave();
   dcRenderOrder();
   dcRenderLog();
@@ -5741,10 +5759,9 @@ function dcRescindPick() {
   team.draftedPlayer = '(Rescinded)';
   team.draftedPos    = '';
 
-  dcResults.push({ pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: '(Rescinded)', pos: '', rescinded: true });
+  dcResults.push({ pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: '(Rescinded)', pos: '', rescinded: true, ...dcCompletionDetails() });
 
-  dcCurrentPick++;
-  dcAdvancePastRescinded();
+  dcAdvanceAfterPick();
 
   dcClearSelection();
   dcSave();
@@ -5802,9 +5819,49 @@ function dcRefreshNotesPanel() {
   }
 }
 
-// ── Skip past any already-rescinded picks ────────────────────────────────
+async function dcSkipPick() {
+  if (!dcModUnlocked || dcSkipBusy || dcSkippedPick !== null) return;
+  dcSkipBusy = true;
+  dcRenderOrder();
+  try {
+    const response = await fetch('/skip_draft_pick', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Draft-Admin': dcModPassword },
+      body: JSON.stringify({ currentPick: dcCurrentPick, ts: dcLastSyncStamp })
+    });
+    const data = await response.json();
+    if (!response.ok) { alert(data.error || 'Unable to skip this pick.'); return; }
+    dcClearSelection();
+    await dcLoadFromServer();
+    dcRenderPool();
+    dcRenderLog();
+    dcRenderQueue();
+    dcAutoSelectFromQueue();
+  } catch(e) { alert('Unable to reach the server. Please try again.'); }
+  finally { dcSkipBusy = false; dcRenderOrder(); }
+}
+
+function dcCompletionDetails() {
+  return {
+    completedAt: Math.max(Date.now(), ...dcResults.map(r => (r.completedAt || 0) + 1)),
+    clockBefore: dcCurrentPick,
+    skippedBefore: dcSkippedPick
+  };
+}
+
+function dcAdvanceAfterPick() {
+  if (dcSkippedPick !== null) {
+    dcCurrentPick = dcSkippedPick;
+    dcSkippedPick = null;
+  } else {
+    dcCurrentPick++;
+  }
+  dcAdvancePastRescinded();
+}
+
+// Skip every completed slot, including the borrowed pick after returning.
 function dcAdvancePastRescinded() {
-  while (dcCurrentPick < dcOrder.length && dcOrder[dcCurrentPick].draftedPlayer === '(Rescinded)') {
+  while (dcCurrentPick < dcOrder.length && dcOrder[dcCurrentPick].draftedPlayer) {
     dcCurrentPick++;
   }
 }
@@ -5832,7 +5889,7 @@ function dcDraftPlayer(playerId) {
   team.draftedPos    = player.pos;
 
   // Record result
-  dcResults.push({ pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: player.name, pos: player.pos });
+  dcResults.push({ pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: player.name, pos: player.pos, ...dcCompletionDetails() });
 
   // Remove from pool
   dcPool.splice(playerIdx, 1);
@@ -5844,8 +5901,7 @@ function dcDraftPlayer(playerId) {
   }
 
   // Advance pick (skip any pre-rescinded slots)
-  dcCurrentPick++;
-  dcAdvancePastRescinded();
+  dcAdvanceAfterPick();
 
   dcClearSelection();
   dcSave();
@@ -5862,10 +5918,16 @@ function dcDraftPlayer(playerId) {
 }
 
 function dcUndoPick() {
-  if (dcCurrentPick <= 0) return;
-
-  // Step back
-  dcCurrentPick--;
+  if (!dcModUnlocked) return;
+  if (dcSkippedPick !== null) {
+    dcCurrentPick = dcSkippedPick;
+    dcSkippedPick = null;
+    dcSave(); dcRenderOrder();
+    return;
+  }
+  if (!dcResults.length) return;
+  const latest = dcResults.reduce((a, b) => (b.completedAt || 0) > (a.completedAt || 0) ? b : a);
+  dcCurrentPick = latest.completedAt ? latest.pick - 1 : Math.max(0, dcCurrentPick - 1);
   const team    = dcOrder[dcCurrentPick];
   const pickNum = dcCurrentPick + 1;
 
@@ -5875,6 +5937,7 @@ function dcUndoPick() {
   const resultIdx = dcResults.findIndex(r => r.pick === pickNum);
   if (resultIdx >= 0) {
     const result = dcResults[resultIdx];
+    dcSkippedPick = result.skippedBefore ?? null;
     // Restore player to pool if it was a real draft (not a rescind)
     if (result.playerName && result.playerName !== '(Rescinded)') {
       const restored = dcAllPlayers.find(p => p.name === result.playerName);
@@ -5905,7 +5968,13 @@ function dcRenderOrder() {
   const clockTeamEl = document.getElementById('dcClockTeam');
   const clockPickEl = document.getElementById('dcClockPickNum');
   const undoBtn     = document.getElementById('dcUndoBtn');
-  if (undoBtn) { const canUndo = dcCurrentPick > 0; undoBtn.disabled = !canUndo; undoBtn.style.opacity = canUndo ? '1' : '0.4'; }
+  if (undoBtn) { const canUndo = dcResults.length > 0 || dcSkippedPick !== null; undoBtn.disabled = !canUndo; undoBtn.style.opacity = canUndo ? '1' : '0.4'; }
+  const skipBtn = document.getElementById('dcSkipBtn');
+  if (skipBtn) {
+    const canSkip = dcModUnlocked && !dcSkipBusy && dcSkippedPick === null && dcCurrentPick < dcOrder.length && dcOrder.some((p, i) => i > dcCurrentPick && !p.draftedPlayer);
+    skipBtn.disabled = !canSkip;
+    skipBtn.style.opacity = canSkip ? '' : '0.4';
+  }
   const rescindBtn = document.getElementById('dcRescindBtn');
   if (rescindBtn) { const can = dcOrder.length > 0 && dcCurrentPick < dcOrder.length; rescindBtn.disabled = !can; rescindBtn.style.opacity = can ? '1' : '0.4'; }
 
@@ -5924,7 +5993,7 @@ function dcRenderOrder() {
       ? `<img src="/static/logos/${imgFile}" alt="" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;">`
       : `<span>${cur.abbr||'?'}</span>`;
     clockTeamEl.textContent = cur.name;
-    clockPickEl.textContent = `Pick ${dcCurrentPick + 1}`;
+    clockPickEl.textContent = `Pick ${dcCurrentPick + 1}` + (dcSkippedPick !== null ? ` • Pick ${dcSkippedPick + 1} returns next` : '');
     banner.classList.add('visible');
   } else {
     clockLogoEl.innerHTML = '';
@@ -5949,7 +6018,7 @@ function dcRenderOrder() {
   dcOrder.forEach((team, idx) => {
     const onClock   = idx === dcCurrentPick;
     const rescinded = team.draftedPlayer === '(Rescinded)';
-    const drafted   = idx < dcCurrentPick && !rescinded;
+    const drafted   = !!team.draftedPlayer && !rescinded;
     if (drafted || rescinded) return; // drafted and rescinded picks are shown in Draft Results only
 
     // Round separator
@@ -5988,12 +6057,12 @@ function dcRenderOrder() {
 
     const tr = document.createElement('tr');
     tr.dataset.idx = idx;
-    if (dcModUnlocked && !rescinded) { tr.draggable = true; tr.style.cursor = 'grab'; }
+    if (dcModUnlocked && dcSkippedPick === null && !rescinded) { tr.draggable = true; tr.style.cursor = 'grab'; }
     if (onClock) tr.classList.add('on-clock');
     if (rescinded) tr.style.cssText = 'opacity:0.45;pointer-events:auto;';
     tr.innerHTML = `
       <td><span class="dc-pick-badge" style="${rescinded ? 'text-decoration:line-through;' : ''}">${idx + 1}</span></td>
-      <td><span class="dc-order-name" style="${rescinded ? 'color:#475569;text-decoration:line-through;' : ''}">${team.name}</span>${rescinded ? ' <span style="font-size:0.68rem;color:#64748b;font-style:italic;">Rescinded</span>' : ''}</td>
+      <td><span class="dc-order-name" style="${rescinded ? 'color:#475569;text-decoration:line-through;' : ''}">${team.name}</span>${idx === dcSkippedPick ? ' <span style="font-size:0.72rem;color:#b45309;">Skipped — returns next</span>' : ''}${rescinded ? ' <span style="font-size:0.68rem;color:#64748b;font-style:italic;">Rescinded</span>' : ''}</td>
       <td>${tradeCell}</td>
       <td>${controls}</td>`;
 
@@ -6012,7 +6081,7 @@ function dcRenderOrder() {
       tr.classList.remove('dc-drag-over');
       const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
       const toIdx   = parseInt(tr.dataset.idx);
-      if (fromIdx === toIdx || fromIdx < dcCurrentPick || toIdx < dcCurrentPick) return;
+      if (dcSkippedPick !== null || fromIdx === toIdx || fromIdx < dcCurrentPick || toIdx < dcCurrentPick) return;
       const moved = dcOrder.splice(fromIdx, 1)[0];
       dcOrder.splice(toIdx, 0, moved);
       dcSave();
@@ -6033,6 +6102,7 @@ function dcRenderOrder() {
 
 // ── Move/remove order rows ────────────────────────────────────────────────
 function dcMoveOrder(idx, dir) {
+  if (dcSkippedPick !== null) return;
   const newIdx = idx + dir;
   if (newIdx < dcCurrentPick || newIdx >= dcOrder.length) return;
   const tmp = dcOrder[idx];
@@ -6043,6 +6113,7 @@ function dcMoveOrder(idx, dir) {
 }
 
 function dcRemoveOrder(idx) {
+  if (dcSkippedPick !== null) { alert('Finish the skipped pick before removing picks.'); return; }
   if (idx < dcCurrentPick) return;
   dcOrder.splice(idx, 1);
   dcSave();
@@ -6099,6 +6170,7 @@ function dcLoadCsv(input) {
     // Advance current pick past any pre-filled players
     dcOrder = newOrder;
     dcCurrentPick = 0;
+    dcSkippedPick = null;
     dcSave();
     dcRenderOrder();
     dcRenderLog();
@@ -6109,7 +6181,7 @@ function dcLoadCsv(input) {
 
 
 // ── Draft Mod PIN ────────────────────────────────────────────────────────
-const DC_MOD_PINS = ['Jordo', 'Hoff', 'Tyler'];
+let dcModPassword = "";
 let dcModUnlocked = false;
 
 function dcShowModPin() {
@@ -6123,9 +6195,18 @@ function dcHideModPin() {
   document.getElementById('dcModPinOverlay').classList.remove('open');
 }
 
-function dcConfirmModPin() {
+async function dcConfirmModPin() {
   const entered = document.getElementById('dcModPinInput').value.trim();
-  if (DC_MOD_PINS.includes(entered)) {
+  let authenticated = false;
+  try {
+    const response = await fetch('/draft_admin_auth', { method: 'POST', headers: { 'X-Draft-Admin': entered } });
+    authenticated = response.ok;
+  } catch(e) {
+    document.getElementById('dcModPinError').textContent = 'Unable to reach server. Try again.';
+    return;
+  }
+  if (authenticated) {
+    dcModPassword = entered;
     dcModUnlocked = true;
     dcHideModPin();
     document.getElementById('dcModLockBtn').style.display  = 'none';
@@ -6144,6 +6225,7 @@ function dcConfirmModPin() {
 
 function dcLockMod() {
   dcModUnlocked = false;
+  dcModPassword = "";
   document.getElementById('dcModControls').style.display = 'none';
   document.getElementById('dcModLockBtn').style.display  = '';
   document.getElementById('dcExportBtn').style.display      = 'none';
@@ -7053,7 +7135,7 @@ function dcRescindFromModal() {
   team.draftedPos = '';
   // Replace existing result for this pick if it exists, otherwise insert at correct position
   const existingIdx = dcResults.findIndex(r => r.pick === pickNum);
-  const rescindedEntry = { pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: '(Rescinded)', pos: '', rescinded: true };
+  const rescindedEntry = { pick: pickNum, teamName: team.name, trade: team.trade || '', playerName: '(Rescinded)', pos: '', rescinded: true, ...dcCompletionDetails() };
   if (existingIdx >= 0) {
     dcResults[existingIdx] = rescindedEntry;
   } else {
@@ -7063,7 +7145,8 @@ function dcRescindFromModal() {
     else dcResults.splice(insertAt, 0, rescindedEntry);
   }
   // Only advance currentPick if this is the current pick
-  if (dcCurrentPick === dcEditingIdx) { dcCurrentPick = dcEditingIdx + 1; dcAdvancePastRescinded(); }
+  if (dcCurrentPick === dcEditingIdx) dcAdvanceAfterPick();
+  else if (dcSkippedPick === dcEditingIdx) dcSkippedPick = null;
   dcHideAddPick();
   dcSave();
   dcRenderOrder();
@@ -7187,6 +7270,7 @@ function dcClearAllConfirmed() {
   document.getElementById('dcClearAllOverlay').style.display = 'none';
   dcPool        = [...dcAllPlayers];
   dcCurrentPick = 0;
+  dcSkippedPick = null;
   dcResults     = [];
   dcOrder       = [];
   dcSave();
@@ -7210,6 +7294,7 @@ function dcStopPolling() {
 }
 
 async function dcPollServer() {
+  if (dcSkipBusy) return;
   try {
     const res = await fetch('/load_draft');
     if (!res.ok) return;
@@ -7222,6 +7307,7 @@ async function dcPollServer() {
     const prevPick = dcCurrentPick;
     dcOrder       = s.order       || [];
     dcCurrentPick = s.currentPick || 0;
+    dcSkippedPick = s.skippedPick ?? null;
     dcResults     = s.results     || [];
     dcPlayerNotes = s.playerNotes || {};
     try { localStorage.setItem(DC_LS_KEY, JSON.stringify(s)); } catch(e) {}

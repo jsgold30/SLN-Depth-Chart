@@ -19,6 +19,8 @@ DATABASE_URL='' DB_PATH=/workspace/.sln-data/depth_charts.db PYTHONDONTWRITEBYTE
 ```
 Validate `/`, `/api/status`, `/api/picks`, and static assets with GET requests; `/fetch_draft_players` uses POST. Verify `/save_chart` then `/load_chart` roundtrip using a disposable SQLite database. Run the tests with `/workspace/.sln-venv/bin/python -m unittest discover -s tests`. There is no frontend build step. Run pip check after dependency installation; add meaningful tests when changing behavior.
 
+Run Draft Center frontend tests with `node --test tests/test_draft_skip.js`. Skip Pick is restricted to Draft Mod admins through server-side password verification; `DRAFT_ADMIN_PASSWORDS` can override the existing moderator passwords as a comma-separated list. The browser keeps the entered password only in memory, clearing it when locked. A pending `skippedPick` preserves original pick numbers and returns to that pick after the borrowed selection. Do not change the one-time reset migration marker for feature releases. `clock_version` rejects old browser writes that cannot preserve skipped state.
+
 ## Code map and data
 
 - `app.py`: Flask routes, scraping, database wrapper, draft pool, league year.
