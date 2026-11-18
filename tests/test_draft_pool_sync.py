@@ -126,6 +126,15 @@ class DraftPoolPublishingTests(unittest.TestCase):
         new['playerNotes'] = {self.first['id']: 'Current note'}
         self.assertEqual(self.client.post('/save_draft', json=new).status_code, 200)
 
+    def test_live_pool_cached_before_draft_initialization_is_used_on_first_load(self):
+        with tempfile.TemporaryDirectory() as temp, patch.object(app, 'DB_PATH', os.path.join(temp, 'first.db')):
+            app.draft_pool_sync.publish([self.first])
+            initialized = self.client.get('/load_draft').get_json()
+            self.assertEqual(initialized['pool_version'], sync.pool_version([self.first]))
+            self.assertEqual(initialized['pool'], [self.first])
+            self.assertEqual(len(initialized['playerNotes']), 36)
+            self.assertEqual(initialized['results'], [])
+
 
 if __name__ == '__main__':
     unittest.main()

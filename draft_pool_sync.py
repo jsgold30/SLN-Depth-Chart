@@ -129,6 +129,17 @@ class DraftPoolSync:
                     refreshing = False
         return dict(self.snapshot(), refreshing=refreshing, warning=warning)
 
+    @staticmethod
+    def apply_to_state(db, players, version):
+        row = db.execute('SELECT data FROM draft_state WHERE id=1' + (' FOR UPDATE' if db._is_pg else '')).fetchone()
+        if row:
+            state = json.loads(row[0])
+            if state.get('pool_version') != version:
+                drafted = {result.get('playerName') for result in state.get('results', [])}
+                state.update(pool=[p for p in players if p['name'] not in drafted], pool_version=version,
+                             pool_client_version=2, ts=max(int(time.time() * 1000), state.get('ts', 0) + 1))
+                db.execute('UPDATE draft_state SET data=?, updated_at=CURRENT_TIMESTAMP WHERE id=1', (json.dumps(state),))
+
     def publish(self, players):
         version = pool_version(players)
         db = self.get_db()
@@ -138,14 +149,7 @@ class DraftPoolSync:
                 db.execute("SELECT value FROM settings WHERE key='draft_pool_lock' FOR UPDATE")
             else:
                 db.execute('BEGIN IMMEDIATE')
-            row = db.execute('SELECT data FROM draft_state WHERE id=1' + (' FOR UPDATE' if db._is_pg else '')).fetchone()
-            if row:
-                state = json.loads(row[0])
-                if state.get('pool_version') != version:
-                    drafted = {result.get('playerName') for result in state.get('results', [])}
-                    state.update(pool=[p for p in players if p['name'] not in drafted], pool_version=version,
-                                 pool_client_version=2, ts=max(int(time.time() * 1000), state.get('ts', 0) + 1))
-                    db.execute('UPDATE draft_state SET data=?, updated_at=CURRENT_TIMESTAMP WHERE id=1', (json.dumps(state),))
+            self.apply_to_state(db, players, version)
             payload = {'players': players, 'pool_version': version, 'source': 'sln', 'fetched_at': time.time()}
             self.put(db, 'draft_pool_live', json.dumps(payload))
             db.commit()

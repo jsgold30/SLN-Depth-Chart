@@ -1090,7 +1090,7 @@ def get_draft_db():
     migration_key = 'draft_migration_' + DRAFT_STATE_REVISION
     try:
         if db.execute('SELECT value FROM settings WHERE key=?', (migration_key,)).fetchone():
-            return db
+            return _align_draft_pool(db)
         # Claim the migration inside the same transaction as the data changes.
         # A concurrent worker waits here, then skips the already-applied import.
         claimed = db.execute('''INSERT INTO settings (key, value) VALUES (?, ?)
@@ -1122,11 +1122,24 @@ def get_draft_db():
                           ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at''',
                        (json.dumps(state),))
         db.commit()
-        return db
+        return _align_draft_pool(db)
     except Exception:
         db._raw.rollback()
         db.close()
         raise
+
+
+def _align_draft_pool(db):
+    """A pool may be fetched by Trade Finder before draft_state exists."""
+    cached = db.execute("SELECT value FROM settings WHERE key='draft_pool_live'").fetchone()
+    state = db.execute('SELECT data FROM draft_state WHERE id=1').fetchone()
+    if cached and state and json.loads(state[0]).get('pool_version') != json.loads(cached[0])['pool_version']:
+        _lock_draft(db)
+        latest = json.loads(db.execute("SELECT value FROM settings WHERE key='draft_pool_live'").fetchone()[0])
+        draft_pool_sync.apply_to_state(db, latest['players'], latest['pool_version'])
+        db.commit()
+    return db
+
 
 @app.route('/fetch_draft_players', methods=['POST'])
 def fetch_draft_players():
