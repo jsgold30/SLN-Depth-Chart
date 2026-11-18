@@ -73,6 +73,7 @@ class DraftStateTests(unittest.TestCase):
                      currentPick=1, playerNotes={'1': 'Edited note'})
         response = self.client.post('/save_draft', json=state)
         self.assertEqual(response.status_code, 200)
+        state['pool'] = state['pool'][1:]
         self.assertEqual(self.load(), state)
 
     def test_stale_browser_cannot_restore_old_draft_or_clear_new_notes(self):

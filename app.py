@@ -17,14 +17,12 @@ import sqlite3
 import json
 import hmac
 from owed_pick_sync import OwedPickSync
-from draft_pool_sync import DraftPoolSync
 
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(days=7)
 OWED_PICKS_AUTO_SYNC = os.environ.get('OWED_PICKS_AUTO_SYNC', '1') != '0'
-DRAFT_POOL_AUTO_SYNC = os.environ.get('DRAFT_POOL_AUTO_SYNC', '1') != '0'
 
 import csv
 import io
@@ -1075,10 +1073,6 @@ def flush_salary_cache():
 
 DRAFT_POOL_VERSION = ','.join(p['name'] for p in DRAFT_PLAYER_POOL)
 DRAFT_POOL_CLIENT_VERSION = 2
-draft_pool_sync = DraftPoolSync(
-    lambda: get_db(), app.app_context,
-    [dict(p, id=str(i+1), out=p.get('out_rat', ''), in_rating=p.get('in_rat', '')) for i, p in enumerate(DRAFT_PLAYER_POOL)],
-    DRAFT_POOL_VERSION)
 DRAFT_STATE_REVISION = '2042-reset-notes-v1'
 DRAFT_CLOCK_VERSION = 2
 DRAFT_ADMIN_PASSWORDS = tuple(os.environ.get('DRAFT_ADMIN_PASSWORDS', 'Jordo,Hoff,Tyler').split(','))
@@ -1129,21 +1123,32 @@ def get_draft_db():
         raise
 
 
+def _draft_pool_players(results=()):
+    """Use the bundled class, excluding selections already made in this draft."""
+    drafted = {result.get('playerName') for result in results}
+    return [dict(p, id=str(i+1), out=p.get('out_rat', ''), in_rating=p.get('in_rat', ''))
+            for i, p in enumerate(DRAFT_PLAYER_POOL) if p['name'] not in drafted]
+
+
 def _align_draft_pool(db):
-    """A pool may be fetched by Trade Finder before draft_state exists."""
-    cached = db.execute("SELECT value FROM settings WHERE key='draft_pool_live'").fetchone()
+    """Restore the bundled class without resetting an in-progress draft."""
     state = db.execute('SELECT data FROM draft_state WHERE id=1').fetchone()
-    if cached and state and json.loads(state[0]).get('pool_version') != json.loads(cached[0])['pool_version']:
+    if state and json.loads(state[0]).get('pool_version') != DRAFT_POOL_VERSION:
         _lock_draft(db)
-        latest = json.loads(db.execute("SELECT value FROM settings WHERE key='draft_pool_live'").fetchone()[0])
-        draft_pool_sync.apply_to_state(db, latest['players'], latest['pool_version'])
+        latest = json.loads(db.execute('SELECT data FROM draft_state WHERE id=1').fetchone()[0])
+        if latest.get('pool_version') != DRAFT_POOL_VERSION:
+            latest.update(pool=_draft_pool_players(latest.get('results', [])),
+                          pool_version=DRAFT_POOL_VERSION,
+                          ts=max(int(time.time() * 1000), int(latest.get('ts', 0)) + 1))
+            db.execute('UPDATE draft_state SET data=?, updated_at=CURRENT_TIMESTAMP WHERE id=1',
+                       (json.dumps(latest),))
         db.commit()
     return db
 
 
 @app.route('/fetch_draft_players', methods=['POST'])
 def fetch_draft_players():
-    return jsonify(draft_pool_sync.get(enabled=DRAFT_POOL_AUTO_SYNC))
+    return jsonify({'players': _draft_pool_players(), 'pool_version': DRAFT_POOL_VERSION})
 
 
 @app.route('/clear_draft_notes', methods=['POST'])
@@ -1174,17 +1179,16 @@ def save_draft():
         return jsonify({'error': 'Draft Center updated; refresh the page before editing.'}), 409
     if data.get('pool_client_version') != DRAFT_POOL_CLIENT_VERSION:
         return jsonify({'error': 'Draft pool updated; refresh the page before editing.'}), 409
+    if data.get('pool_version') != DRAFT_POOL_VERSION:
+        return jsonify({'error': 'Draft pool updated; refresh the page before editing.'}), 409
     db = get_draft_db()
     _lock_draft(db)
-    cached = db.execute("SELECT value FROM settings WHERE key='draft_pool_live'").fetchone()
-    if cached and data.get('pool_version') != json.loads(cached[0])['pool_version']:
-        db.close()
-        return jsonify({'error': 'SLN draft pool changed; refresh the page before editing.'}), 409
     row = db.execute('SELECT data FROM draft_state WHERE id=1').fetchone()
     previous = json.loads(row[0]) if row else {}
     if not _draft_admin() and not _valid_draft_clock_change(previous, data):
         db.close()
         return jsonify({'error': 'Only a draft admin can skip a pick. Reload the draft and try again.'}), 403
+    data['pool'] = _draft_pool_players(data.get('results', []))
     db.execute('''INSERT INTO draft_state (id, data, updated_at)
                   VALUES (1, ?, CURRENT_TIMESTAMP)
                   ON CONFLICT(id) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at''',
