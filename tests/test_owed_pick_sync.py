@@ -36,6 +36,14 @@ class ForumReaderTests(unittest.TestCase):
         with self.assertRaises(sync.ForumLoginRequired):
             sync.first_post_text(LOGIN_HTML)
 
+    def test_login_feedback_is_sanitized_instead_of_returning_raw_html(self):
+        self.assertIn('form verification', sync.login_failure_message('<div class="error">The submitted form was invalid. Try submitting again.</div>'))
+        message = sync.login_failure_message('<div class="error">You specified an incorrect password for secret-test-user</div>')
+        self.assertIn('rejected', message)
+        self.assertNotIn('secret-test-user', message)
+        self.assertIn('security check', sync.login_failure_message('<div class="error">Maximum number of login attempts exceeded.</div>'))
+        self.assertIsNone(sync.login_failure_message('<div>Successfully logged in.</div>'))
+
     def session(self):
         session = Mock()
         session.headers = {}

@@ -17,6 +17,19 @@ class ForumLoginRequired(ValueError):
     pass
 
 
+def login_failure_message(html):
+    """Map forum feedback to safe diagnostics without exposing response text or credentials."""
+    soup = BeautifulSoup(html, 'html.parser')
+    errors = ' '.join(node.get_text(' ', strip=True) for node in soup.select('.error, .errorbox, .successbox')).lower()
+    if 'submitted form was invalid' in errors or ('form' in errors and 'invalid' in errors):
+        return 'The forum rejected the login form verification. Saved picks are retained.'
+    if any(word in errors for word in ['captcha', 'maximum number', 'too many login']):
+        return 'The forum requires an interactive login/security check. Saved picks are retained.'
+    if any(word in errors for word in ['incorrect', 'invalid username', 'invalid password']):
+        return 'The forum rejected the configured SLN username/password. Check the staging service variables. Saved picks are retained.'
+    return None
+
+
 def first_post_text(html):
     soup = BeautifulSoup(html, 'html.parser')
     content = soup.select_one('.postbody .content')
@@ -42,7 +55,7 @@ def fetch_first_post(credentials):
             return first_post_text(response.text)
         except ForumLoginRequired:
             if not credentials.get('username') or not credentials.get('password'):
-                raise
+                raise ForumLoginRequired('The SLN session is expired and a complete SLN_USERNAME/SLN_PASSWORD login is not configured for this service. Saved picks are retained.') from None
         # Use the forum's actual hidden/CSRF fields and keep authentication in this session.
         soup = BeautifulSoup(response.text, 'html.parser')
         password_input = soup.find('input', attrs={'name': 'password'})
@@ -57,6 +70,9 @@ def fetch_first_post(credentials):
         session.headers.pop('Cookie', None)
         response = session.post(login_url, data=payload, timeout=10, allow_redirects=False)
         response.raise_for_status()
+        failure = login_failure_message(response.text)
+        if failure:
+            raise ForumLoginRequired(failure)
         # Fetch the known topic URL rather than following a form-controlled redirect.
         response = session.get(FORUM_URL, timeout=10)
         response.raise_for_status()
