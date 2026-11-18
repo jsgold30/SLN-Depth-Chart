@@ -2065,7 +2065,8 @@
       Trade Machine
       <button onclick="tmToggleAdminPin()" style="font-size:0.68rem;padding:3px 10px;background:#f5e8c8;color:#7c5a1a;border:1px solid #c4a05a;border-radius:6px;cursor:pointer;letter-spacing:0.04em;">Admin</button>
     </div>
-    <p id="tmPickSources" style="font-size:0.75rem;line-height:1.5;margin:0 0 12px;">Pick ownership uses roster pages for the first two years and pasted owed picks for the next four.</p>
+    <p id="tmPickSources" style="font-size:0.75rem;line-height:1.5;margin:0 0 12px;">Pick ownership uses roster pages for the first two years and the owed-picks post for the next four.</p>
+    <p id="tmOwedAutoStatus" style="font-size:0.73rem;line-height:1.5;margin:0 0 12px;">Checking owed-picks refresh…</p>
     <!-- Admin PIN entry -->
     <div id="tmAdminPinPanel" style="display:none;padding:10px 0 2px;border-bottom:1px solid #e2cc90;margin-bottom:10px;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -2100,7 +2101,8 @@
       <hr style="border-color:#d4b87a;margin:2px 0;">
       <!-- Owed Picks Paste -->
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <span style="color:#7c5a1a;font-size:0.72rem;font-weight:600;">Paste Owed Picks</span>
+        <span style="color:#7c5a1a;font-size:0.72rem;font-weight:600;">Owed Picks · Manual Paste Fallback</span>
+        <button class="btn btn-slate" onclick="tmRefreshOwedPicks()" style="padding:3px 10px;font-size:0.73rem;">Refresh from SLN</button>
         <a href="https://simleaguenirvana.com/viewtopic.php?t=18&hilit=owed+picks" target="_blank" style="font-size:0.68rem;color:#a07840;text-decoration:underline;">Open forum thread ↗</a>
       </div>
       <div id="tmOwedPicksHelp" style="font-size:0.68rem;color:#a07840;margin-bottom:4px;">Paste the next four seasons of owed picks, with year headings.</div>
@@ -2556,11 +2558,16 @@ function switchTab(tab) {
   document.getElementById('tabBtnDraft').classList.toggle('active', tab === 'draft');
   document.getElementById('tabBtnStatBook').classList.toggle('active', tab === 'statbook');
   document.getElementById('tabBtnSLN').classList.toggle('active', tab === 'sln');
+  // Check for fresh owed picks while the Trade Machine is open.
+  if (tab === 'trade' && !tmOwedRefreshTimer) {
+    tmOwedRefreshTimer = setInterval(tmLoadOwedPicks, 300000);
+    tmLoadOwedPicks();
+  }
+  if (tab !== 'trade' && tmOwedRefreshTimer) { clearInterval(tmOwedRefreshTimer); tmOwedRefreshTimer = null; }
   // Build Trade Machine logo grids + load owed picks lazily on first visit
   if (tab === 'trade' && !tmLogoGridsBuilt) {
     buildTMLogoGrids();
     tmLogoGridsBuilt = true;
-    tmLoadOwedPicks();
     tfPreloadAllRosters(); // background pre-load so TF ratings are ready
     // Auto-select myTeam as side A on first open
     if (myTeam) {
@@ -4487,6 +4494,8 @@ function tmApplyLeagueYear(year) {
 let tmPicksA = [];   // [{year, round, ownerAbbr, originalAbbr, label}]
 let tmPicksB = [];
 let tmOwedYears = []; // year sections actually supplied by the pasted post
+let tmOwedRefreshTimer = null;
+let tmOwedSyncPoll = null;
 let tmOwedPicks = []; // [{from_abbr, year, round, to_abbr}] — loaded from server
 let tmRosterPicksA = null; // picks parsed from Team A's roster page [{year, round, original_team}]
 let tmRosterPicksB = null; // picks parsed from Team B's roster page
@@ -4500,6 +4509,7 @@ async function tmLoadOwedPicks() {
     const res = await fetch('/api/picks');
     if (!res.ok) return;
     const data = await res.json();
+    tmRenderOwedSyncStatus(data);
     tmOwedPicks = data.owed || [];
     tmOwedYears = data.owed_years || [];
     tmApplyLeagueYear(data.league_year);
@@ -4510,15 +4520,18 @@ async function tmLoadOwedPicks() {
 
     // If server is syncing fresh data in background, poll for results
     if (data.syncing) {
+      if (tmOwedSyncPoll) clearInterval(tmOwedSyncPoll);
       let attempts = 0;
-      const poll = setInterval(async () => {
+      tmOwedSyncPoll = setInterval(async () => {
         attempts++;
         try {
           const r2 = await fetch('/api/picks');
-          if (!r2.ok) { clearInterval(poll); return; }
+          if (!r2.ok) { clearInterval(tmOwedSyncPoll); tmOwedSyncPoll = null; return; }
           const d2 = await r2.json();
+          tmRenderOwedSyncStatus(d2);
           if (!d2.syncing || attempts >= 12) {
-            clearInterval(poll);
+            clearInterval(tmOwedSyncPoll);
+            tmOwedSyncPoll = null;
             tmOwedPicks = d2.owed || [];
             tmOwedYears = d2.owed_years || [];
             tmApplyLeagueYear(d2.league_year);
@@ -4527,10 +4540,30 @@ async function tmLoadOwedPicks() {
               if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side);
             });
           }
-        } catch(e) { clearInterval(poll); }
+        } catch(e) { clearInterval(tmOwedSyncPoll); tmOwedSyncPoll = null; }
       }, 5000); // poll every 5s, up to 60s
     }
   } catch(e) {}
+}
+
+function tmRenderOwedSyncStatus(data) {
+  const status = document.getElementById('tmOwedAutoStatus');
+  if (!status) return;
+  if (data.syncing) status.textContent = 'Refreshing owed picks from SLN… Saved picks remain available.';
+  else if (data.sync_error) status.textContent = '⚠ ' + data.sync_error;
+  else if (data.last_auto_sync) status.textContent = 'Owed picks automatically refreshed: ' + new Date(data.last_auto_sync * 1000).toLocaleString();
+  else status.textContent = data.auto_sync ? 'Automatic owed-picks refresh enabled.' : 'Automatic refresh disabled. Saved picks remain available.';
+}
+
+async function tmRefreshOwedPicks() {
+  try {
+    const response = await fetch('/api/picks/sync', { method: 'POST' });
+    if (!response.ok) throw new Error('Refresh unavailable');
+    await tmLoadOwedPicks();
+  } catch(e) {
+    const status = document.getElementById('tmOwedAutoStatus');
+    if (status) status.textContent = 'Could not refresh owed picks. Saved picks remain available.';
+  }
 }
 
 function _teamNameToAbbr(name) {
@@ -4583,9 +4616,9 @@ function tmAvailablePicks(abbr, side) {
 function tmUpdatePickSourceInfo() {
   const years = TM_PICK_YEARS;
   const missing = years.slice(2).filter(year => !tmOwedYears.includes(year));
-  const description = `Pick window: ${years[0]}–${years[5]}. ${years[0]}–${years[1]}: roster pages. ${years[2]}–${years[5]}: pasted owed picks.`;
+  const description = `Pick window: ${years[0]}–${years[5]}. ${years[0]}–${years[1]}: roster pages. ${years[2]}–${years[5]}: owed-picks post.`;
   const note = document.getElementById('tmPickSources');
-  if (note) note.textContent = description + (missing.length ? ` Paste owed picks for ${missing.join(', ')} to make those years available.` : '');
+  if (note) note.textContent = description + (missing.length ? ` Refresh owed picks or paste sections for ${missing.join(', ')} to make those years available.` : '');
   const help = document.getElementById('tmOwedPicksHelp');
   if (help) help.textContent = `Paste the ${years[2]}–${years[5]} year sections from the forum. Include a year heading even when no picks are owed. Each pasted year replaces that saved year; other saved years are kept.`;
 }

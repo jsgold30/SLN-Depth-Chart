@@ -16,11 +16,13 @@ import re
 import sqlite3
 import json
 import hmac
+from owed_pick_sync import OwedPickSync
 
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(days=7)
+OWED_PICKS_AUTO_SYNC = os.environ.get('OWED_PICKS_AUTO_SYNC', '1') != '0'
 
 import csv
 import io
@@ -1435,6 +1437,7 @@ def clear_salary_cache():
 
 @app.route('/api/picks', methods=['GET'])
 def get_picks():
+    sync = owed_pick_sync.schedule(_forum_credentials(), enabled=OWED_PICKS_AUTO_SYNC)
     db = get_db()
     row = db.execute('SELECT data, updated_at FROM owed_picks WHERE id = 1').fetchone()
     db.close()
@@ -1443,8 +1446,18 @@ def get_picks():
     future_years = set(range(league_year + 2, league_year + 6))
     return jsonify({'owed': [p for p in record['owed'] if p['year'] in future_years],
                     'owed_years': [year for year in record['years'] if year in future_years],
-                    'updated_at': row[1] if row else None, 'syncing': False,
-                    'league_year': league_year})
+                    'updated_at': row[1] if row else None,
+                    'league_year': league_year, **sync})
+
+
+def _forum_credentials():
+    db = get_db()
+    try:
+        row = db.execute("SELECT value FROM settings WHERE key='sln_cookie'").fetchone()
+    finally:
+        db.close()
+    return {'cookie': (row[0] if row and row[0] else os.environ.get('SLN_COOKIE', '')).strip(),
+            'username': os.environ.get('SLN_USERNAME', ''), 'password': os.environ.get('SLN_PASSWORD', '')}
 
 
 def _owed_picks_record(raw):
@@ -1464,13 +1477,10 @@ def _save_owed_picks(db, picks, years):
 
 
 
-@app.route('/api/picks/from-paste', methods=['POST'])
-def picks_from_paste():
-    """Replace pasted year sections, preserving other saved sections for season changes."""
-    body = request.get_json() or {}
-    text = (body.get('text') or '').strip()
-    if not text:
-        return jsonify({'error': 'text required'}), 400
+_NO_SNAPSHOT = object()
+
+
+def _import_owed_text(text, require_all=False, expected_snapshot=_NO_SNAPSHOT):
 
     years = set()
     current_year = None
@@ -1482,22 +1492,53 @@ def picks_from_paste():
             years.add(current_year)
         elif current_year and re.search(r'\b(1st|2nd)\b.*\bto\b', line, re.I):
             if not parse_owed_picks_from_thread(f'{current_year}:\n{line}'):
-                return jsonify({'error': f'Could not read a pick transfer for {current_year}. Check the team names before saving.'}), 400
+                raise ValueError(f'Could not read a pick transfer for {current_year}. Check the team names before saving.')
     league_year = get_league_year()
     active_years = sorted(years.intersection(range(league_year + 2, league_year + 6)))
     if not active_years:
-        return jsonify({'error': f'Include year headings for {league_year + 2}–{league_year + 5}. The first two years come from roster pages.'}), 400
+        raise ValueError(f'Include year headings for {league_year + 2}–{league_year + 5}. The first two years come from roster pages.')
+    if require_all and len(active_years) != 4:
+        raise ValueError('The forum post is missing some of the four owed-pick year sections. Saved picks are retained.')
     picks = parse_owed_picks_from_thread(text)
     db = get_db()
     try:
-        row = db.execute('SELECT data FROM owed_picks WHERE id=1').fetchone()
+        if not db._is_pg:
+            db.execute('BEGIN IMMEDIATE')
+        else:
+            db.execute("INSERT INTO settings (key, value) VALUES ('owed_import_lock', '1') ON CONFLICT(key) DO NOTHING")
+            db.execute("SELECT value FROM settings WHERE key='owed_import_lock' FOR UPDATE")
+        row = db.execute('SELECT data FROM owed_picks WHERE id=1' + (' FOR UPDATE' if db._is_pg else '')).fetchone()
+        if expected_snapshot is not _NO_SNAPSHOT and (row[0] if row else None) != expected_snapshot:
+            raise ValueError('Saved picks changed during the refresh. The newer saved picks were retained.')
         previous = _owed_picks_record(row[0]) if row else {'owed': [], 'years': []}
         combined = [p for p in previous['owed'] if p['year'] not in years] + picks
         _save_owed_picks(db, combined, set(previous['years']) | years)
     finally:
         db.close()
-    return jsonify({'ok': True, 'total': sum(p['year'] in active_years for p in picks),
-                    'years_saved': active_years})
+    return {'ok': True, 'total': sum(p['year'] in active_years for p in picks), 'years_saved': active_years}
+
+
+owed_pick_sync = OwedPickSync(lambda: get_db(),
+                             lambda text, snapshot: _import_owed_text(text, require_all=True, expected_snapshot=snapshot),
+                             app.app_context)
+
+
+@app.route('/api/picks/sync', methods=['POST'])
+def sync_owed_picks():
+    return jsonify(owed_pick_sync.schedule(_forum_credentials(), enabled=OWED_PICKS_AUTO_SYNC, force=True))
+
+
+@app.route('/api/picks/from-paste', methods=['POST'])
+def picks_from_paste():
+    """Manual fallback; replaces only pasted year sections."""
+    body = request.get_json() or {}
+    text = (body.get('text') or '').strip()
+    if not text:
+        return jsonify({'error': 'text required'}), 400
+    try:
+        return jsonify(_import_owed_text(text))
+    except ValueError as error:
+        return jsonify({'error': str(error)}), 400
 
 
 @app.route('/api/picks/update', methods=['POST'])
