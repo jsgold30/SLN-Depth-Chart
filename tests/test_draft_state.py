@@ -86,7 +86,7 @@ class DraftStateTests(unittest.TestCase):
 
     def test_explicit_note_clear_is_not_reseeded(self):
         self.load()
-        response = self.client.post('/clear_draft_notes', json={'state_revision': app.DRAFT_STATE_REVISION})
+        response = self.client.post('/clear_draft_notes', json={'state_revision': app.DRAFT_STATE_REVISION, 'pool_client_version': app.DRAFT_POOL_CLIENT_VERSION})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.load()['playerNotes'], {})
         self.assertEqual(self.load()['playerNotes'], {})

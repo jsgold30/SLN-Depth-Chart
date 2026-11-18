@@ -17,12 +17,14 @@ import sqlite3
 import json
 import hmac
 from owed_pick_sync import OwedPickSync
+from draft_pool_sync import DraftPoolSync
 
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(days=7)
 OWED_PICKS_AUTO_SYNC = os.environ.get('OWED_PICKS_AUTO_SYNC', '1') != '0'
+DRAFT_POOL_AUTO_SYNC = os.environ.get('DRAFT_POOL_AUTO_SYNC', '1') != '0'
 
 import csv
 import io
@@ -1072,6 +1074,11 @@ def flush_salary_cache():
 
 
 DRAFT_POOL_VERSION = ','.join(p['name'] for p in DRAFT_PLAYER_POOL)
+DRAFT_POOL_CLIENT_VERSION = 2
+draft_pool_sync = DraftPoolSync(
+    lambda: get_db(), app.app_context,
+    [dict(p, id=str(i+1), out=p.get('out_rat', ''), in_rating=p.get('in_rat', '')) for i, p in enumerate(DRAFT_PLAYER_POOL)],
+    DRAFT_POOL_VERSION)
 DRAFT_STATE_REVISION = '2042-reset-notes-v1'
 DRAFT_CLOCK_VERSION = 2
 DRAFT_ADMIN_PASSWORDS = tuple(os.environ.get('DRAFT_ADMIN_PASSWORDS', 'Jordo,Hoff,Tyler').split(','))
@@ -1105,7 +1112,8 @@ def get_draft_db():
                 if report not in existing:
                     notes[player_id] = existing + ('\n\n' if existing else '') + report
             state.update(pool=players, order=[], results=[], currentPick=0,
-                         pool_version=DRAFT_POOL_VERSION, state_revision=DRAFT_STATE_REVISION,
+                         pool_version=DRAFT_POOL_VERSION, pool_client_version=DRAFT_POOL_CLIENT_VERSION,
+                         state_revision=DRAFT_STATE_REVISION,
                          ts=max(int(time.time() * 1000), int(state.get('ts', 0)) + 1))
             db.execute('INSERT INTO settings (key, value) VALUES (?, ?)',
                        ('draft_backup_' + DRAFT_STATE_REVISION, original))
@@ -1122,14 +1130,15 @@ def get_draft_db():
 
 @app.route('/fetch_draft_players', methods=['POST'])
 def fetch_draft_players():
-    players = [dict(p, id=str(i+1), out=p.get('out_rat',''), in_rating=p.get('in_rat','')) for i, p in enumerate(DRAFT_PLAYER_POOL)]
-    return jsonify({'players': players, 'pool_version': DRAFT_POOL_VERSION})
+    return jsonify(draft_pool_sync.get(enabled=DRAFT_POOL_AUTO_SYNC))
 
 
 @app.route('/clear_draft_notes', methods=['POST'])
 def clear_draft_notes():
     if (request.get_json(silent=True) or {}).get('state_revision') != DRAFT_STATE_REVISION:
         return jsonify({'error': 'Draft Center updated; refresh the page before editing.'}), 409
+    if (request.get_json(silent=True) or {}).get('pool_client_version') != DRAFT_POOL_CLIENT_VERSION:
+        return jsonify({'error': 'Draft pool updated; refresh the page before editing.'}), 409
     db = get_draft_db()
     row = db.execute('SELECT data FROM draft_state WHERE id = 1').fetchone()
     if row:
@@ -1150,8 +1159,14 @@ def save_draft():
         return jsonify({'error': 'Draft Center updated; refresh the page before editing.'}), 409
     if data.get('clock_version') != DRAFT_CLOCK_VERSION:
         return jsonify({'error': 'Draft Center updated; refresh the page before editing.'}), 409
+    if data.get('pool_client_version') != DRAFT_POOL_CLIENT_VERSION:
+        return jsonify({'error': 'Draft pool updated; refresh the page before editing.'}), 409
     db = get_draft_db()
     _lock_draft(db)
+    cached = db.execute("SELECT value FROM settings WHERE key='draft_pool_live'").fetchone()
+    if cached and data.get('pool_version') != json.loads(cached[0])['pool_version']:
+        db.close()
+        return jsonify({'error': 'SLN draft pool changed; refresh the page before editing.'}), 409
     row = db.execute('SELECT data FROM draft_state WHERE id=1').fetchone()
     previous = json.loads(row[0]) if row else {}
     if not _draft_admin() and not _valid_draft_clock_change(previous, data):
@@ -1174,6 +1189,7 @@ def load_draft():
     if row:
         data = json.loads(row[0])
         data['clock_version'] = DRAFT_CLOCK_VERSION
+        data['pool_client_version'] = DRAFT_POOL_CLIENT_VERSION
         return jsonify(data)
     return jsonify({})
 

@@ -2579,7 +2579,7 @@ function switchTab(tab) {
   }
   // Load draft players lazily on first visit; start/stop polling with tab
   if (tab === 'draft') {
-    if (!dcPlayersLoaded) dcFetchPlayers();
+    dcFetchPlayers();
     dcStartPolling();
   } else {
     dcStopPolling();
@@ -5207,6 +5207,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 let dcPlayersLoaded = false;
 let dcPlayersFetching = false; // guard against concurrent fetches
+let dcPoolRefreshing = false;
 let dcAllPlayers   = [];   // full pool fetched from server
 let dcPool         = [];   // remaining (un-drafted) players
 let dcOrder        = [];   // [{ name, abbr, c1, c2, url }, ...]  current draft order
@@ -5472,7 +5473,7 @@ async function dcSave() {
   // is reachable. Prevents cold-start network errors from wiping real data.
   const hasData = dcOrder.length > 0 || dcResults.length > 0 || Object.keys(dcPlayerNotes).length > 0;
   if (!hasData && !dcServerReached) return;
-  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, skippedPick: dcSkippedPick, results: dcResults, playerNotes: dcPlayerNotes, pool_version: dcSavedPoolVersion, state_revision: DC_STATE_REVISION, clock_version: DC_CLOCK_VERSION, ts: Math.max(Date.now(), dcLastSyncStamp + 1) };
+  const payload = { pool: dcPool, order: dcOrder, currentPick: dcCurrentPick, skippedPick: dcSkippedPick, results: dcResults, playerNotes: dcPlayerNotes, pool_version: dcSavedPoolVersion, pool_client_version: 2, state_revision: DC_STATE_REVISION, clock_version: DC_CLOCK_VERSION, ts: Math.max(Date.now(), dcLastSyncStamp + 1) };
   dcLastSyncStamp = payload.ts;
   // Save to server (shared across all devices)
   try {
@@ -5553,20 +5554,16 @@ async function dcFetchPlayers() {
     });
     const data = await resp.json();
     if (data.error) { dcPlayersFetching = false; statusEl.textContent = 'Error: ' + data.error; return; }
+    dcPoolRefreshing = !!data.refreshing;
+
+    // A background refresh may have updated saved state since the first load.
+    if (data.pool_version !== dcSavedPoolVersion) await dcLoadFromServer();
 
     dcAllPlayers = data.players;
     dcPlayersLoaded = true;
     dcPlayersFetching = false;
 
-    // If the pool changed (new draft class), wipe scout notes automatically.
-    if (data.pool_version && data.pool_version !== dcSavedPoolVersion) {
-      dcPlayerNotes = {};
-      fetch('/clear_draft_notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state_revision: DC_STATE_REVISION })
-      });
-    }
+    // Stable player IDs preserve notes when SLN reorders or updates ratings.
     dcSavedPoolVersion = data.pool_version || '';
 
     // Always rebuild pool from the authoritative server list,
@@ -5592,6 +5589,9 @@ async function dcFetchPlayers() {
       dcRenderOrder();
       dcRenderLog();
     }
+    if (data.warning) statusEl.textContent = data.warning;
+    else if (data.refreshing) statusEl.textContent = 'Checking the SLN draft pool… Showing the saved players.';
+    else if (data.source === 'sln') statusEl.textContent = 'Player pool refreshed from SLN: ' + new Date(data.fetched_at * 1000).toLocaleString();
   } catch(e) {
     console.error('[dcFetchPlayers] error:', e);
     dcPlayersFetching = false;
@@ -7361,15 +7361,18 @@ function dcClearAllConfirmed() {
 
 // ── Real-time sync polling ────────────────────────────────────────────────
 let dcPollInterval  = null;
+let dcPoolRefreshInterval = null;
 let dcLastSyncStamp = 0; // server updated_at we last loaded
 
 function dcStartPolling() {
   if (dcPollInterval) return;
   dcPollInterval = setInterval(dcPollServer, 4000);
+  dcPoolRefreshInterval = setInterval(dcFetchPlayers, 300000);
 }
 
 function dcStopPolling() {
   if (dcPollInterval) { clearInterval(dcPollInterval); dcPollInterval = null; }
+  if (dcPoolRefreshInterval) { clearInterval(dcPoolRefreshInterval); dcPoolRefreshInterval = null; }
 }
 
 async function dcPollServer() {
@@ -7380,6 +7383,10 @@ async function dcPollServer() {
     dcServerReached = true;
     const s = await res.json();
     if (!s || !s.ts) return;
+    if (dcPoolRefreshing || (s.pool_version && s.pool_version !== dcSavedPoolVersion)) {
+      await dcFetchPlayers();
+      return;
+    }
     // Only update if server has newer data than what we last loaded
     if (s.ts <= dcLastSyncStamp) return;
     dcLastSyncStamp = s.ts;
