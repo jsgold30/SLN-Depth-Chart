@@ -79,6 +79,25 @@ class ForumReaderTests(unittest.TestCase):
             sync.fetch_first_post({'username': 'test-reader', 'password': 'test-password'})
         session.post.assert_not_called()
 
+    def test_login_waits_for_token_age_without_modifying_csrf_fields(self):
+        session, manager = self.session()
+        session.get.side_effect = [response(LOGIN_HTML.replace('</form>', '<input type="hidden" name="creation_time" value="100"></form>')), response(POST_HTML)]
+        aged = []
+
+        def post(*args, **kwargs):
+            if not aged:
+                return response('<div class="error">The submitted form was invalid. Try submitting again.</div>')
+            self.assertEqual(kwargs['data']['form_token'], 'test-csrf')
+            self.assertEqual(kwargs['data']['creation_time'], '100')
+            return response('', 302)
+
+        session.post.side_effect = post
+        with patch.object(sync.requests, 'Session', return_value=manager), \
+                patch.object(sync.time, 'sleep', side_effect=lambda seconds: aged.append(seconds)):
+            text = sync.fetch_first_post({'username': 'test-reader', 'password': 'test-password'})
+        self.assertEqual(aged, [1.1])
+        self.assertIn('SAS 1st to ORL', text)
+
 
 class OwedSyncTests(unittest.TestCase):
     def setUp(self):

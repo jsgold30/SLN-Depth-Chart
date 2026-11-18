@@ -68,6 +68,9 @@ def fetch_first_post(credentials):
         payload = {field['name']: field.get('value', '') for field in form.find_all('input', type='hidden') if field.get('name')}
         payload.update(username=credentials['username'], password=credentials['password'], login='Login')
         session.headers.pop('Cookie', None)
+        # phpBB check_form_key rejects tokens submitted in their creation second.
+        # Preserve the issued token and allow one full second to elapse on the forum.
+        time.sleep(1.1)
         response = session.post(login_url, data=payload, timeout=10, allow_redirects=False)
         response.raise_for_status()
         failure = login_failure_message(response.text)
