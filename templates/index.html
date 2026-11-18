@@ -2065,6 +2065,7 @@
       Trade Machine
       <button onclick="tmToggleAdminPin()" style="font-size:0.68rem;padding:3px 10px;background:#f5e8c8;color:#7c5a1a;border:1px solid #c4a05a;border-radius:6px;cursor:pointer;letter-spacing:0.04em;">Admin</button>
     </div>
+    <p id="tmPickSources" style="font-size:0.75rem;line-height:1.5;margin:0 0 12px;">Pick ownership uses roster pages for the first two years and pasted owed picks for the next four.</p>
     <!-- Admin PIN entry -->
     <div id="tmAdminPinPanel" style="display:none;padding:10px 0 2px;border-bottom:1px solid #e2cc90;margin-bottom:10px;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -2083,7 +2084,7 @@
       </div>
       <!-- League Year -->
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="color:#7c5a1a;font-size:0.72rem;font-weight:600;">Current League Year:</span>
+        <span style="color:#7c5a1a;font-size:0.72rem;font-weight:600;">Current Season:</span>
         <input id="tmLeagueYearInput" type="number" min="2020" max="2060" value="{{ league_year }}"
           style="width:80px;background:#fdf6e3;color:#3a2e1a;border:1px solid #d4b87a;border-radius:5px;padding:3px 8px;font-size:0.75rem;">
         <button class="btn btn-green" style="padding:3px 10px;font-size:0.73rem;" onclick="tmSaveLeagueYear()">Save</button>
@@ -2102,7 +2103,7 @@
         <span style="color:#7c5a1a;font-size:0.72rem;font-weight:600;">Paste Owed Picks</span>
         <a href="https://simleaguenirvana.com/viewtopic.php?t=18&hilit=owed+picks" target="_blank" style="font-size:0.68rem;color:#a07840;text-decoration:underline;">Open forum thread ↗</a>
       </div>
-      <div style="font-size:0.68rem;color:#a07840;margin-bottom:4px;">Copy the text of the owed picks post from the SLN forum and paste it below.</div>
+      <div id="tmOwedPicksHelp" style="font-size:0.68rem;color:#a07840;margin-bottom:4px;">Paste the next four seasons of owed picks, with year headings.</div>
       <textarea id="tmOwedPicksInput" rows="5" style="width:100%;font-size:0.7rem;background:#fffdf5;border:1px solid #d4b87a;border-radius:4px;padding:6px;color:#3b2a0e;resize:vertical;box-sizing:border-box;" placeholder="Paste forum post text here…"></textarea>
       <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
         <button class="btn btn-green" style="padding:5px 14px;font-size:0.75rem;" onclick="tmPastePicksNow()">Save Picks</button>
@@ -4464,15 +4465,20 @@ function fmtSal(n) {
 
 // ─── Draft Picks in Trade Machine ─────────────────────────────────────────────
 let TM_LEAGUE_YEAR = {{ league_year }};
-let TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + 1 + i);
+let TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + i);
 
 function tmApplyLeagueYear(year) {
   if (!year) return;
   if (year !== TM_LEAGUE_YEAR) {
     TM_LEAGUE_YEAR = year;
-    TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + 1 + i);
-    ['A','B'].forEach(side => { if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side); });
+    TM_PICK_YEARS  = Array.from({length: 6}, (_, i) => TM_LEAGUE_YEAR + i);
+    tmPicksA = tmPicksA.filter(p => TM_PICK_YEARS.includes(p.year));
+    tmPicksB = tmPicksB.filter(p => TM_PICK_YEARS.includes(p.year));
+    ['A','B'].forEach(side => { tmRenderPickPills(side); if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side); });
+    document.getElementById('tmResult').innerHTML = '';
+    document.getElementById('tmPicksSyncStatus').textContent = '';
   }
+  tmUpdatePickSourceInfo();
   // Always sync admin input to the authoritative server value
   const inp = document.getElementById('tmLeagueYearInput');
   if (inp && parseInt(inp.value) !== year) inp.value = year;
@@ -4480,9 +4486,12 @@ function tmApplyLeagueYear(year) {
 
 let tmPicksA = [];   // [{year, round, ownerAbbr, originalAbbr, label}]
 let tmPicksB = [];
+let tmOwedYears = []; // year sections actually supplied by the pasted post
 let tmOwedPicks = []; // [{from_abbr, year, round, to_abbr}] — loaded from server
 let tmRosterPicksA = null; // picks parsed from Team A's roster page [{year, round, original_team}]
 let tmRosterPicksB = null; // picks parsed from Team B's roster page
+let tmRosterPickYearsA = [];
+let tmRosterPickYearsB = [];
 let tmRPA = 0;        // Roster Points being traded by side A
 let tmRPB = 0;        // Roster Points being traded by side B
 
@@ -4491,8 +4500,10 @@ async function tmLoadOwedPicks() {
     const res = await fetch('/api/picks');
     if (!res.ok) return;
     const data = await res.json();
-    tmApplyLeagueYear(data.league_year);
     tmOwedPicks = data.owed || [];
+    tmOwedYears = data.owed_years || [];
+    tmApplyLeagueYear(data.league_year);
+    tmReconcilePicks();
     ['A','B'].forEach(side => {
       if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side);
     });
@@ -4508,8 +4519,10 @@ async function tmLoadOwedPicks() {
           const d2 = await r2.json();
           if (!d2.syncing || attempts >= 12) {
             clearInterval(poll);
-            tmApplyLeagueYear(d2.league_year);
             tmOwedPicks = d2.owed || [];
+            tmOwedYears = d2.owed_years || [];
+            tmApplyLeagueYear(d2.league_year);
+            tmReconcilePicks();
             ['A','B'].forEach(side => {
               if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side);
             });
@@ -4547,30 +4560,55 @@ function _picksFromOwed(abbr, years, picks) {
   }
 }
 
-// Returns all picks the team currently owns.
-// Next year (league_year + 1): from roster page if loaded, else owed-picks DB.
-// Years +2 through +6: always from owed-picks DB.
+// The current season and next season come exclusively from the loaded roster.
+// The following four seasons come exclusively from saved owed-picks sections.
 function tmAvailablePicks(abbr, side) {
   const rosterPicks = side === 'A' ? tmRosterPicksA : (side === 'B' ? tmRosterPicksB : null);
-  const nextYear   = TM_LEAGUE_YEAR + 1;
-  const outerYears = TM_PICK_YEARS.filter(y => y > nextYear);
+  const coveredYears = side === 'A' ? tmRosterPickYearsA : (side === 'B' ? tmRosterPickYearsB : []);
   const picks = [];
-
-  // All years — owed-picks DB is always the base (own picks + traded picks).
-  // Roster page supplements next year with any received picks not yet in the DB.
-  _picksFromOwed(abbr, TM_PICK_YEARS, picks);
-  if (rosterPicks) {
-    rosterPicks
-      .filter(p => p.year === nextYear)
-      .forEach(p => {
-        const origAbbr = _teamNameToAbbr(p.original_team);
-        if (!picks.find(x => x.year === p.year && x.round === p.round && x.originalAbbr === origAbbr))
-          picks.push({ year: p.year, round: p.round, ownerAbbr: abbr, originalAbbr: origAbbr, swapPartner: null, qualifier: null });
-      });
+  const rosterYears = TM_PICK_YEARS.slice(0, 2);
+  const owedYears = TM_PICK_YEARS.slice(2).filter(year => tmOwedYears.includes(year));
+  _picksFromOwed(abbr, owedYears, picks);
+  for (const p of rosterPicks || []) {
+    if (!rosterYears.includes(p.year) || !coveredYears.includes(p.year) || ![1, 2].includes(p.round)) continue;
+    const originalAbbr = _teamNameToAbbr(p.original_team);
+    if (!TM_TEAMS.some(t => t.abbr === originalAbbr)) continue;
+    picks.push({ year: p.year, round: p.round, ownerAbbr: abbr, originalAbbr, swapPartner: null, qualifier: null });
   }
+  const unique = new Map();
+  for (const p of picks) unique.set(`${p.year}:${p.round}:${p.originalAbbr}:${p.qualifier || ''}`, p);
+  return [...unique.values()].sort((a, b) => a.year - b.year || a.round - b.round || a.originalAbbr.localeCompare(b.originalAbbr));
+}
 
-  picks.sort((a, b) => a.year - b.year || a.round - b.round);
-  return picks;
+function tmUpdatePickSourceInfo() {
+  const years = TM_PICK_YEARS;
+  const missing = years.slice(2).filter(year => !tmOwedYears.includes(year));
+  const description = `Pick window: ${years[0]}–${years[5]}. ${years[0]}–${years[1]}: roster pages. ${years[2]}–${years[5]}: pasted owed picks.`;
+  const note = document.getElementById('tmPickSources');
+  if (note) note.textContent = description + (missing.length ? ` Paste owed picks for ${missing.join(', ')} to make those years available.` : '');
+  const help = document.getElementById('tmOwedPicksHelp');
+  if (help) help.textContent = `Paste the ${years[2]}–${years[5]} year sections from the forum. Include a year heading even when no picks are owed. Each pasted year replaces that saved year; other saved years are kept.`;
+}
+
+function tmReconcilePicks() {
+  for (const side of ['A', 'B']) {
+    const abbr = tmGetSideAbbr(side);
+    const available = abbr ? tmAvailablePicks(abbr, side) : [];
+    const selected = side === 'A' ? tmPicksA : tmPicksB;
+    const valid = selected.filter(p => available.some(a => a.year === p.year && a.round === p.round && a.originalAbbr === p.originalAbbr && (a.qualifier || null) === (p.qualifier || null)));
+    if (side === 'A') tmPicksA = valid; else tmPicksB = valid;
+    tmRenderPickPills(side);
+    tmPopulatePickSelectors(side);
+  }
+}
+
+function tmPickTradeErrors(picks, abbr, side) {
+  const available = abbr ? tmAvailablePicks(abbr, side) : [];
+  return picks.flatMap(p => {
+    if (!TM_PICK_YEARS.includes(p.year)) return [`✗ ${p.label} — picks must be within ${TM_PICK_YEARS[0]}–${TM_PICK_YEARS[5]} (current season plus five).`];
+    if (!available.some(a => a.year === p.year && a.round === p.round && a.originalAbbr === p.originalAbbr && (a.qualifier || null) === (p.qualifier || null))) return [`✗ ${p.label} — ownership is not confirmed. Reload the roster or update the owed-picks paste.`];
+    return [];
+  });
 }
 
 function tmPickLabel(pick) {
@@ -4588,7 +4626,7 @@ function tmPopulatePickSelectors(side) {
   const abbr = tmGetSideAbbr(side);
   const all = abbr
     ? tmAvailablePicks(abbr, side)
-    : TM_PICK_YEARS.flatMap(y => [1,2].map(r => ({year:y, round:r, ownerAbbr:'', originalAbbr:'', swapPartner:null, qualifier:null})));
+    : [];
 
   // Filter out picks already added to this side's trade
   const alreadyAdded = side === 'A' ? tmPicksA : tmPicksB;
@@ -4600,7 +4638,7 @@ function tmPopulatePickSelectors(side) {
   );
 
   if (available.length === 0) {
-    sel.innerHTML = '<option value="">No picks available</option>';
+    sel.innerHTML = '<option value="">No picks available — load roster / paste owed picks</option>';
     return;
   }
   sel.innerHTML = available.map(p => {
@@ -4670,6 +4708,7 @@ function tmConfirmPick(side) {
   }
 
   const pick = { year, round, ownerAbbr, originalAbbr, swapPartner, qualifier };
+  if (tmPickTradeErrors([pick], ownerAbbr, side).length) { alert('That pick is no longer available. Reload the team or update owed picks.'); return; }
   pick.label = tmPickLabel(pick);
   arr.push(pick);
   tmRenderPickPills(side);
@@ -4742,6 +4781,12 @@ async function loadTMTeam(side) {
   const statusEl = document.getElementById(`tmStatus${side}`);
   if (!url) { statusEl.textContent = 'Select a team first.'; return; }
 
+  // Never reuse a different team's near-term ownership while this request loads.
+  if (side === 'A') { tmRosterPicksA = null; tmRosterPickYearsA = []; tmPicksA = []; }
+  else { tmRosterPicksB = null; tmRosterPickYearsB = []; tmPicksB = []; }
+  tmRenderPickPills(side);
+  tmPopulatePickSelectors(side);
+
   statusEl.style.display = '';
   statusEl.textContent = 'Loading…';
   document.getElementById(`tmPlayerList${side}`).innerHTML = '';
@@ -4751,11 +4796,12 @@ async function loadTMTeam(side) {
 
   try {
     const data = await fetchSalaryRosterWithFallback(url);
+    if (document.getElementById(`tmSelect${side}`).value !== url) return;
     if (data.error) { statusEl.style.display = ''; statusEl.textContent = '⚠ ' + data.error; return; }
 
     const teamName = (data.team_name || (side === 'A' ? 'Team A' : 'Team B')).replace(/\s*Roster$/i, '').trim();
-    if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; tmRosterPicksA = data.draft_picks || null; tfShowButton(true); }
-    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; tmRosterPicksB = data.draft_picks || null; tfShowButtonB(true);
+    if (side === 'A') { tmRosterA = data.players; tmTotalA = data.total_salary; tmNameA = teamName; tmRosterPicksA = data.draft_picks || null; tmRosterPickYearsA = data.draft_pick_years || []; tfShowButton(true); }
+    else              { tmRosterB = data.players; tmTotalB = data.total_salary; tmNameB = teamName; tmRosterPicksB = data.draft_picks || null; tmRosterPickYearsB = data.draft_pick_years || []; tfShowButtonB(true);
       // Pre-cache Team B roster for TF all-teams search
       const _abbrB = tmGetSideAbbr('B');
       if (_abbrB) tfAllRosters[_abbrB] = data.players.map(p => ({name:p.name,pos:p.pos,salary:p.salary||0,in_rat:p.in_rat||'',out:p.out||'',hn:p.hn||'',df:p.df||'',reb:p.reb||''})).filter(p=>p.salary>0);
@@ -4923,12 +4969,9 @@ function validateTradeMatch() {
   const picksA = [...tmPicksA];
   const picksB = [...tmPicksB];
 
-  // ── Picks: 6-year cap check ──────────────────────────────────────────────
-  for (const p of [...picksA, ...picksB]) {
-    if (p.year > TM_LEAGUE_YEAR + 6) {
-      errors.push(`✗ ${p.label} — picks more than 6 seasons out (${TM_LEAGUE_YEAR + 6}) cannot be traded.`);
-    }
-  }
+  // Current season plus five; validate ownership against the correct source.
+  errors.push(...tmPickTradeErrors(picksA, tmGetSideAbbr('A'), 'A'));
+  errors.push(...tmPickTradeErrors(picksB, tmGetSideAbbr('B'), 'B'));
 
   // ── Rule: At least 1 player or salary on each side ───────────────────────
   const customCntA = document.querySelectorAll('#tmVetMinListA .tm-custom-sal-input').length;
@@ -6353,7 +6396,7 @@ function tfShowButtonB(show) {
 
 function tmClearTeamB() {
   if (tfOpen) tfClose();
-  tmRosterB = []; tmTotalB = 0; tmNameB = 'Team B'; tfPinnedB = []; tmRosterPicksB = null;
+  tmRosterB = []; tmTotalB = 0; tmNameB = 'Team B'; tfPinnedB = []; tmRosterPicksB = null; tmRosterPickYearsB = [];
   document.getElementById('tmSelectB').value = '';
   document.getElementById('tmPlayerListB').innerHTML = '';
   document.getElementById('tmTeamNameB').style.display = 'none';
@@ -6885,6 +6928,7 @@ async function tmSaveLeagueYear() {
     setTimeout(() => { status.textContent = ''; }, 3000);
     // Update pick year range in-place — no page reload needed
     tmApplyLeagueYear(year);
+    await tmLoadOwedPicks();
   } catch(e) { status.style.color='#f87171'; status.textContent='Network error'; }
 }
 
@@ -6918,11 +6962,13 @@ async function tmPastePicksNow() {
     if (!res.ok) { status.style.color = '#b91c1c'; status.textContent = data.error || 'Error saving picks.'; return; }
     const r2 = await fetch('/api/picks');
     const d2 = await r2.json();
-    if (d2.league_year) tmApplyLeagueYear(d2.league_year);
     tmOwedPicks = d2.owed || [];
+    tmOwedYears = d2.owed_years || [];
+    if (d2.league_year) tmApplyLeagueYear(d2.league_year);
+    tmReconcilePicks();
     ['A','B'].forEach(side => { if (tmGetSideAbbr(side)) tmPopulatePickSelectors(side); });
     status.style.color = '#16a34a';
-    status.textContent = `✓ ${tmOwedPicks.length} picks loaded`;
+    status.textContent = `✓ ${data.total} owed picks saved for ${(data.years_saved || []).join(', ')}`;
     const _sat = document.getElementById('tmPicksSyncedAt');
     if (_sat) _sat.textContent = 'Last updated: just now';
     const _inp = document.getElementById('tmOwedPicksInput');
@@ -7466,7 +7512,7 @@ const FAQ_DATA = [
   {
     keywords: ['trade rules', 'how to trade', 'salary matching', '15 percent', 'trade matching', 'what makes a trade work'],
     question: 'What are the trade rules?',
-    answer: 'Key trade rules:\n• Over soft cap: incoming salary must be within 15% of outgoing salary (multiply the smaller side by 1.15)\n• Max 5 players OR picks from each side per transaction (split into 2 trades if needed)\n• MLE/LLE players cannot be traded until Day 30\n• Future picks: max 6 seasons in advance\n• RPs can be included: max 1,500 RPs per season via trade\n• Both parties must accept in the Trade Thread — not official until then\n• Commish can veto trades that hurt league integrity\n• Repeatedly posting illegal trades = RP penalty'
+    answer: 'Key trade rules:\n• Over soft cap: incoming salary must be within 15% of outgoing salary (multiply the smaller side by 1.15)\n• Max 5 players OR picks from each side per transaction (split into 2 trades if needed)\n• MLE/LLE players cannot be traded until Day 30\n• Picks: current season plus the next 5 seasons (6 years total)\n• RPs can be included: max 1,500 RPs per season via trade\n• Both parties must accept in the Trade Thread — not official until then\n• Commish can veto trades that hurt league integrity\n• Repeatedly posting illegal trades = RP penalty'
   },
   {
     keywords: ['rp in trade', 'trade reward points', 'buy player with rp', 'trade rps'],

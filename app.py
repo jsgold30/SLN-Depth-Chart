@@ -640,46 +640,49 @@ def parse_salary(salary_str):
         return 0
 
 
+DRAFT_PICKS_PARSER_VERSION = 3
+
+
 def _parse_draft_picks_from_soup(soup):
-    """Parse the 'Draft Picks' section from an SLN roster page.
-    Returns a list of {year, round, original_team} dicts."""
+    return _parse_draft_pick_data(soup)['picks']
+
+
+def _parse_draft_pick_data(soup):
+    """Read each year/Round/Team column group without flattening nested tables."""
     picks = []
+    years = set()
+    seen = set()
     for table in soup.find_all('table'):
-        if 'draft picks' not in table.get_text(' ', strip=True).lower():
+        rows = [row for row in table.find_all('tr') if row.find_parent('table') is table]
+        if not any(cell.get_text(' ', strip=True).lower() == 'draft picks'
+                   for row in rows for cell in row.find_all(['td', 'th'], recursive=False)):
             continue
-        current_year = None
-        in_picks = False
-        for row in table.find_all('tr'):
-            cells = [td.get_text(strip=True) for td in row.find_all(['td', 'th'])]
-            if not cells:
+        year_columns = {}
+        for row in rows:
+            columns = {}
+            found_years = {}
+            column = 0
+            for cell in row.find_all(['td', 'th'], recursive=False):
+                text = cell.get_text(' ', strip=True)
+                columns[column] = text
+                if re.fullmatch(r'20\d{2}', text):
+                    found_years[column] = int(text)
+                column += max(1, int(cell.get('colspan', 1)))
+            if found_years:
+                year_columns = found_years
+                years.update(found_years.values())
                 continue
-            if not in_picks:
-                if any('draft picks' in c.lower() for c in cells):
-                    in_picks = True
-                continue
-            # Year row?
-            year_found = False
-            for c in cells:
-                m = re.match(r'^(20[2-9]\d)$', c.strip())
-                if m:
-                    current_year = int(m.group(1))
-                    year_found = True
-                    break
-            if year_found:
-                continue
-            # Header row?
-            low = [c.lower() for c in cells]
-            if 'round' in low or 'team' in low:
-                continue
-            # Data row: first cell is round (1 or 2), second is team name
-            if current_year and len(cells) >= 2:
-                round_str = cells[0].strip()
-                team_str = cells[1].strip()
-                if re.match(r'^[12]$', round_str) and team_str:
-                    picks.append({'year': current_year, 'round': int(round_str), 'original_team': team_str})
-        if picks:
-            break
-    return picks
+            for column, year in year_columns.items():
+                round_text = columns.get(column, '')
+                team = columns.get(column + 1, '')
+                if round_text not in {'1', '2'} or not team:
+                    continue
+                identity = (year, int(round_text), team.casefold())
+                if identity not in seen:
+                    seen.add(identity)
+                    picks.append({'year': year, 'round': int(round_text), 'original_team': team})
+    return {'picks': sorted(picks, key=lambda pick: (pick['year'], pick['round'], pick['original_team'])),
+            'years': sorted(years)}
 
 
 @app.route('/fetch_salary_roster', methods=['POST'])
@@ -703,7 +706,8 @@ def fetch_salary_roster():
                 cached_data = json.loads(cache_row[0])
                 # Bust old cache entries that don't have rating fields
                 players_list = cached_data.get('players', [])
-                if players_list and players_list[0].get('in_rat'):
+                if (players_list and players_list[0].get('in_rat')
+                        and cached_data.get('draft_picks_version') == DRAFT_PICKS_PARSER_VERSION):
                     return jsonify(cached_data)
     except Exception as e:
         app.logger.warning("non-critical error suppressed: %s", e)
@@ -835,8 +839,10 @@ def fetch_salary_roster():
                 break
 
         total_salary = sum(p['salary'] for p in players) + cut_salary
-        draft_picks = _parse_draft_picks_from_soup(soup)
-        result = {'players': players, 'team_name': team_name, 'total_salary': total_salary, 'draft_picks': draft_picks}
+        pick_data = _parse_draft_pick_data(soup)
+        result = {'players': players, 'team_name': team_name, 'total_salary': total_salary,
+                  'draft_picks': pick_data['picks'], 'draft_pick_years': pick_data['years'],
+                  'draft_picks_version': DRAFT_PICKS_PARSER_VERSION}
 
         try:
             conn = get_db()
@@ -949,8 +955,10 @@ def _parse_salary_roster_from_soup(soup):
             break
 
     total_salary = sum(p['salary'] for p in players) + cut_salary
-    draft_picks = _parse_draft_picks_from_soup(soup)
-    return {'players': players, 'team_name': team_name, 'total_salary': total_salary, 'draft_picks': draft_picks}
+    pick_data = _parse_draft_pick_data(soup)
+    return {'players': players, 'team_name': team_name, 'total_salary': total_salary,
+            'draft_picks': pick_data['picks'], 'draft_pick_years': pick_data['years'],
+            'draft_picks_version': DRAFT_PICKS_PARSER_VERSION}
 
 
 @app.route('/parse_salary_roster_html', methods=['POST'])
@@ -1238,7 +1246,7 @@ def skip_draft_pick():
         db.close()
 
 
-LEAGUE_YEAR_DEFAULT = 2036
+LEAGUE_YEAR_DEFAULT = 2043
 
 def get_league_year():
     try:
@@ -1328,7 +1336,7 @@ def parse_owed_picks_from_thread(post_text):
             continue
 
         # Year header line: "2038:" or "2038"
-        year_header = re.match(r'^(20[3-9]\d)\s*:?\s*$', line)
+        year_header = re.match(r'^(20\d{2})\s*:?\s*$', line)
         if year_header:
             current_year = int(year_header.group(1))
             continue
@@ -1431,51 +1439,83 @@ def get_picks():
     row = db.execute('SELECT data, updated_at FROM owed_picks WHERE id = 1').fetchone()
     db.close()
     league_year = get_league_year()
-    if row:
-        return jsonify({'owed': json.loads(row[0]), 'updated_at': row[1], 'syncing': False, 'league_year': league_year})
-    return jsonify({'owed': [], 'updated_at': None, 'syncing': False, 'league_year': league_year})
+    record = _owed_picks_record(row[0]) if row else {'owed': [], 'years': []}
+    future_years = set(range(league_year + 2, league_year + 6))
+    return jsonify({'owed': [p for p in record['owed'] if p['year'] in future_years],
+                    'owed_years': [year for year in record['years'] if year in future_years],
+                    'updated_at': row[1] if row else None, 'syncing': False,
+                    'league_year': league_year})
+
+
+def _owed_picks_record(raw):
+    record = json.loads(raw)
+    if isinstance(record, list):
+        # Legacy saves only prove coverage for years that contain recorded transfers.
+        return {'owed': record, 'years': sorted({p['year'] for p in record})}
+    return record
+
+
+def _save_owed_picks(db, picks, years):
+    db.execute('''INSERT INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)
+                  ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data, updated_at=EXCLUDED.updated_at''',
+               (json.dumps({'owed': picks, 'years': sorted(set(years))}),))
+    db.commit()
 
 
 
 
 @app.route('/api/picks/from-paste', methods=['POST'])
 def picks_from_paste():
-    """Accept pasted text from the SLN owed-picks thread and save all parsed picks.
-    Replaces whatever is currently stored — paste is the source of truth.
-    """
+    """Replace pasted year sections, preserving other saved sections for season changes."""
     body = request.get_json() or {}
     text = (body.get('text') or '').strip()
     if not text:
         return jsonify({'error': 'text required'}), 400
 
+    years = set()
+    current_year = None
+    for raw in text.replace('\r', '').split('\n'):
+        line = raw.strip().lstrip('*').strip()
+        header = re.fullmatch(r'(20\d{2})\s*:?\s*', line)
+        if header:
+            current_year = int(header.group(1))
+            years.add(current_year)
+        elif current_year and re.search(r'\b(1st|2nd)\b.*\bto\b', line, re.I):
+            if not parse_owed_picks_from_thread(f'{current_year}:\n{line}'):
+                return jsonify({'error': f'Could not read a pick transfer for {current_year}. Check the team names before saving.'}), 400
+    league_year = get_league_year()
+    active_years = sorted(years.intersection(range(league_year + 2, league_year + 6)))
+    if not active_years:
+        return jsonify({'error': f'Include year headings for {league_year + 2}–{league_year + 5}. The first two years come from roster pages.'}), 400
     picks = parse_owed_picks_from_thread(text)
-    if not picks:
-        return jsonify({'error': 'No picks found — make sure you copied the full post text'}), 400
-
     db = get_db()
-    db.execute(
-        '''INSERT INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)
-               ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data, updated_at=EXCLUDED.updated_at''',
-        (json.dumps(picks),)
-    )
-    db.commit()
-    db.close()
-    return jsonify({'ok': True, 'total': len(picks)})
+    try:
+        row = db.execute('SELECT data FROM owed_picks WHERE id=1').fetchone()
+        previous = _owed_picks_record(row[0]) if row else {'owed': [], 'years': []}
+        combined = [p for p in previous['owed'] if p['year'] not in years] + picks
+        _save_owed_picks(db, combined, set(previous['years']) | years)
+    finally:
+        db.close()
+    return jsonify({'ok': True, 'total': sum(p['year'] in active_years for p in picks),
+                    'years_saved': active_years})
 
 
 @app.route('/api/picks/update', methods=['POST'])
 def update_picks():
-    body = request.get_json()
+    body = request.get_json() or {}
+    if not isinstance(body, dict):
+        return jsonify({'error': 'Expected an owed-picks object'}), 400
     owed = body.get('owed', [])
     if not isinstance(owed, list):
         return jsonify({'error': 'owed must be a list'}), 400
+    if any(not isinstance(p, dict) or type(p.get('year')) is not int
+           or p.get('round') not in (1, 2) or not p.get('from_abbr') or not p.get('to_abbr') for p in owed):
+        return jsonify({'error': 'Each pick needs a year, round, original team and receiving team'}), 400
+    years = body.get('years', sorted({p['year'] for p in owed}))
+    if not isinstance(years, list) or any(type(year) is not int or not 2000 <= year <= 2099 for year in years):
+        return jsonify({'error': 'years must contain year numbers'}), 400
     db = get_db()
-    db.execute(
-        '''INSERT INTO owed_picks (id, data, updated_at) VALUES (1, ?, CURRENT_TIMESTAMP)
-               ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data, updated_at=EXCLUDED.updated_at''',
-        (json.dumps(owed),)
-    )
-    db.commit()
+    _save_owed_picks(db, owed, years)
     db.close()
     return jsonify({'ok': True, 'count': len(owed)})
 
@@ -1486,7 +1526,7 @@ def settings_league_year():
         return jsonify({'league_year': get_league_year()})
     body = request.get_json() or {}
     year = body.get('year')
-    if not isinstance(year, int) or year < 2020 or year > 2060:
+    if type(year) is not int or year < 2020 or year > 2060:
         return jsonify({'error': 'Invalid year'}), 400
     db = get_db()
     db.execute("INSERT INTO settings (key, value) VALUES ('league_year', ?) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", (str(year),))

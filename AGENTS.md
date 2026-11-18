@@ -32,11 +32,11 @@ Run Draft Center frontend tests with `node --test tests/test_draft_skip.js`. Ski
 
 ## Domain rules to preserve
 
-- League year comes from database settings with `LEAGUE_YEAR_DEFAULT` fallback and is rendered into `TM_LEAGUE_YEAR`. Future picks cover the next six years.
+- League year is the current season, from database settings with `LEAGUE_YEAR_DEFAULT` fallback (2043). Tradeable picks run from the current season through current + 5, inclusive. Changing the setting must update dropdowns, selected picks, source coverage, paste guidance, and validation immediately.
 - Draft pool ranks `sri`, `sro`, `srh`, `srd`, `srr`, `srp` are 1-based positions from SLN's six draft sort pages. Replace the pool each season; `DRAFT_POOL_VERSION` is derived from player names.
 - Draft CSV rounds start with `Round N:` then `#,Team,Trade`. Trade cells use `FROM to TEAM`; blank means untraded.
 - IR limit is `Math.max(0, roster.length - 12)`. Checked IR boxes must remain enabled so users can remove players; disable unchecked boxes only when capacity is reached. Preserve selected styling in both themes.
-- `tmAvailablePicks()` must include `_picksFromOwed()` for all six future years. Roster data only supplements next-year received picks.
+- Pick sources are exclusive: current/current + 1 use actual roster picks only; current + 2 through current + 5 use pasted owed-picks sections only. No DB supplementation of near-term picks and no roster supplementation of later picks. Empty roster columns mean no owned picks; missing source coverage must not invent own picks. Parse each year’s Round/Team columns independently, including empty columns in `draft_pick_years`. Owed-picks saves retain explicit year coverage (including zero-debt years) and saved sections beyond the current window for season changes. Legacy saves without coverage only confirm years containing recorded transfers. Increment `DRAFT_PICKS_PARSER_VERSION` when changing cached pick parsing. Run `node --test tests/test_trade_picks.js` and the Python tests for this workflow.
 
 ## External integrations and deployment
 
